@@ -83,6 +83,63 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_game_plans: {
+        Row: {
+          bias: string
+          created_at: string
+          discipline_score: number | null
+          id: string
+          key_levels: number[]
+          max_loss: number | null
+          max_trades: number
+          notes: string | null
+          plan_date: string
+          planned_setups: string[]
+          reviewed_at: string | null
+          stayed_within_loss: boolean | null
+          stuck_to_max_trades: boolean | null
+          traded_planned_setups: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bias?: string
+          created_at?: string
+          discipline_score?: number | null
+          id?: string
+          key_levels?: number[]
+          max_loss?: number | null
+          max_trades?: number
+          notes?: string | null
+          plan_date: string
+          planned_setups?: string[]
+          reviewed_at?: string | null
+          stayed_within_loss?: boolean | null
+          stuck_to_max_trades?: boolean | null
+          traded_planned_setups?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bias?: string
+          created_at?: string
+          discipline_score?: number | null
+          id?: string
+          key_levels?: number[]
+          max_loss?: number | null
+          max_trades?: number
+          notes?: string | null
+          plan_date?: string
+          planned_setups?: string[]
+          reviewed_at?: string | null
+          stayed_within_loss?: boolean | null
+          stuck_to_max_trades?: boolean | null
+          traded_planned_setups?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
