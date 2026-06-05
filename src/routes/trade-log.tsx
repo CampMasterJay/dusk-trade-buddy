@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, Search, BookOpen, CalendarDays } from "lucide-react";
+import { Trash2, Search, BookOpen, CalendarDays, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -234,6 +234,13 @@ function TradeLogScreen() {
           >
             <CalendarDays className="h-3.5 w-3.5" />
             Calendar view
+          </Link>
+          <Link
+            to="/risk-of-ruin"
+            className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            Risk of Ruin
           </Link>
         </div>
 

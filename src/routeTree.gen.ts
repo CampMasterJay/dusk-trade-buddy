@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TradeLogRouteImport } from './routes/trade-log'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RiskOfRuinRouteImport } from './routes/risk-of-ruin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
@@ -34,6 +35,11 @@ const SignupRoute = SignupRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RiskOfRuinRoute = RiskOfRuinRouteImport.update({
+  id: '/risk-of-ruin',
+  path: '/risk-of-ruin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/news': typeof NewsRoute
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/reset-password'
+    | '/risk-of-ruin'
     | '/settings'
     | '/signup'
     | '/trade-log'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/reset-password'
+    | '/risk-of-ruin'
     | '/settings'
     | '/signup'
     | '/trade-log'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/news'
     | '/onboarding'
     | '/reset-password'
+    | '/risk-of-ruin'
     | '/settings'
     | '/signup'
     | '/trade-log'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   NewsRoute: typeof NewsRoute
   OnboardingRoute: typeof OnboardingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  RiskOfRuinRoute: typeof RiskOfRuinRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TradeLogRoute: typeof TradeLogRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/risk-of-ruin': {
+      id: '/risk-of-ruin'
+      path: '/risk-of-ruin'
+      fullPath: '/risk-of-ruin'
+      preLoaderRoute: typeof RiskOfRuinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewsRoute: NewsRoute,
   OnboardingRoute: OnboardingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  RiskOfRuinRoute: RiskOfRuinRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TradeLogRoute: TradeLogRoute,
