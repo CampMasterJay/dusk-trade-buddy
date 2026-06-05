@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { supabase, checkSupabaseHealth } from "@/lib/supabaseClient";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 interface ThemeContextValue {
   theme: "dark";
+  supabaseReady: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({ theme: "dark" });
