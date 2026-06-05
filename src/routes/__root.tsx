@@ -137,6 +137,7 @@ function RootComponent() {
       <ThemeProvider>
         <AuthProvider>
           <Outlet />
+          <BottomNav />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
