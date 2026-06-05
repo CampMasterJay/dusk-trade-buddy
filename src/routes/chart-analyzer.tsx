@@ -649,6 +649,8 @@ function AnalysisView({
   saved?: boolean;
   saving?: boolean;
 }) {
+  const _balance = balance ?? 0;
+  const _riskPct = riskPct ?? 0;
   const setupName = (a.setupDetected ?? a.patterns?.[0] ?? "Setup")
     .toString()
     .toUpperCase();
