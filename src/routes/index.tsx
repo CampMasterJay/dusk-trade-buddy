@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, CalendarRange } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -181,6 +181,24 @@ function Dashboard() {
               rrRatio={rrRatio}
               winRate={stats?.winRate ?? undefined}
             />
+
+            <Link
+              to="/weekly-report"
+              className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-trade-green/40"
+            >
+              <div>
+                <div className="text-xs uppercase tracking-[2px] text-muted-foreground font-data">
+                  Weekly Review
+                </div>
+                <div className="mt-1 font-data text-sm text-muted-foreground">
+                  Auto-generated report with AI insight
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-2 rounded-md bg-trade-green/15 px-3 py-1.5 text-sm font-data text-trade-green">
+                <CalendarRange className="h-4 w-4" />
+                This Week
+              </span>
+            </Link>
           </>
         )}
       </main>
