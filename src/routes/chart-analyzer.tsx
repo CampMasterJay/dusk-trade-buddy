@@ -37,6 +37,7 @@ import {
 } from "@/lib/imageUpload";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { SetupScorer } from "@/components/SetupScorer";
 import {
   buildAnalysisInsert,
   deleteChartAnalysis,
@@ -477,6 +478,8 @@ function ChartAnalyzer() {
               a={analysis}
               balance={Number(settings?.current_balance ?? 0)}
               riskPct={Number(settings?.risk_pct ?? 0)}
+              minRr={Number(settings?.rr_ratio ?? 1.5)}
+              session={settings?.session ?? null}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
@@ -636,6 +639,8 @@ function AnalysisView({
   a,
   balance,
   riskPct,
+  minRr,
+  session,
   onUseLevels,
   onSave,
   saved,
@@ -644,6 +649,8 @@ function AnalysisView({
   a: Analysis;
   balance?: number;
   riskPct?: number;
+  minRr?: number;
+  session?: string | null;
   onUseLevels?: () => void;
   onSave?: () => void | Promise<void>;
   saved?: boolean;
@@ -770,6 +777,19 @@ function AnalysisView({
           </div>
         )}
       </div>
+
+      {/* Setup Scorer */}
+      <SetupScorer
+        inputs={{
+          trend: a.trend,
+          biasDirection: a.biasDirection ?? a.setupIdea?.direction,
+          confluenceFactors: confluence,
+          riskFactors: risks,
+          rr,
+          minRr,
+          session,
+        }}
+      />
 
       {/* Section 3 — Key Levels */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
