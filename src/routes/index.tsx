@@ -5,6 +5,7 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { ProjectionModal } from "@/components/ProjectionModal";
+import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
@@ -142,6 +143,7 @@ function Dashboard() {
     <div className="min-h-screen bg-background text-foreground pb-24">
       <AppHeader balance={currentBalance} />
       <main className="mx-auto max-w-3xl space-y-4 p-4">
+        <HighImpactAlertCard />
         {loading && !stats ? (
           <div className="flex justify-center py-16">
             <LoadingSpinner label="Loading dashboard…" />

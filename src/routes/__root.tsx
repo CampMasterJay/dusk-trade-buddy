@@ -16,6 +16,7 @@ import { AuthProvider } from "../components/AuthProvider";
 import { BottomNav } from "../components/BottomNav";
 import { Toaster } from "../components/ui/sonner";
 import { CoachChat } from "../components/CoachChat";
+import { HighImpactBanner } from "../components/HighImpactBanner";
 import { initServiceWorker } from "../lib/registerSW";
 
 function NotFoundComponent() {
@@ -188,6 +189,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
+          <HighImpactBanner />
           <div className="pb-16 md:pb-0">
             <Outlet />
           </div>
