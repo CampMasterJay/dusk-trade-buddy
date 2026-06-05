@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Upload, X, ImageIcon } from "lucide-react";
+import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
@@ -27,6 +27,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  PreTradeChecklist,
+  type ChecklistResult,
+  type ChecklistPrefill,
+} from "@/components/PreTradeChecklist";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -67,6 +72,7 @@ interface Props {
     direction?: "Long" | "Short" | null;
     instrument?: string | null;
   } | null;
+  checklistPrefill?: ChecklistPrefill | null;
 }
 
 export function NewTradeSheet({
@@ -77,6 +83,7 @@ export function NewTradeSheet({
   open: openProp,
   onOpenChange,
   prefill,
+  checklistPrefill,
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -133,6 +140,20 @@ export function NewTradeSheet({
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Pre-trade checklist
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklist, setChecklist] = useState<ChecklistResult | null>(
+    editTrade && (editTrade as { checklist_score?: number | null }).checklist_score != null
+      ? {
+          score: Number((editTrade as { checklist_score?: number }).checklist_score ?? 0),
+          verdict:
+            ((editTrade as { checklist_verdict?: string }).checklist_verdict as ChecklistResult["verdict"]) ??
+            "CAUTION",
+          items: {},
+        }
+      : null,
+  );
+
   // Defaults from settings
   const balance = Number(settings?.current_balance ?? 100);
   const riskPct = Number(settings?.risk_pct ?? 15);
@@ -163,8 +184,20 @@ export function NewTradeSheet({
       setChartFile(null);
       setRTouched(true);
       setErrors({});
+      const cs = (editTrade as { checklist_score?: number | null }).checklist_score;
+      const cv = (editTrade as { checklist_verdict?: string | null }).checklist_verdict;
+      setChecklist(
+        cs != null
+          ? {
+              score: Number(cs),
+              verdict: (cv as ChecklistResult["verdict"]) ?? "CAUTION",
+              items: {},
+            }
+          : null,
+      );
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+      setChecklist(null);
       if (prefill) {
         if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
         if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
@@ -340,6 +373,8 @@ export function NewTradeSheet({
         range_size: rangeSize === "" ? null : parseFloat(rangeSize),
         notes: notes.trim() || null,
         chart_url: chartUrl,
+        checklist_score: checklist?.score ?? null,
+        checklist_verdict: checklist?.verdict ?? null,
       };
 
       const { error } = isEdit && editTrade
@@ -360,6 +395,7 @@ export function NewTradeSheet({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={setOpen}>
       {trigger !== null && (
         <SheetTrigger asChild>
@@ -620,6 +656,14 @@ export function NewTradeSheet({
               </Field>
             </div>
           </Section>
+
+          {/* Pre-Trade Checklist */}
+          <Section title="Pre-Trade Checklist">
+            <ChecklistSummary
+              result={checklist}
+              onOpen={() => setChecklistOpen(true)}
+            />
+          </Section>
         </div>
 
         <SheetFooter className="mt-5">
@@ -636,6 +680,21 @@ export function NewTradeSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+    <PreTradeChecklist
+      open={checklistOpen}
+      onOpenChange={setChecklistOpen}
+      rrSetting={rrSetting}
+      prefill={{
+        rrMet:
+          rrRatio != null && Number.isFinite(rrRatio)
+            ? rrRatio >= rrSetting
+            : undefined,
+        ...(checklistPrefill ?? {}),
+      }}
+      initial={checklist}
+      onConfirm={(r) => setChecklist(r)}
+    />
+    </>
   );
 }
 
@@ -684,6 +743,58 @@ function Stat({ label, value }: { label: string; value: string }) {
       </div>
       <div className="font-data text-sm text-foreground">{value}</div>
     </div>
+  );
+}
+
+function ChecklistSummary({
+  result,
+  onOpen,
+}: {
+  result: ChecklistResult | null;
+  onOpen: () => void;
+}) {
+  if (!result) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onOpen}
+        className="h-10 w-full justify-start gap-2"
+      >
+        <ListChecks className="h-4 w-4" />
+        Run Pre-Trade Checklist
+      </Button>
+    );
+  }
+  const v = result.verdict;
+  const cls =
+    v === "GO"
+      ? "border-trade-green/40 bg-trade-green/10 text-trade-green"
+      : v === "CAUTION"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+        : "border-trade-red/40 bg-trade-red/10 text-trade-red";
+  const Icon = v === "GO" ? CheckCircle2 : v === "CAUTION" ? AlertTriangle : XCircle;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left transition-colors hover:opacity-90",
+        cls,
+      )}
+    >
+      <span className="flex items-center gap-2">
+        <Icon className="h-4 w-4" />
+        <span className="font-data text-sm font-bold uppercase tracking-wider">{v}</span>
+      </span>
+      <span className="font-data text-sm">
+        {result.score}<span className="text-muted-foreground">/10</span>
+        <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+          Edit
+        </span>
+      </span>
+    </button>
   );
 }
 

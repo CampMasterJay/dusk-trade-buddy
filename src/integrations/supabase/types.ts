@@ -119,6 +119,8 @@ export type Database = {
       trades: {
         Row: {
           chart_url: string | null
+          checklist_score: number | null
+          checklist_verdict: string | null
           created_at: string
           date: string
           deleted_at: string | null
@@ -138,6 +140,8 @@ export type Database = {
         }
         Insert: {
           chart_url?: string | null
+          checklist_score?: number | null
+          checklist_verdict?: string | null
           created_at?: string
           date: string
           deleted_at?: string | null
@@ -157,6 +161,8 @@ export type Database = {
         }
         Update: {
           chart_url?: string | null
+          checklist_score?: number | null
+          checklist_verdict?: string | null
           created_at?: string
           date?: string
           deleted_at?: string | null
