@@ -311,12 +311,9 @@ function StatsRow({
   stats: TradeStats | null;
   streak: { type: "W" | "L" | null; count: number };
 }) {
-  const items = [
+  const items: { label: string; value: string; accent?: "green" | "red" | "default" }[] = [
     { label: "Trades", value: String(stats?.totalTrades ?? 0) },
-    {
-      label: "Win Rate",
-      value: `${((stats?.winRate ?? 0) * 100).toFixed(0)}%`,
-    },
+    { label: "Win Rate", value: `${((stats?.winRate ?? 0) * 100).toFixed(0)}%` },
     {
       label: "EV / trade",
       value: fmtUSD(stats?.ev ?? 0),
@@ -337,7 +334,7 @@ function StatsRow({
       value: streak.type ? `${streak.count}${streak.type}` : "—",
       accent: streak.type === "W" ? "green" : streak.type === "L" ? "red" : "default",
     },
-  ] as const;
+  ];
 
   return (
     <section className="-mx-4">
