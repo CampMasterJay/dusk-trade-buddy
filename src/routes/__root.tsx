@@ -141,6 +141,7 @@ function RootComponent() {
             <Outlet />
           </div>
           <BottomNav />
+          <Toaster />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
