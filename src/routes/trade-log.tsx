@@ -339,13 +339,14 @@ function TradeLogScreen() {
 function TradeCard({
   trade,
   runningBalance,
+  onOpen,
   onDeleted,
 }: {
   trade: Trade;
   runningBalance: number;
+  onOpen: () => void;
   onDeleted: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -426,7 +427,7 @@ function TradeCard({
       >
         <button
           type="button"
-          onClick={() => setExpanded((x) => !x)}
+          onClick={onOpen}
           className="w-full text-left p-4"
         >
           <div className="flex items-start justify-between gap-3">
@@ -470,43 +471,8 @@ function TradeCard({
               <div className="text-sm font-data text-foreground">
                 {fmtMoney(runningBalance)}
               </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 ml-auto mt-1 text-muted-foreground transition-transform",
-                  expanded && "rotate-180",
-                )}
-              />
             </div>
           </div>
-
-          {expanded && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-3 text-xs font-data">
-              <Detail label="Entry" value={fmtNum(trade.entry)} />
-              <Detail label="Stop" value={fmtNum(trade.stop)} />
-              <Detail label="Target" value={fmtNum(trade.target)} />
-              {trade.range_size != null && (
-                <Detail label="Range" value={fmtNum(trade.range_size)} />
-              )}
-              {trade.notes && (
-                <div className="col-span-3 text-muted-foreground whitespace-pre-wrap">
-                  {trade.notes}
-                </div>
-              )}
-              <div className="col-span-3 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-trade-red hover:text-trade-red"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                </Button>
-              </div>
-            </div>
-          )}
         </button>
       </div>
 
