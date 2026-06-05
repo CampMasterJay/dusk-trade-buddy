@@ -192,6 +192,8 @@ function TradeLogScreen() {
 
   const currentBalance = Number(settings?.current_balance ?? 100);
   const refresh = () => setReloadKey((k) => k + 1);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   return (
     <>
@@ -298,6 +300,10 @@ function TradeLogScreen() {
                 key={t.id}
                 trade={t}
                 runningBalance={balanceMap.get(t.id) ?? 0}
+                onOpen={() => {
+                  setSelectedTrade(t);
+                  setDetailOpen(true);
+                }}
                 onDeleted={() => {
                   setTrades((prev) => prev.filter((x) => x.id !== t.id));
                 }}
@@ -319,6 +325,12 @@ function TradeLogScreen() {
           </div>
         )}
       </div>
+      <TradeDetailSheet
+        trade={selectedTrade}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onChanged={refresh}
+      />
     </>
   );
 }
