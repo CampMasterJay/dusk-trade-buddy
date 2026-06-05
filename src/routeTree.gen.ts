@@ -20,6 +20,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as GamePlanRouteImport } from './routes/game-plan'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ChartAnalyzerRouteImport } from './routes/chart-analyzer'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -81,6 +82,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GamePlanRoute = GamePlanRouteImport.update({
+  id: '/game-plan',
+  path: '/game-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/game-plan': typeof GamePlanRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/game-plan': typeof GamePlanRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/game-plan': typeof GamePlanRoute
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/chart-analyzer'
     | '/forgot-password'
+    | '/game-plan'
     | '/login'
     | '/news'
     | '/onboarding'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/chart-analyzer'
     | '/forgot-password'
+    | '/game-plan'
     | '/login'
     | '/news'
     | '/onboarding'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/chart-analyzer'
     | '/forgot-password'
+    | '/game-plan'
     | '/login'
     | '/news'
     | '/onboarding'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   ChartAnalyzerRoute: typeof ChartAnalyzerRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GamePlanRoute: typeof GamePlanRoute
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
@@ -316,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/game-plan': {
+      id: '/game-plan'
+      path: '/game-plan'
+      fullPath: '/game-plan'
+      preLoaderRoute: typeof GamePlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -369,6 +389,7 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   ChartAnalyzerRoute: ChartAnalyzerRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GamePlanRoute: GamePlanRoute,
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
