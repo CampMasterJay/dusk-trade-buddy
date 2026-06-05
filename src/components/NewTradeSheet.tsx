@@ -502,6 +502,25 @@ export function NewTradeSheet({
                 />
               </Field>
 
+              <Field label="Setup Type" className="sm:col-span-2">
+                <Select
+                  value={setupTag === "" ? "__none" : setupTag}
+                  onValueChange={(v) => setSetupTag(v === "__none" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tag the setup (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Untagged</SelectItem>
+                    {SETUP_TAGS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
               <Field label="Entry" error={errors.entry}>
                 <Input
                   type="number"
