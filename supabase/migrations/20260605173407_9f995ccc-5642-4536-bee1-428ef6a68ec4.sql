@@ -1,0 +1,1 @@
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS checklist_score smallint; ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS checklist_verdict text;
