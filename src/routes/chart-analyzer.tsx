@@ -29,6 +29,7 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  Lightbulb,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -50,6 +51,8 @@ import {
   type ChartAnalysis as SavedAnalysis,
 } from "@/lib/chartAnalysisService";
 import { getTrades, type Trade } from "@/lib/tradeService";
+import { TipsCarousel } from "@/components/TipsCarousel";
+
 
 export const Route = createFileRoute("/chart-analyzer")({
   head: () => ({
@@ -293,6 +296,7 @@ function ChartAnalyzer() {
         )}
 
         {tab === "analyzer" && (<>
+        <TipsCarousel />
         {/* Multi-Timeframe upload */}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
