@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
+import { ProjectionModal } from "@/components/ProjectionModal";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
@@ -172,6 +173,14 @@ function Dashboard() {
               riskDollar={riskDollar}
               targetDollar={targetDollar}
             />
+
+            <ProjectionSection
+              currentBalance={currentBalance}
+              targetBalance={targetBalance}
+              riskPct={riskPct}
+              rrRatio={rrRatio}
+              winRate={stats?.winRate ?? undefined}
+            />
           </>
         )}
       </main>
@@ -199,6 +208,49 @@ function calcStreak(trades: Trade[]): { type: "W" | "L" | null; count: number } 
     else break;
   }
   return { type: first, count };
+}
+
+function ProjectionSection({
+  currentBalance,
+  targetBalance,
+  riskPct,
+  rrRatio,
+  winRate,
+}: {
+  currentBalance: number;
+  targetBalance: number;
+  riskPct: number;
+  rrRatio: number;
+  winRate?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between">
+      <div>
+        <div className="text-xs uppercase tracking-[2px] text-muted-foreground font-data">
+          Projection
+        </div>
+        <div className="mt-1 font-data text-sm text-muted-foreground">
+          See the compounding path to your target
+        </div>
+      </div>
+      <Button
+        onClick={() => setOpen(true)}
+        className="bg-trade-green text-background hover:bg-trade-green/90 font-data"
+      >
+        See Projection
+      </Button>
+      <ProjectionModal
+        open={open}
+        onOpenChange={setOpen}
+        currentBalance={currentBalance}
+        targetBalance={targetBalance}
+        riskPct={riskPct}
+        rrRatio={rrRatio}
+        winRate={winRate}
+      />
+    </section>
+  );
 }
 
 function fmtUSD(n: number, decimals = 2) {
