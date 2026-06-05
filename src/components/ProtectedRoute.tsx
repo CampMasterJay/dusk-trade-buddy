@@ -1,16 +1,26 @@
 import { type ReactNode, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "./AuthProvider";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { settings, loading: settingsLoading } = useUserSettings();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (!loading && !user) {
       navigate({ to: "/login", replace: true });
     }
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (loading || settingsLoading || !user || !settings) return;
+    if (!settings.onboarding_completed && pathname !== "/onboarding") {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [loading, settingsLoading, user, settings, pathname, navigate]);
 
   if (loading) {
     return (
