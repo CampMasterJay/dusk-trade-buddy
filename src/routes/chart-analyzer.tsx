@@ -899,11 +899,12 @@ function HistoryView(props: {
   onDelete: (id: string) => void | Promise<void>;
   onLink: (item: SavedAnalysis) => void;
   trades: Trade[];
+  onFeedbackSaved?: () => void | Promise<void>;
 }) {
   const {
     items, loading, error, setupOptions, instrumentOptions,
     filterSetup, filterInstrument, onFilterSetup, onFilterInstrument,
-    onOpen, onDelete, onLink, trades,
+    onOpen, onDelete, onLink, trades, onFeedbackSaved,
   } = props;
 
   return (
@@ -951,11 +952,15 @@ function HistoryView(props: {
         <ul className="space-y-2">
           {items.map((it) => {
             const linkedTrade = trades.find((t) => t.id === it.linked_trade_id);
+            const result = linkedTrade?.result?.toLowerCase();
+            const showFeedback =
+              linkedTrade && (result === "win" || result === "loss" || result === "won" || result === "lost");
             return (
               <li
                 key={it.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                className="rounded-xl border border-border bg-card p-3"
               >
+                <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => onOpen(it)}
@@ -1017,6 +1022,22 @@ function HistoryView(props: {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                </div>
+                {showFeedback && (
+                  <div className="mt-3">
+                    <AnalysisFeedbackPrompt
+                      analysisId={it.id}
+                      setupLabel={it.setup_detected ?? "this setup"}
+                      direction={it.bias_direction ?? "Neutral"}
+                      result={
+                        result === "win" || result === "won" ? "won" : "lost"
+                      }
+                      existingRating={it.feedback_rating}
+                      existingNote={it.feedback_note}
+                      onSaved={onFeedbackSaved}
+                    />
+                  </div>
+                )}
               </li>
             );
           })}
