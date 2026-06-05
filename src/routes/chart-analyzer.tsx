@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -15,6 +15,10 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Trash2,
+  Link2,
+  Star,
+  ArrowLeft,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -24,6 +28,16 @@ import {
   processImageFile,
   type ProcessedImage,
 } from "@/lib/imageUpload";
+import { useAuth } from "@/components/AuthProvider";
+import {
+  buildAnalysisInsert,
+  deleteChartAnalysis,
+  linkAnalysisToTrade,
+  listChartAnalyses,
+  saveChartAnalysis,
+  type ChartAnalysis as SavedAnalysis,
+} from "@/lib/chartAnalysisService";
+import { getTrades, type Trade } from "@/lib/tradeService";
 
 export const Route = createFileRoute("/chart-analyzer")({
   head: () => ({
@@ -64,6 +78,54 @@ function ChartAnalyzer() {
   const [raw, setRaw] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"analyzer" | "history">("analyzer");
+  const [history, setHistory] = useState<SavedAnalysis[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<SavedAnalysis | null>(null);
+  const [filterSetup, setFilterSetup] = useState<string>("all");
+  const [filterInstrument, setFilterInstrument] = useState<string>("all");
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [linkSheetFor, setLinkSheetFor] = useState<SavedAnalysis | null>(null);
+
+  async function refreshHistory() {
+    if (!user) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    const { data, error } = await listChartAnalyses(user.id);
+    if (error) setHistoryError(error.message);
+    else setHistory(data ?? []);
+    setHistoryLoading(false);
+  }
+
+  useEffect(() => {
+    if (tab === "history" && user) {
+      void refreshHistory();
+      void getTrades(user.id, 100).then(({ data }) => setTrades(data ?? []));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user?.id]);
+
+  const setupOptions = useMemo(() => {
+    const s = new Set<string>();
+    history.forEach((h) => h.setup_detected && s.add(h.setup_detected));
+    return Array.from(s);
+  }, [history]);
+  const instrumentOptions = useMemo(() => {
+    const s = new Set<string>();
+    history.forEach((h) => h.instrument && s.add(h.instrument));
+    return Array.from(s);
+  }, [history]);
+  const filtered = useMemo(
+    () =>
+      history.filter(
+        (h) =>
+          (filterSetup === "all" || h.setup_detected === filterSetup) &&
+          (filterInstrument === "all" || h.instrument === filterInstrument),
+      ),
+    [history, filterSetup, filterInstrument],
+  );
 
   async function handleFile(file: File) {
     setError(null);
@@ -85,8 +147,18 @@ function ChartAnalyzer() {
       if (!res.ok) {
         setError(res.error);
       } else {
-        setAnalysis((res.analysis as Analysis) ?? null);
+        const a = (res.analysis as Analysis) ?? null;
+        setAnalysis(a);
         setRaw(res.raw ?? null);
+        if (user && a) {
+          await saveChartAnalysis(
+            buildAnalysisInsert({
+              userId: user.id,
+              chartUrl: processed.dataUrl,
+              analysis: a as unknown as Record<string, unknown>,
+            }),
+          );
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");
@@ -121,6 +193,46 @@ function ChartAnalyzer() {
           </span>
         </div>
 
+        {/* Tabs */}
+        <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-card p-1">
+          {(["analyzer", "history"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-md px-3 py-2 text-xs font-data uppercase tracking-wider transition-colors ${
+                tab === t
+                  ? "bg-trade-green/15 text-trade-green"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {t === "analyzer" ? "Analyze" : "Previous"}
+            </button>
+          ))}
+        </div>
+
+        {tab === "history" && (
+          <HistoryView
+            items={filtered}
+            loading={historyLoading}
+            error={historyError}
+            setupOptions={setupOptions}
+            instrumentOptions={instrumentOptions}
+            filterSetup={filterSetup}
+            filterInstrument={filterInstrument}
+            onFilterSetup={setFilterSetup}
+            onFilterInstrument={setFilterInstrument}
+            onOpen={setSelected}
+            onDelete={async (id) => {
+              await deleteChartAnalysis(id);
+              await refreshHistory();
+            }}
+            onLink={setLinkSheetFor}
+            trades={trades}
+          />
+        )}
+
+        {tab === "analyzer" && (<>
         {/* Upload area */}
         {!image ? (
           <div
@@ -358,7 +470,25 @@ function ChartAnalyzer() {
             </pre>
           )}
         </div>
+        </>)}
       </div>
+
+      {selected && (
+        <DetailModal item={selected} onClose={() => setSelected(null)} />
+      )}
+
+      {linkSheetFor && (
+        <LinkTradeModal
+          item={linkSheetFor}
+          trades={trades}
+          onClose={() => setLinkSheetFor(null)}
+          onLinked={async (tradeId) => {
+            await linkAnalysisToTrade(linkSheetFor.id, tradeId);
+            setLinkSheetFor(null);
+            await refreshHistory();
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }
@@ -491,6 +621,292 @@ function AnalysisView({ a }: { a: Analysis }) {
       <p className="pt-2 text-[10px] text-muted-foreground">
         AI analysis is informational — not financial advice. Always confirm with your own process.
       </p>
+    </div>
+  );
+}
+
+function QualityStars({ q }: { q: number | null | undefined }) {
+  const v = q ?? 0;
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`h-3 w-3 ${
+            i < v ? "fill-trade-green text-trade-green" : "text-muted-foreground"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HistoryView(props: {
+  items: SavedAnalysis[];
+  loading: boolean;
+  error: string | null;
+  setupOptions: string[];
+  instrumentOptions: string[];
+  filterSetup: string;
+  filterInstrument: string;
+  onFilterSetup: (v: string) => void;
+  onFilterInstrument: (v: string) => void;
+  onOpen: (item: SavedAnalysis) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  onLink: (item: SavedAnalysis) => void;
+  trades: Trade[];
+}) {
+  const {
+    items, loading, error, setupOptions, instrumentOptions,
+    filterSetup, filterInstrument, onFilterSetup, onFilterInstrument,
+    onOpen, onDelete, onLink, trades,
+  } = props;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={filterInstrument}
+          onChange={(e) => onFilterInstrument(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-data"
+        >
+          <option value="all">All instruments</option>
+          {instrumentOptions.map((i) => (
+            <option key={i} value={i}>{i}</option>
+          ))}
+        </select>
+        <select
+          value={filterSetup}
+          onChange={(e) => onFilterSetup(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-data"
+        >
+          <option value="all">All setups</option>
+          {setupOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-trade-red/40 bg-trade-red/5 p-3 text-sm text-trade-red">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+          <p className="text-sm text-muted-foreground">No analyses yet</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((it) => {
+            const linkedTrade = trades.find((t) => t.id === it.linked_trade_id);
+            return (
+              <li
+                key={it.id}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => onOpen(it)}
+                  className="flex flex-1 items-center gap-3 text-left"
+                >
+                  {it.chart_url ? (
+                    <img
+                      src={it.chart_url}
+                      alt="chart"
+                      className="h-14 w-14 shrink-0 rounded-md border border-border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {it.setup_detected ?? "—"}
+                      </span>
+                      {it.instrument && (
+                        <span className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-data">
+                          {it.instrument}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <QualityStars q={it.setup_quality} />
+                      <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+                        {new Date(it.created_at).toLocaleDateString()}
+                      </span>
+                      {linkedTrade && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-data uppercase tracking-wider text-trade-green">
+                          <Link2 className="h-3 w-3" />
+                          linked
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onLink(it)}
+                    aria-label="Link to trade"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Delete this analysis?")) void onDelete(it.id);
+                    }}
+                    aria-label="Delete"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-trade-red/30 bg-trade-red/10 text-trade-red hover:bg-trade-red/20"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DetailModal({
+  item,
+  onClose,
+}: {
+  item: SavedAnalysis;
+  onClose: () => void;
+}) {
+  const a = (item.raw_analysis as unknown as Analysis | null) ?? null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-card sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-data uppercase tracking-wider text-muted-foreground hover:bg-accent"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
+          <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            {new Date(item.created_at).toLocaleString()}
+          </span>
+        </div>
+        <div className="space-y-4 p-4">
+          {item.chart_url && (
+            <img
+              src={item.chart_url}
+              alt="chart"
+              className="w-full rounded-lg border border-border"
+            />
+          )}
+          {a ? (
+            <AnalysisView a={a} />
+          ) : (
+            <div className="space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
+              <p><span className="text-muted-foreground">Bias:</span> {item.bias_direction ?? "—"}</p>
+              <p className="text-foreground">{item.summary ?? "—"}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkTradeModal({
+  item,
+  trades,
+  onClose,
+  onLinked,
+}: {
+  item: SavedAnalysis;
+  trades: Trade[];
+  onClose: () => void;
+  onLinked: (tradeId: string | null) => void | Promise<void>;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-card sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-border p-3">
+          <h3 className="text-xs font-data uppercase tracking-[2px] text-muted-foreground">
+            Link to trade
+          </h3>
+        </div>
+        <div className="divide-y divide-border">
+          {item.linked_trade_id && (
+            <button
+              type="button"
+              onClick={() => onLinked(null)}
+              className="block w-full px-4 py-3 text-left text-sm text-trade-red hover:bg-accent"
+            >
+              Unlink current trade
+            </button>
+          )}
+          {trades.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No trades to link
+            </div>
+          ) : (
+            trades.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onLinked(t.id)}
+                className="block w-full px-4 py-3 text-left hover:bg-accent"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {t.instrument} · {t.direction}
+                  </span>
+                  <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+                    {t.date}
+                  </span>
+                </div>
+                <div className="text-[11px] font-data text-muted-foreground">
+                  {t.result} · R {t.r_multiple ?? "—"}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-data uppercase tracking-wider hover:bg-accent"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      chart_analyses: {
+        Row: {
+          bias_direction: string | null
+          chart_url: string | null
+          created_at: string
+          id: string
+          instrument: string | null
+          linked_trade_id: string | null
+          raw_analysis: Json | null
+          rr_ratio: number | null
+          setup_detected: string | null
+          setup_quality: number | null
+          suggested_entry: number | null
+          suggested_stop: number | null
+          suggested_target: number | null
+          summary: string | null
+          timeframe: string | null
+          trend: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bias_direction?: string | null
+          chart_url?: string | null
+          created_at?: string
+          id?: string
+          instrument?: string | null
+          linked_trade_id?: string | null
+          raw_analysis?: Json | null
+          rr_ratio?: number | null
+          setup_detected?: string | null
+          setup_quality?: number | null
+          suggested_entry?: number | null
+          suggested_stop?: number | null
+          suggested_target?: number | null
+          summary?: string | null
+          timeframe?: string | null
+          trend?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bias_direction?: string | null
+          chart_url?: string | null
+          created_at?: string
+          id?: string
+          instrument?: string | null
+          linked_trade_id?: string | null
+          raw_analysis?: Json | null
+          rr_ratio?: number | null
+          setup_detected?: string | null
+          setup_quality?: number | null
+          suggested_entry?: number | null
+          suggested_stop?: number | null
+          suggested_target?: number | null
+          summary?: string | null
+          timeframe?: string | null
+          trend?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
