@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { getTrades, type Trade } from "@/lib/tradeService";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { generateWeeklyInsight } from "@/lib/api/weeklyInsight.functions";
 import { EMOTIONS, type EmotionState } from "@/lib/journalService";
@@ -115,11 +116,15 @@ function computeWeekStats(trades: Trade[]): WeekStats {
   let bestSetup: { instrument: string; r: number } | null = null;
   let worstSetup: { instrument: string; r: number } | null = null;
   byInstrument.forEach((r, instrument) => {
-    if (bestSetup == null || r > bestSetup.r) bestSetup = { instrument, r };
-    if (worstSetup == null || r < worstSetup.r) worstSetup = { instrument, r };
+    if (bestSetup === null || r > (bestSetup as { instrument: string; r: number }).r) {
+      bestSetup = { instrument, r };
+    }
+    if (worstSetup === null || r < (worstSetup as { instrument: string; r: number }).r) {
+      worstSetup = { instrument, r };
+    }
   });
-  if (bestSetup && bestSetup.r <= 0) bestSetup = null;
-  if (worstSetup && worstSetup.r >= 0) worstSetup = null;
+  if (bestSetup !== null && (bestSetup as { r: number }).r <= 0) bestSetup = null;
+  if (worstSetup !== null && (worstSetup as { r: number }).r >= 0) worstSetup = null;
 
   return {
     count: trades.length,
@@ -138,6 +143,8 @@ function computeWeekStats(trades: Trade[]): WeekStats {
 function WeeklyReport() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const { settings } = useUserSettings();
+  const balance = Number(settings?.current_balance ?? 0);
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [journals, setJournals] = useState<JournalRow[]>([]);
@@ -241,6 +248,7 @@ function WeeklyReport() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       <AppHeader />
+
       <main className="mx-auto max-w-3xl space-y-4 p-4">
         <div className="flex items-center justify-between">
           <Link
