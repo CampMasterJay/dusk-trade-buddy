@@ -463,6 +463,15 @@ function TradeCard({
                 </span>
                 <Badge className={dirColor}>{trade.direction}</Badge>
                 <Badge className={resultColor}>{trade.result}</Badge>
+                {hasJournal && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-trade-amber/40 bg-trade-amber/10 text-trade-amber px-1.5 py-0.5"
+                    title="Has journal entry"
+                    aria-label="Has journal entry"
+                  >
+                    <BookOpen className="h-3 w-3" />
+                  </span>
+                )}
               </div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className={cn("font-data font-bold text-lg", pnlColor)}>
