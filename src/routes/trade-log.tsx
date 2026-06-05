@@ -235,6 +235,11 @@ function TradeLogScreen() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  const drawdown = useMemo(
+    () => computeDrawdown(trades, Number(settings?.starting_balance ?? 100)),
+    [trades, settings?.starting_balance],
+  );
+
   return (
     <>
       <AppHeader balance={currentBalance} />
