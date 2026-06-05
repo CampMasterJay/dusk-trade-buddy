@@ -1010,15 +1010,8 @@ function DetailModal({
           </span>
         </div>
         <div className="space-y-4 p-4">
-          {item.chart_url && (
-            <img
-              src={item.chart_url}
-              alt="chart"
-              className="w-full rounded-lg border border-border"
-            />
-          )}
           {a ? (
-            <AnalysisView a={a} />
+            <AnalysisView a={a} chartImageUrl={item.chart_url ?? null} />
           ) : (
             <div className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
