@@ -26,7 +26,6 @@ function TradeLog() {
             </p>
           </div>
         </div>
-      </div>
     </ProtectedRoute>
   );
 }

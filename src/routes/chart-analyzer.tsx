@@ -26,7 +26,6 @@ function ChartAnalyzer() {
             </p>
           </div>
         </div>
-      </div>
     </ProtectedRoute>
   );
 }

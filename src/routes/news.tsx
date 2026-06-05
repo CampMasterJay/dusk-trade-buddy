@@ -26,7 +26,6 @@ function News() {
             </p>
           </div>
         </div>
-      </div>
     </ProtectedRoute>
   );
 }
