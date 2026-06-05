@@ -165,6 +165,19 @@ export function NewTradeSheet({
       setErrors({});
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+      if (prefill) {
+        if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
+        if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
+        if (prefill.target != null && prefill.target !== "") setTarget(String(prefill.target));
+        if (prefill.direction) setDirection(prefill.direction);
+        if (prefill.instrument) {
+          const known = INSTRUMENTS.includes(
+            prefill.instrument as (typeof INSTRUMENTS)[number],
+          );
+          setInstrument(known ? prefill.instrument : "Other");
+          setCustomInstrument(known ? "" : prefill.instrument);
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editTrade?.id]);
