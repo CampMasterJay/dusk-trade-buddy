@@ -874,3 +874,101 @@ export function NewTradeIconButton(props: Props) {
     />
   );
 }
+
+function NewsPicker({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selected: Article | null = useMemo(
+    () => (value ? ARTICLES.find((a) => a.id === value) ?? null : null),
+    [value],
+  );
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = [...ARTICLES].sort((a, b) => b.publishedAt - a.publishedAt);
+    if (!q) return base.slice(0, 8);
+    return base
+      .filter((a) =>
+        [a.headline, a.source, ...a.tags].some((s) =>
+          s.toLowerCase().includes(q),
+        ),
+      )
+      .slice(0, 12);
+  }, [query]);
+
+  if (selected) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+        <Newspaper className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium leading-snug">{selected.headline}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            {selected.source}
+            {selected.impact === "high" ? " · HIGH impact" : ""}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Remove news link"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search news that influenced this trade…"
+          className="pl-8"
+          maxLength={120}
+        />
+      </div>
+      {open ? (
+        <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-card">
+          {results.length === 0 ? (
+            <div className="p-3 text-xs text-muted-foreground">No matching articles.</div>
+          ) : (
+            results.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => {
+                  onChange(a.id);
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className="block w-full border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
+              >
+                <div className="text-xs font-medium leading-snug line-clamp-2">
+                  {a.headline}
+                </div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {a.source} · {a.impact} impact
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
