@@ -136,7 +136,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Outlet />
+          <div className="pb-16 md:pb-0">
+            <Outlet />
+          </div>
           <BottomNav />
         </AuthProvider>
       </ThemeProvider>
