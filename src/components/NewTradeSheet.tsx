@@ -36,6 +36,16 @@ import {
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
+export const SETUP_TAGS = [
+  "ORB",
+  "VWAP Reclaim",
+  "Flag",
+  "B&R",
+  "Inside Bar",
+  "Other",
+] as const;
+export type SetupTag = (typeof SETUP_TAGS)[number];
+
 const schema = z.object({
   date: z.string().min(1, "Date is required"),
   instrument: z.string().min(1, "Instrument is required").max(20),
@@ -132,6 +142,9 @@ export function NewTradeSheet({
   const [rangeSize, setRangeSize] = useState(
     editTrade?.range_size != null ? String(editTrade.range_size) : "",
   );
+  const [setupTag, setSetupTag] = useState<string>(
+    (editTrade as { setup_tag?: string | null } | null | undefined)?.setup_tag ?? "",
+  );
   // Track whether user manually edited the R multiple — so we don't auto-overwrite in edit mode.
   const [rTouched, setRTouched] = useState(isEdit);
   const [chartFile, setChartFile] = useState<File | null>(null);
@@ -185,6 +198,9 @@ export function NewTradeSheet({
       setRangeSize(
         editTrade.range_size != null ? String(editTrade.range_size) : "",
       );
+      setSetupTag(
+        (editTrade as { setup_tag?: string | null }).setup_tag ?? "",
+      );
       setExistingChart(editTrade.chart_url ?? null);
       setChartFile(null);
       setRTouched(true);
@@ -205,6 +221,7 @@ export function NewTradeSheet({
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
       setChecklist(null);
       setNewsId(null);
+      setSetupTag("");
       if (prefill) {
         if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
         if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
@@ -307,6 +324,7 @@ export function NewTradeSheet({
     setRTouched(false);
     setNotes("");
     setRangeSize("");
+    setSetupTag("");
     setChartFile(null);
     setExistingChart(null);
     setErrors({});
@@ -383,6 +401,7 @@ export function NewTradeSheet({
         checklist_score: checklist?.score ?? null,
         checklist_verdict: checklist?.verdict ?? null,
         news_id: newsId,
+        setup_tag: setupTag === "" ? null : setupTag,
       };
 
       const { error } = isEdit && editTrade
@@ -481,6 +500,25 @@ export function NewTradeSheet({
                     { value: "Short", label: "Short", color: "amber" },
                   ]}
                 />
+              </Field>
+
+              <Field label="Setup Type" className="sm:col-span-2">
+                <Select
+                  value={setupTag === "" ? "__none" : setupTag}
+                  onValueChange={(v) => setSetupTag(v === "__none" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tag the setup (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Untagged</SelectItem>
+                    {SETUP_TAGS.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
 
               <Field label="Entry" error={errors.entry}>

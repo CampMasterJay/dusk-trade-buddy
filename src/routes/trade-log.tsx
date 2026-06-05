@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
+import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
@@ -281,6 +282,10 @@ function TradeLogScreen() {
         {/* Stats */}
         <div className="mb-4">
           <TradeStats stats={stats} trades={trades} />
+        </div>
+
+        <div className="mb-4">
+          <SetupPerformanceBreakdown trades={trades} />
         </div>
 
         {/* Filter bar */}
