@@ -655,6 +655,14 @@ export function NewTradeSheet({
               </Field>
             </div>
           </Section>
+
+          {/* Pre-Trade Checklist */}
+          <Section title="Pre-Trade Checklist">
+            <ChecklistSummary
+              result={checklist}
+              onOpen={() => setChecklistOpen(true)}
+            />
+          </Section>
         </div>
 
         <SheetFooter className="mt-5">
@@ -671,6 +679,21 @@ export function NewTradeSheet({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+    <PreTradeChecklist
+      open={checklistOpen}
+      onOpenChange={setChecklistOpen}
+      rrSetting={rrSetting}
+      prefill={{
+        rrMet:
+          rrRatio != null && Number.isFinite(rrRatio)
+            ? rrRatio >= rrSetting
+            : undefined,
+        ...(checklistPrefill ?? {}),
+      }}
+      initial={checklist}
+      onConfirm={(r) => setChecklist(r)}
+    />
+    </>
   );
 }
 
