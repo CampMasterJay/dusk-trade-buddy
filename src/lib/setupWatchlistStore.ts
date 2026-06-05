@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 
-export type SetupStatus = "watching" | "triggered" | "missed" | "invalidated";
+export type SetupStatus =
+  | "watching"
+  | "triggered_enter"
+  | "triggered_skipped"
+  | "invalidated"
+  | "missed"
+  | "waiting_news";
+
+/** Status values from older stored data that we still accept while reading. */
+type LegacyStatus = SetupStatus | "triggered";
 
 export type WatchedSetup = {
   id: string;
@@ -10,6 +19,8 @@ export type WatchedSetup = {
   direction: "long" | "short";
   notes?: string;
   status: SetupStatus;
+  outcomeNote?: string;
+  outcomeAt?: number;
   createdAt: number;
 };
 
@@ -21,8 +32,12 @@ function read(): WatchedSetup[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as WatchedSetup[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as Array<WatchedSetup & { status: LegacyStatus }>;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((s) => ({
+      ...s,
+      status: s.status === "triggered" ? "triggered_enter" : (s.status as SetupStatus),
+    }));
   } catch {
     return [];
   }
