@@ -33,6 +33,10 @@ import {
   AlertTriangle,
   Trash2,
   Activity,
+  Zap,
+  SkipForward,
+  Hourglass,
+  Percent,
 } from "lucide-react";
 import {
   addSetup,
@@ -47,6 +51,7 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { OrbSetupBuilder } from "@/components/OrbSetupBuilder";
 import { VwapReclaimBuilder } from "@/components/VwapReclaimBuilder";
 import { SessionTimer } from "@/components/SessionTimer";
+import { NewTradeSheet } from "@/components/NewTradeSheet";
 
 export const Route = createFileRoute("/setup-advisor")({
   component: SetupAdvisorPage,
@@ -63,11 +68,32 @@ const SETUP_TYPES = [
   "Opening Range",
 ];
 
-const STATUSES: { key: SetupStatus; label: string; color: string; icon: typeof CircleDot }[] = [
-  { key: "watching", label: "Watching", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", icon: CircleDot },
-  { key: "triggered", label: "Triggered", color: "text-trade-green border-trade-green/40 bg-trade-green/10", icon: CheckCircle2 },
-  { key: "missed", label: "Missed", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: AlertTriangle },
-  { key: "invalidated", label: "Invalidated", color: "text-trade-red border-trade-red/40 bg-trade-red/10", icon: XCircle },
+type StatusMeta = {
+  key: SetupStatus;
+  label: string;
+  short: string;
+  color: string;
+  icon: typeof CircleDot;
+  requiresNote?: boolean;
+  opensTrade?: boolean;
+};
+
+const STATUSES: StatusMeta[] = [
+  { key: "watching", label: "Watching", short: "Watching", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", icon: CircleDot },
+  { key: "triggered_enter", label: "Triggered — Enter", short: "Enter", color: "text-trade-green border-trade-green/40 bg-trade-green/10", icon: Zap, opensTrade: true },
+  { key: "triggered_skipped", label: "Triggered — Skipped", short: "Skipped", color: "text-muted-foreground border-border bg-muted/40", icon: SkipForward, requiresNote: true },
+  { key: "invalidated", label: "Invalidated", short: "Invalidated", color: "text-trade-red border-trade-red/40 bg-trade-red/10", icon: XCircle, requiresNote: true },
+  { key: "missed", label: "Missed", short: "Missed", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: AlertTriangle, requiresNote: true },
+  { key: "waiting_news", label: "Waiting — News Delay", short: "Waiting", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: Hourglass },
+];
+
+const STATUS_ORDER: SetupStatus[] = [
+  "watching",
+  "waiting_news",
+  "triggered_enter",
+  "triggered_skipped",
+  "missed",
+  "invalidated",
 ];
 
 function SetupAdvisorPage() {
@@ -81,6 +107,7 @@ function SetupAdvisorPage() {
         <SessionTimer />
         <OrbSetupBuilder />
         <VwapReclaimBuilder />
+        <SetupOutcomeStats />
         <SetupWatchlistSection />
       </main>
     </ProtectedRoute>
@@ -228,8 +255,7 @@ function SetupWatchlistSection() {
   const [open, setOpen] = useState(false);
 
   const grouped = useMemo(() => {
-    const order: SetupStatus[] = ["watching", "triggered", "missed", "invalidated"];
-    return order
+    return STATUS_ORDER
       .map((status) => ({ status, items: setups.filter((s) => s.status === status) }))
       .filter((g) => g.items.length > 0);
   }, [setups]);
@@ -298,6 +324,44 @@ function SetupCard({ setup }: { setup: WatchedSetup }) {
   const DirIcon = setup.direction === "long" ? TrendingUp : TrendingDown;
   const dirColor = setup.direction === "long" ? "text-trade-green" : "text-trade-red";
 
+  const [tradeOpen, setTradeOpen] = useState(false);
+  const [noteFor, setNoteFor] = useState<SetupStatus | null>(null);
+  const [noteText, setNoteText] = useState("");
+
+  const handleChoose = (next: SetupStatus) => {
+    const nextMeta = STATUSES.find((s) => s.key === next)!;
+    if (nextMeta.opensTrade) {
+      updateSetup(setup.id, { status: next, outcomeAt: Date.now() });
+      setTradeOpen(true);
+      return;
+    }
+    if (nextMeta.requiresNote) {
+      setNoteText(setup.outcomeNote ?? "");
+      setNoteFor(next);
+      return;
+    }
+    updateSetup(setup.id, { status: next, outcomeAt: Date.now() });
+  };
+
+  const saveNote = () => {
+    if (!noteFor) return;
+    updateSetup(setup.id, {
+      status: noteFor,
+      outcomeNote: noteText.trim() || undefined,
+      outcomeAt: Date.now(),
+    });
+    const label = STATUSES.find((s) => s.key === noteFor)?.label ?? "Updated";
+    toast.success(`Marked ${label}`);
+    setNoteFor(null);
+    setNoteText("");
+  };
+
+  // Parse a numeric entry from the level string if possible to pre-fill the trade.
+  const parsedEntry = (() => {
+    const m = setup.level.match(/-?\d+(?:\.\d+)?/);
+    return m ? Number(m[0]) : null;
+  })();
+
   return (
     <div className="rounded-xl border border-border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
@@ -313,6 +377,12 @@ function SetupCard({ setup }: { setup: WatchedSetup }) {
           </div>
           {setup.notes ? (
             <p className="mt-1.5 text-xs text-muted-foreground">{setup.notes}</p>
+          ) : null}
+          {setup.outcomeNote ? (
+            <p className="mt-1.5 rounded-md border border-dashed border-border bg-background px-2 py-1 text-xs text-muted-foreground">
+              <span className="font-data uppercase tracking-wider text-[10px] text-muted-foreground">Outcome · </span>
+              {setup.outcomeNote}
+            </p>
           ) : null}
         </div>
         <button
@@ -335,18 +405,117 @@ function SetupCard({ setup }: { setup: WatchedSetup }) {
           <Icon className="h-3 w-3" />
           {meta.label}
         </span>
-        <div className="ml-auto flex flex-wrap gap-1">
-          {STATUSES.filter((s) => s.key !== setup.status).map((s) => (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => updateSetup(setup.id, { status: s.key })}
-              className="rounded-md border border-border bg-background px-2 py-0.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              {s.label}
-            </button>
-          ))}
+      </div>
+
+      {noteFor ? (
+        <div className="mt-3 rounded-md border border-border bg-background p-2">
+          <Label className="text-[10px] font-data uppercase tracking-[2px] text-muted-foreground">
+            What happened?
+          </Label>
+          <Textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder={
+              noteFor === "invalidated"
+                ? "Price action broke structure…"
+                : noteFor === "missed"
+                  ? "Moved without me — too slow, hesitated…"
+                  : "Why did you skip?"
+            }
+            rows={2}
+            className="mt-1"
+            autoFocus
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => { setNoteFor(null); setNoteText(""); }}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={saveNote}>Save outcome</Button>
+          </div>
         </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {STATUSES.filter((s) => s.key !== setup.status).map((s) => {
+            const SIcon = s.icon;
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => handleChoose(s.key)}
+                className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <SIcon className="h-3 w-3" />
+                {s.short}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <NewTradeSheet
+        open={tradeOpen}
+        onOpenChange={setTradeOpen}
+        prefill={{
+          instrument: setup.instrument,
+          direction: setup.direction === "long" ? "Long" : "Short",
+          entry: parsedEntry,
+        }}
+      />
+    </div>
+  );
+}
+
+/* -------------------- Outcome stats -------------------- */
+
+function SetupOutcomeStats() {
+  const setups = useSetups();
+  const resolved = setups.filter((s) => s.status !== "watching" && s.status !== "waiting_news");
+  const total = resolved.length;
+  const missed = resolved.filter((s) => s.status === "missed" || s.status === "triggered_skipped").length;
+  const entered = resolved.filter((s) => s.status === "triggered_enter").length;
+  const invalidated = resolved.filter((s) => s.status === "invalidated").length;
+
+  if (total === 0) return null;
+
+  // Miss rate = late or skipped out of "valid" setups (those that actually played out,
+  // i.e. excluding invalidated which were never tradable).
+  const validPlayed = entered + missed;
+  const missRate = validPlayed > 0 ? Math.round((missed / validPlayed) * 100) : 0;
+
+  const tone =
+    missRate >= 50 ? "text-trade-red" : missRate >= 25 ? "text-amber-400" : "text-trade-green";
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-1.5 text-[10px] font-data uppercase tracking-[3px] text-muted-foreground">
+        <Percent className="h-3 w-3" />
+        Setup Outcome Stats
+      </div>
+      <div className="grid grid-cols-4 gap-2 text-center">
+        <Stat label="Miss rate" value={`${missRate}%`} tone={tone} />
+        <Stat label="Entered" value={String(entered)} tone="text-trade-green" />
+        <Stat label="Skip/Late" value={String(missed)} tone="text-amber-400" />
+        <Stat label="Invalid" value={String(invalidated)} tone="text-trade-red" />
+      </div>
+      {validPlayed > 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {missRate >= 50
+            ? `You're late or skipping ${missRate}% of valid setups. Pre-stage entries and stops to act faster.`
+            : missRate >= 25
+              ? `${missRate}% miss rate — manageable, but consider why you hesitated on the skipped ones.`
+              : `Strong execution — only ${missRate}% of valid setups slipped past.`}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div className="rounded-md border border-border bg-background p-2">
+      <div className={cn("font-data text-base tabular-nums", tone)}>{value}</div>
+      <div className="mt-0.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+        {label}
       </div>
     </div>
   );
