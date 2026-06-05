@@ -223,10 +223,30 @@ function News() {
 
           {tab === "news" ? (
             <>
+              <SearchBar value={searchInput} onChange={setSearchInput} />
               <div className="space-y-3 mb-4">
                 <FilterRow label="Asset" options={ASSET_FILTERS} value={asset} onChange={setAsset} />
                 <FilterRow label="Impact" options={IMPACT_FILTERS} value={impact} onChange={setImpact} />
                 <FilterRow label="Sentiment" options={SENTIMENT_FILTERS} value={sentiment} onChange={setSentiment} />
+                <FilterRow label="Date" options={DATE_RANGE_FILTERS} value={dateRange} onChange={setDateRange} />
+                {dateRange === "custom" ? (
+                  <div className="flex flex-wrap items-center gap-2 pl-1">
+                    <label className="text-xs text-muted-foreground">From</label>
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={(e) => setCustomFrom(e.target.value)}
+                      className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    />
+                    <label className="text-xs text-muted-foreground">To</label>
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                      className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -266,6 +286,7 @@ function News() {
                       article={a}
                       score={scores[a.id]}
                       scoring={pending.has(a.id)}
+                      highlight={searchQuery}
                     />
                   ))
                 )}
