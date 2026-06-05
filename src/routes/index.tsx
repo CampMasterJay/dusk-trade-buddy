@@ -210,6 +210,49 @@ function calcStreak(trades: Trade[]): { type: "W" | "L" | null; count: number } 
   return { type: first, count };
 }
 
+function ProjectionSection({
+  currentBalance,
+  targetBalance,
+  riskPct,
+  rrRatio,
+  winRate,
+}: {
+  currentBalance: number;
+  targetBalance: number;
+  riskPct: number;
+  rrRatio: number;
+  winRate?: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 flex items-center justify-between">
+      <div>
+        <div className="text-xs uppercase tracking-[2px] text-muted-foreground font-data">
+          Projection
+        </div>
+        <div className="mt-1 font-data text-sm text-muted-foreground">
+          See the compounding path to your target
+        </div>
+      </div>
+      <Button
+        onClick={() => setOpen(true)}
+        className="bg-trade-green text-background hover:bg-trade-green/90 font-data"
+      >
+        See Projection
+      </Button>
+      <ProjectionModal
+        open={open}
+        onOpenChange={setOpen}
+        currentBalance={currentBalance}
+        targetBalance={targetBalance}
+        riskPct={riskPct}
+        rrRatio={rrRatio}
+        winRate={winRate}
+      />
+    </section>
+  );
+}
+
 function fmtUSD(n: number, decimals = 2) {
   return n.toLocaleString("en-US", {
     style: "currency",
