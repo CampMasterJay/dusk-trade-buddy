@@ -859,6 +859,7 @@ function AnalysisView({
       )}
 
       {/* Section 7 — Action Buttons */}
+      {(onUseLevels || onSave) && (
       <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
         <button
           type="button"
@@ -885,6 +886,7 @@ function AnalysisView({
           )}
         </button>
       </div>
+      )}
 
       <p className="pt-1 text-[10px] text-muted-foreground">
         AI analysis is informational — not financial advice. Always confirm with your own process.
