@@ -6,7 +6,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { getMacroSummary } from "@/lib/api/macroContext.functions";
+import {
+  getMacroSummary,
+  getMacroIndicators,
+  type MacroIndicators,
+} from "@/lib/api/macroContext.functions";
 import {
   getEconomicCalendar,
   type CalendarEvent,
@@ -232,32 +236,6 @@ function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onCli
 
 // ---------- Macro tab ----------
 
-type MacroIndicators = {
-  fedFundsRate: number;
-  fedFundsLastChange: string; // ISO date
-  nextFomcDate: string; // ISO date
-  vix: number;
-  us10y: number;
-  dxy: number;
-  dxyChangePct: number;
-  advancing: number;
-  declining: number;
-};
-
-// Representative snapshot. In production, swap with a free data feed
-// (FRED for Fed Funds/10Y, CBOE for VIX, etc.).
-const MACRO_SNAPSHOT: MacroIndicators = {
-  fedFundsRate: 4.5,
-  fedFundsLastChange: "2025-12-18",
-  nextFomcDate: "2026-06-17",
-  vix: 17.8,
-  us10y: 4.21,
-  dxy: 103.4,
-  dxyChangePct: -0.18,
-  advancing: 1820,
-  declining: 1140,
-};
-
 function daysUntil(iso: string): number {
   const target = new Date(iso + "T14:00:00Z").getTime();
   return Math.max(0, Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000)));
@@ -278,29 +256,64 @@ function vixTone(vix: number): { label: string; accent: "green" | "amber" | "red
 }
 
 function MacroView() {
-  const m = MACRO_SNAPSHOT;
-  const fomcIn = daysUntil(m.nextFomcDate);
-  const vix = vixTone(m.vix);
-  const breadthRatio = m.advancing / Math.max(1, m.declining);
-  const breadthPos = m.advancing > m.declining;
+  const fetchIndicators = useServerFn(getMacroIndicators);
+  const [m, setM] = useState<MacroIndicators | null>(null);
+  const [indicatorsError, setIndicatorsError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const summarize = useServerFn(getMacroSummary);
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const indicatorsText = useMemo(
-    () =>
-      [
-        `Fed Funds Rate: ${m.fedFundsRate}% (last changed ${fmtDate(m.fedFundsLastChange)})`,
-        `Next FOMC meeting: ${fmtDate(m.nextFomcDate)} (${fomcIn} days)`,
-        `VIX: ${m.vix} (${vix.label})`,
-        `US 10Y yield: ${m.us10y}%`,
-        `DXY: ${m.dxy} (${m.dxyChangePct >= 0 ? "+" : ""}${m.dxyChangePct}% today)`,
-        `Market breadth: ${m.advancing} advancing vs ${m.declining} declining (${breadthRatio.toFixed(2)}:1)`,
-      ].join("\n"),
-    [m, fomcIn, vix.label, breadthRatio],
-  );
+  const loadIndicators = useCallback(async () => {
+    setRefreshing(true);
+    setIndicatorsError(null);
+    try {
+      const res = await fetchIndicators();
+      if (res.ok) setM(res.data);
+      else setIndicatorsError(res.error);
+    } catch (e) {
+      setIndicatorsError(e instanceof Error ? e.message : "Failed to load indicators.");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchIndicators]);
+
+  useEffect(() => {
+    void loadIndicators();
+  }, [loadIndicators]);
+
+  if (!m) {
+    return (
+      <div className="space-y-4">
+        {indicatorsError ? (
+          <div className="rounded-xl border border-trade-red/30 bg-trade-red/10 p-3 text-xs text-trade-red">
+            {indicatorsError}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
+            Loading macro indicators…
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const fomcIn = daysUntil(m.nextFomcDate);
+  const vix = vixTone(m.vix);
+  const breadthRatio = m.advancing / Math.max(1, m.declining);
+  const breadthPos = m.advancing > m.declining;
+
+  const indicatorsText = [
+    `Fed Funds Rate: ${m.fedFundsRate}% (last changed ${fmtDate(m.fedFundsLastChange)})`,
+    `Next FOMC meeting: ${fmtDate(m.nextFomcDate)} (${fomcIn} days)`,
+    `VIX: ${m.vix} (${vix.label}, ${m.vixChangePct >= 0 ? "+" : ""}${m.vixChangePct}% today)`,
+    `US 10Y yield: ${m.us10y}% (${m.us10yChangePct >= 0 ? "+" : ""}${m.us10yChangePct}% today)`,
+    `DXY: ${m.dxy} (${m.dxyChangePct >= 0 ? "+" : ""}${m.dxyChangePct}% today)`,
+    `Market breadth: ${m.advancing} advancing vs ${m.declining} declining (${breadthRatio.toFixed(2)}:1)`,
+  ].join("\n");
 
   const loadSummary = async () => {
     setLoading(true);
@@ -311,11 +324,6 @@ function MacroView() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <div className="space-y-4">
       {/* AI Market Context */}
@@ -325,17 +333,28 @@ function MacroView() {
             <Sparkles className="size-3.5" />
             Market Context
           </div>
-          <button
-            type="button"
-            onClick={loadSummary}
-            disabled={loading}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={cn("size-3", loading && "animate-spin")} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void loadIndicators()}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <RefreshCw className={cn("size-3", refreshing && "animate-spin")} />
+              Data
+            </button>
+            <button
+              type="button"
+              onClick={loadSummary}
+              disabled={loading}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <Sparkles className={cn("size-3", loading && "animate-pulse")} />
+              {summary ? "Re-summarise" : "Summarise"}
+            </button>
+          </div>
         </div>
-        {loading && !summary ? (
+        {loading ? (
           <div className="space-y-2">
             <div className="h-3 w-full rounded bg-muted/40 animate-pulse" />
             <div className="h-3 w-5/6 rounded bg-muted/40 animate-pulse" />
@@ -343,8 +362,12 @@ function MacroView() {
           </div>
         ) : error ? (
           <p className="text-sm text-trade-red">{error}</p>
-        ) : (
+        ) : summary ? (
           <p className="text-sm leading-relaxed text-foreground">{summary}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Tap "Summarise" for a plain-English read on current conditions.
+          </p>
         )}
       </div>
 
@@ -357,8 +380,18 @@ function MacroView() {
           sub={fmtDate(m.nextFomcDate)}
           accent={fomcIn <= 7 ? "amber" : undefined}
         />
-        <IndicatorCard label="VIX" value={m.vix.toFixed(1)} sub={vix.label} accent={vix.accent} />
-        <IndicatorCard label="US 10Y" value={`${m.us10y}%`} sub="Yield" />
+        <IndicatorCard
+          label="VIX"
+          value={m.vix.toFixed(1)}
+          sub={`${vix.label} · ${m.vixChangePct >= 0 ? "+" : ""}${m.vixChangePct}%`}
+          accent={vix.accent}
+        />
+        <IndicatorCard
+          label="US 10Y"
+          value={`${m.us10y}%`}
+          sub={`${m.us10yChangePct >= 0 ? "+" : ""}${m.us10yChangePct}% today`}
+          accent={m.us10yChangePct >= 0 ? "red" : "green"}
+        />
         <IndicatorCard
           label="DXY"
           value={m.dxy.toFixed(1)}
@@ -374,7 +407,9 @@ function MacroView() {
       </div>
 
       <p className="text-[11px] text-muted-foreground px-1">
-        Macro snapshot is indicative. Connect a market data feed for live values.
+        Quotes: {m.sources.quotes === "live" ? "live (Yahoo Finance)" : "fallback snapshot"} · Breadth:{" "}
+        {m.sources.breadth === "live" ? "live" : "fallback"} · Updated{" "}
+        {new Date(m.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
       </p>
     </div>
   );
