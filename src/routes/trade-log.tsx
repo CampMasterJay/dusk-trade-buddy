@@ -228,7 +228,7 @@ function TradeLogScreen() {
           />
         </div>
 
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <Link
             to="/calendar"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
@@ -238,11 +238,16 @@ function TradeLogScreen() {
           </Link>
           <Link
             to="/risk-of-ruin"
-            className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
           >
             <Shield className="h-3.5 w-3.5" />
             Risk of Ruin
           </Link>
+          <ExportButtons
+            userId={userId}
+            startingBalance={Number(settings?.starting_balance ?? 100)}
+            stats={stats}
+          />
         </div>
 
         {/* Stats */}
