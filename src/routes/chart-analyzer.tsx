@@ -52,6 +52,10 @@ import {
 } from "@/lib/chartAnalysisService";
 import { getTrades, type Trade } from "@/lib/tradeService";
 import { TipsCarousel } from "@/components/TipsCarousel";
+import {
+  AnalysisFeedbackPrompt,
+  computeAnalysisAccuracy,
+} from "@/components/AnalysisFeedbackPrompt";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
