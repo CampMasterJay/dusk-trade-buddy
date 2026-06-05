@@ -687,7 +687,7 @@ const TradeCard = memo(function TradeCard({
       </AlertDialog>
     </li>
   );
-}
+});
 
 function Badge({
   className,
