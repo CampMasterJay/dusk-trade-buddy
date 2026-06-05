@@ -56,6 +56,7 @@ import {
   AnalysisFeedbackPrompt,
   computeAnalysisAccuracy,
 } from "@/components/AnalysisFeedbackPrompt";
+import { ScanMode } from "@/components/ScanMode";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
@@ -124,7 +125,7 @@ function ChartAnalyzer() {
   const navigate = useNavigate();
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"analyzer" | "history">("analyzer");
+  const [tab, setTab] = useState<"analyzer" | "scan" | "history">("analyzer");
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -287,8 +288,8 @@ function ChartAnalyzer() {
         </div>
 
         {/* Tabs */}
-        <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-card p-1">
-          {(["analyzer", "history"] as const).map((t) => (
+        <div className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-card p-1">
+          {(["analyzer", "scan", "history"] as const).map((t) => (
             <button
               key={t}
               type="button"
@@ -299,10 +300,12 @@ function ChartAnalyzer() {
                   : "text-muted-foreground hover:bg-accent"
               }`}
             >
-              {t === "analyzer" ? "Analyze" : "Previous"}
+              {t === "analyzer" ? "Analyze" : t === "scan" ? "Scan" : "Previous"}
             </button>
           ))}
         </div>
+
+        {tab === "scan" && <ScanMode />}
 
         {tab === "history" && (
           <HistoryView
