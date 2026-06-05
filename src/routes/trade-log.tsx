@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, Search, BookOpen, CalendarDays, Shield } from "lucide-react";
+import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,6 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   getTrades,
+  getAllTrades,
   getTradeStats,
   deleteTrade,
   type Trade,
