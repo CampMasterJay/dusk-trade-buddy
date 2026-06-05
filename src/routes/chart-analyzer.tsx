@@ -77,7 +77,28 @@ type Analysis = {
   setupIdea?: { direction?: "long" | "short" | "none"; entry?: string; stop?: string; target?: string; rr?: string };
   risks?: string[];
   summary?: string;
+  frames?: Partial<Record<"HTF" | "MTF" | "LTF", {
+    timeframe?: string | null;
+    trend?: "bullish" | "bearish" | "sideways" | string;
+    structure?: string;
+    summary?: string;
+  } | null>>;
+  mtfAlignment?: {
+    aligned?: number;
+    total?: number;
+    verdict?: string;
+    htfTrend?: string;
+    mtfStructure?: string;
+    ltfSignal?: string;
+  };
 };
+
+type Slot = "HTF" | "MTF" | "LTF";
+const SLOT_META: { key: Slot; label: string; tfs: string[] }[] = [
+  { key: "HTF", label: "Higher Timeframe", tfs: ["4h", "1h", "Daily"] },
+  { key: "MTF", label: "Entry Timeframe", tfs: ["15m", "5m"] },
+  { key: "LTF", label: "Trigger Timeframe", tfs: ["2m", "1m"] },
+];
 
 function ChartAnalyzer() {
   const fileRef = useRef<HTMLInputElement>(null);
