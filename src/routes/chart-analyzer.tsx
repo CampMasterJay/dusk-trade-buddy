@@ -78,6 +78,54 @@ function ChartAnalyzer() {
   const [raw, setRaw] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
+  const { user } = useAuth();
+  const [tab, setTab] = useState<"analyzer" | "history">("analyzer");
+  const [history, setHistory] = useState<SavedAnalysis[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<SavedAnalysis | null>(null);
+  const [filterSetup, setFilterSetup] = useState<string>("all");
+  const [filterInstrument, setFilterInstrument] = useState<string>("all");
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [linkSheetFor, setLinkSheetFor] = useState<SavedAnalysis | null>(null);
+
+  async function refreshHistory() {
+    if (!user) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    const { data, error } = await listChartAnalyses(user.id);
+    if (error) setHistoryError(error.message);
+    else setHistory(data ?? []);
+    setHistoryLoading(false);
+  }
+
+  useEffect(() => {
+    if (tab === "history" && user) {
+      void refreshHistory();
+      void getTrades(user.id, 100).then(({ data }) => setTrades(data ?? []));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user?.id]);
+
+  const setupOptions = useMemo(() => {
+    const s = new Set<string>();
+    history.forEach((h) => h.setup_detected && s.add(h.setup_detected));
+    return Array.from(s);
+  }, [history]);
+  const instrumentOptions = useMemo(() => {
+    const s = new Set<string>();
+    history.forEach((h) => h.instrument && s.add(h.instrument));
+    return Array.from(s);
+  }, [history]);
+  const filtered = useMemo(
+    () =>
+      history.filter(
+        (h) =>
+          (filterSetup === "all" || h.setup_detected === filterSetup) &&
+          (filterInstrument === "all" || h.instrument === filterInstrument),
+      ),
+    [history, filterSetup, filterInstrument],
+  );
 
   async function handleFile(file: File) {
     setError(null);
@@ -99,8 +147,18 @@ function ChartAnalyzer() {
       if (!res.ok) {
         setError(res.error);
       } else {
-        setAnalysis((res.analysis as Analysis) ?? null);
+        const a = (res.analysis as Analysis) ?? null;
+        setAnalysis(a);
         setRaw(res.raw ?? null);
+        if (user && a) {
+          await saveChartAnalysis(
+            buildAnalysisInsert({
+              userId: user.id,
+              chartUrl: processed.dataUrl,
+              analysis: a as unknown as Record<string, unknown>,
+            }),
+          );
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");
