@@ -61,7 +61,6 @@ function Index() {
 
 function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useAuth();
 
   const totalPortfolio = portfolioData.reduce((sum, item) => sum + item.value, 0);
   const totalPnl = portfolioData.reduce((sum, item) => sum + item.pnl, 0);
@@ -69,54 +68,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="flex h-14 items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 hover:bg-accent rounded-md"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-trade-green/20">
-                <Zap className="h-5 w-5 text-trade-green" />
-              </div>
-              <span className="text-lg font-bold font-heading tracking-tight">
-                Edge<span className="text-trade-green">Trader</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="hidden md:flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search assets..."
-                className="h-9 w-64 rounded-md border border-input bg-background pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-            <button className="relative p-2 hover:bg-accent rounded-md">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-trade-red" />
-            </button>
-            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border">
-              <span className="text-xs text-muted-foreground font-data max-w-[160px] truncate">
-                {user?.email}
-              </span>
-              <button
-                onClick={() => signOut()}
-                title="Sign out"
-                className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-trade-red transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader balance={totalPortfolio} />
 
       <div className="flex">
         {/* Sidebar */}
