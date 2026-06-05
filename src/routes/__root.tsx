@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -154,6 +155,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     initServiceWorker();
@@ -195,7 +197,9 @@ function RootComponent() {
           <OfflineBanner />
           <HighImpactBanner />
           <div className="pb-16 md:pb-0">
-            <Outlet />
+            <div key={pathname} className="animate-route-slide">
+              <Outlet />
+            </div>
           </div>
           <BottomNav />
           <CoachChat />
