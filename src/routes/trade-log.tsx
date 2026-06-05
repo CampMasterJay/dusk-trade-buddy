@@ -8,6 +8,8 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
+import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
+import { computeDrawdown } from "@/lib/drawdown";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
