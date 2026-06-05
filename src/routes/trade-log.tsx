@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, Search, BookOpen, CalendarDays, Shield } from "lucide-react";
+import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,6 +11,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   getTrades,
+  getAllTrades,
   getTradeStats,
   deleteTrade,
   type Trade,
@@ -227,7 +228,7 @@ function TradeLogScreen() {
           />
         </div>
 
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <Link
             to="/calendar"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
@@ -237,11 +238,16 @@ function TradeLogScreen() {
           </Link>
           <Link
             to="/risk-of-ruin"
-            className="ml-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
           >
             <Shield className="h-3.5 w-3.5" />
             Risk of Ruin
           </Link>
+          <ExportButtons
+            userId={userId}
+            startingBalance={Number(settings?.starting_balance ?? 100)}
+            stats={stats}
+          />
         </div>
 
         {/* Stats */}
@@ -582,5 +588,195 @@ function formatDate(d: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+/* ============ Export helpers ============ */
+
+function escapeCsvCell(v: string | number | null | undefined): string {
+  const str = String(v ?? "");
+  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function buildCsv(allTrades: Trade[], startingBalance: number): string {
+  const headers = [
+    "Date",
+    "Instrument",
+    "Direction",
+    "Entry",
+    "Stop",
+    "Target",
+    "Result",
+    "R Multiple",
+    "P&L",
+    "Running Balance",
+    "Notes",
+  ];
+  let csv = headers.map(escapeCsvCell).join(",") + "\n";
+  let running = startingBalance;
+  for (const t of allTrades) {
+    running += Number(t.pnl ?? 0);
+    const row = [
+      t.date,
+      t.instrument,
+      t.direction,
+      t.entry,
+      t.stop,
+      t.target,
+      t.result,
+      t.r_multiple == null ? "" : Number(t.r_multiple).toFixed(2),
+      Number(t.pnl ?? 0).toFixed(2),
+      running.toFixed(2),
+      t.notes ?? "",
+    ];
+    csv += row.map(escapeCsvCell).join(",") + "\n";
+  }
+  return csv;
+}
+
+function triggerDownload(filename: string, content: string, mime = "text/csv") {
+  const blob = new Blob([content], { type: `${mime};charset=utf-8;` });
+  const url = URL.createObjectURL(blob);
+
+  // Try Web Share API on mobile
+  const file = new File([blob], filename, { type: blob.type });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator
+      .share({ files: [file], title: filename })
+      .catch(() => fallbackDownload(url, filename));
+  } else {
+    fallbackDownload(url, filename);
+  }
+}
+
+function fallbackDownload(url: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
+function getWeekBounds(d = new Date()) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diffToMon = (day + 6) % 7;
+  const mon = new Date(dt);
+  mon.setDate(dt.getDate() - diffToMon);
+  mon.setHours(0, 0, 0, 0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  sun.setHours(23, 59, 59, 999);
+  return { mon, sun };
+}
+
+function buildWeeklySummary(allTrades: Trade[], stats: TradeStatsType | null): string {
+  const { mon, sun } = getWeekBounds();
+  const monStr = mon.toISOString().slice(0, 10);
+  const sunStr = sun.toISOString().slice(0, 10);
+
+  const weekTrades = allTrades.filter(
+    (t) => t.date >= monStr && t.date <= sunStr,
+  );
+  const wins = weekTrades.filter((t) => t.result === "Win");
+  const losses = weekTrades.filter((t) => t.result === "Loss");
+  const winRate = weekTrades.length > 0 ? (wins.length / weekTrades.length) * 100 : 0;
+  const netPnl = weekTrades.reduce((a, t) => a + Number(t.pnl ?? 0), 0);
+  const totalR = weekTrades.reduce((a, t) => a + Number(t.r_multiple ?? 0), 0);
+
+  const fmtMoney = (n: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
+  const lines: string[] = [
+    "📊 EdgeTrader Weekly Summary",
+    `${mon.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${sun.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`,
+    "",
+    `Trades taken: ${weekTrades.length}`,
+    `Win rate: ${winRate.toFixed(0)}% (${wins.length}W / ${losses.length}L)`,
+    `Net P&L: ${netPnl >= 0 ? "+" : ""}${fmtMoney(netPnl)}`,
+    `Total R: ${totalR.toFixed(2)}R`,
+  ];
+
+  if (stats) {
+    const ev = stats.ev;
+    const avgWin = stats.avgWin;
+    const avgLoss = Math.abs(stats.avgLoss);
+    lines.push(``, `Avg Win: ${fmtMoney(avgWin)}`);
+    lines.push(`Avg Loss: ${fmtMoney(-avgLoss)}`);
+    lines.push(`EV / Trade: ${ev >= 0 ? "+" : ""}${fmtMoney(ev)}`);
+  }
+
+  return lines.join("\n");
+}
+
+function ExportButtons({
+  userId,
+  startingBalance,
+  stats,
+}: {
+  userId: string | null;
+  startingBalance: number;
+  stats: TradeStatsType | null;
+}) {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportCsv = async () => {
+    if (!userId) return;
+    setExporting(true);
+    const res = await getAllTrades(userId);
+    setExporting(false);
+    if (res.error || !res.data) {
+      toast.error("Failed to load trades for export");
+      return;
+    }
+    const csv = buildCsv(res.data, startingBalance);
+    const today = new Date().toISOString().slice(0, 10);
+    const filename = `EdgeTrader_trades_${today}.csv`;
+    triggerDownload(filename, csv);
+    toast.success("CSV exported");
+  };
+
+  const handleCopySummary = async () => {
+    if (!userId) return;
+    const res = await getAllTrades(userId);
+    if (res.error || !res.data) {
+      toast.error("Failed to load trades");
+      return;
+    }
+    const text = buildWeeklySummary(res.data, stats);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Weekly summary copied to clipboard");
+    } catch {
+      toast.error("Could not copy to clipboard");
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleExportCsv}
+        disabled={exporting}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50 disabled:opacity-50"
+      >
+        <Download className="h-3.5 w-3.5" />
+        {exporting ? "Exporting…" : "Export CSV"}
+      </button>
+      <button
+        onClick={handleCopySummary}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
+      >
+        <ClipboardCopy className="h-3.5 w-3.5" />
+        Copy stats
+      </button>
+    </>
+  );
 }
 

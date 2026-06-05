@@ -51,6 +51,32 @@ export async function getTrades(
   }
 }
 
+export async function getAllTrades(userId: string): Promise<ServiceResult<Trade[]>> {
+  try {
+    const all: Trade[] = [];
+    const chunk = 1000;
+    let offset = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from("trades")
+        .select("*")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("date", { ascending: true })
+        .order("created_at", { ascending: true })
+        .range(offset, offset + chunk - 1);
+      if (error) throw error;
+      const rows = data ?? [];
+      all.push(...rows);
+      if (rows.length < chunk) break;
+      offset += chunk;
+    }
+    return { data: all, error: null };
+  } catch (err) {
+    return { data: null, error: toError(err) };
+  }
+}
+
 export async function getTradeById(
   id: string,
 ): Promise<ServiceResult<Trade>> {
