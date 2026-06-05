@@ -639,6 +639,8 @@ function AnalysisView({
   a,
   balance,
   riskPct,
+  minRr,
+  session,
   onUseLevels,
   onSave,
   saved,
@@ -647,6 +649,8 @@ function AnalysisView({
   a: Analysis;
   balance?: number;
   riskPct?: number;
+  minRr?: number;
+  session?: string | null;
   onUseLevels?: () => void;
   onSave?: () => void | Promise<void>;
   saved?: boolean;
