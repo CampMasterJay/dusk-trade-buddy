@@ -601,73 +601,290 @@ function Chips({ items }: { items?: string[] }) {
   );
 }
 
-function AnalysisView({ a }: { a: Analysis }) {
+function BiasBadge({ b }: { b?: string }) {
+  const norm = (b ?? "").toLowerCase();
+  const variant =
+    norm === "long"
+      ? { cls: "bg-blue-500/15 text-blue-400 border-blue-500/40", label: "LONG" }
+      : norm === "short"
+        ? { cls: "bg-amber-500/15 text-amber-400 border-amber-500/40", label: "SHORT" }
+        : { cls: "bg-muted text-muted-foreground border-border", label: "NEUTRAL" };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-data font-bold uppercase tracking-[2px] ${variant.cls}`}
+    >
+      {variant.label}
+    </span>
+  );
+}
+
+function toNum(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : parseFloat(String(v).replace(/[^\d.\-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function fmtUsd(v: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(v);
+}
+
+function AnalysisView({
+  a,
+  balance,
+  riskPct,
+  onUseLevels,
+  onSave,
+  saved,
+  saving,
+}: {
+  a: Analysis;
+  balance: number;
+  riskPct: number;
+  onUseLevels: () => void;
+  onSave: () => void | Promise<void>;
+  saved: boolean;
+  saving: boolean;
+}) {
+  const setupName = (a.setupDetected ?? a.patterns?.[0] ?? "Setup")
+    .toString()
+    .toUpperCase();
+  const quality = Math.max(
+    0,
+    Math.min(5, Math.round(Number(a.setupQuality ?? 0))),
+  );
+  const bias = a.biasDirection ?? a.setupIdea?.direction ?? "neutral";
+
+  const entry = toNum(a.setupIdea?.entry);
+  const stop = toNum(a.setupIdea?.stop);
+  const target = toNum(a.setupIdea?.target);
+  const rr =
+    entry != null && stop != null && target != null && entry !== stop
+      ? Math.abs(target - entry) / Math.abs(entry - stop)
+      : toNum(a.setupIdea?.rr);
+  const riskDollar = balance > 0 && riskPct > 0 ? (balance * riskPct) / 100 : 0;
+  const targetDollar = rr != null && rr > 0 ? riskDollar * rr : 0;
+
+  const confluence = a.confluenceFactors ?? [];
+  const risks = a.riskFactors ?? a.risks ?? [];
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        {a.instrument && (
-          <span className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-data">
-            {a.instrument}
-          </span>
-        )}
-        {a.timeframe && (
-          <span className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-data">
-            {a.timeframe}
-          </span>
-        )}
-        <TrendBadge trend={a.trend} />
-      </div>
-
-      {a.summary && (
-        <p className="rounded-lg border border-border bg-background/50 p-3 text-sm text-foreground">
-          {a.summary}
-        </p>
-      )}
-
-      {a.structure && <Section title="Structure">{a.structure}</Section>}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Section title="Support">
-          <Chips items={a.keyLevels?.support} />
-        </Section>
-        <Section title="Resistance">
-          <Chips items={a.keyLevels?.resistance} />
-        </Section>
-        <Section title="Patterns">
-          <Chips items={a.patterns} />
-        </Section>
-        <Section title="Indicators">
-          <Chips items={a.indicators} />
-        </Section>
-      </div>
-
-      {a.setupIdea && (
-        <div className="rounded-lg border border-trade-green/20 bg-trade-green/5 p-3">
-          <h3 className="mb-2 text-[10px] font-data uppercase tracking-[2px] text-trade-green">
-            Setup Idea {a.setupIdea.direction ? `· ${a.setupIdea.direction.toUpperCase()}` : ""}
-          </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs font-data sm:grid-cols-4">
-            <div><span className="text-muted-foreground">Entry</span><div>{a.setupIdea.entry ?? "—"}</div></div>
-            <div><span className="text-muted-foreground">Stop</span><div>{a.setupIdea.stop ?? "—"}</div></div>
-            <div><span className="text-muted-foreground">Target</span><div>{a.setupIdea.target ?? "—"}</div></div>
-            <div><span className="text-muted-foreground">R:R</span><div>{a.setupIdea.rr ?? "—"}</div></div>
+      {/* Section 1 — Setup Overview */}
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg sm:text-xl font-bold font-data uppercase tracking-[2px] leading-tight text-foreground">
+            {setupName}
+          </h2>
+          <BiasBadge b={bias} />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Star
+                key={i}
+                className={`h-4 w-4 ${
+                  i < quality
+                    ? "fill-trade-green text-trade-green"
+                    : "text-muted-foreground/40"
+                }`}
+              />
+            ))}
+            <span className="ml-1.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+              Quality {quality}/5
+            </span>
           </div>
+          <TrendBadge trend={a.trend} />
+          {a.instrument && (
+            <span className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-data">
+              {a.instrument}
+            </span>
+          )}
+          {a.timeframe && (
+            <span className="rounded-md border border-border bg-background px-2 py-0.5 text-xs font-data">
+              {a.timeframe}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Section 2 — Trade Levels */}
+      <div className="rounded-xl border border-trade-green/30 bg-gradient-to-br from-trade-green/5 to-transparent p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[10px] font-data uppercase tracking-[3px] text-trade-green">
+            Trade Levels
+          </h3>
+          {rr != null && (
+            <span className="inline-flex items-center rounded-full border border-trade-green/40 bg-trade-green/10 px-2 py-0.5 text-[11px] font-data font-bold text-trade-green">
+              R:R {rr.toFixed(2)}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-border bg-background p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+              <ArrowUp className="h-3 w-3 text-trade-green" /> Entry
+            </div>
+            <div className="mt-1 text-sm font-bold font-data text-trade-green">
+              {entry ?? a.setupIdea?.entry ?? "—"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-background p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+              <X className="h-3 w-3 text-trade-red" /> Stop
+            </div>
+            <div className="mt-1 text-sm font-bold font-data text-trade-red">
+              {stop ?? a.setupIdea?.stop ?? "—"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-background p-2.5">
+            <div className="flex items-center gap-1 text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+              <TargetIcon className="h-3 w-3 text-trade-green" /> Target
+            </div>
+            <div className="mt-1 text-sm font-bold font-data text-trade-green">
+              {target ?? a.setupIdea?.target ?? "—"}
+            </div>
+          </div>
+        </div>
+        {riskDollar > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
+            <div className="text-xs font-data">
+              <span className="text-muted-foreground uppercase tracking-wider text-[9px]">
+                Risk
+              </span>
+              <div className="text-trade-red font-bold">{fmtUsd(riskDollar)}</div>
+            </div>
+            <div className="text-xs font-data">
+              <span className="text-muted-foreground uppercase tracking-wider text-[9px]">
+                Target
+              </span>
+              <div className="text-trade-green font-bold">
+                {targetDollar > 0 ? fmtUsd(targetDollar) : "—"}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Section 3 — Key Levels */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-border bg-card p-3">
+          <h3 className="mb-2 text-[10px] font-data uppercase tracking-[2px] text-trade-green">
+            Support
+          </h3>
+          {a.keyLevels?.support && a.keyLevels.support.length > 0 ? (
+            <ul className="space-y-1">
+              {a.keyLevels.support.map((s, i) => (
+                <li
+                  key={i}
+                  className="font-data text-sm font-medium text-trade-green"
+                >
+                  {s}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">—</p>
+          )}
+        </div>
+        <div className="rounded-lg border border-border bg-card p-3">
+          <h3 className="mb-2 text-[10px] font-data uppercase tracking-[2px] text-trade-red">
+            Resistance
+          </h3>
+          {a.keyLevels?.resistance && a.keyLevels.resistance.length > 0 ? (
+            <ul className="space-y-1">
+              {a.keyLevels.resistance.map((s, i) => (
+                <li
+                  key={i}
+                  className="font-data text-sm font-medium text-trade-red"
+                >
+                  {s}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-muted-foreground">—</p>
+          )}
+        </div>
+      </div>
+
+      {/* Section 4 — Confluence */}
+      {confluence.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-[10px] font-data uppercase tracking-[2px] text-trade-green">
+            Confluence Factors
+          </h3>
+          <ul className="space-y-1.5">
+            {confluence.map((c, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-trade-green" />
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
-      {a.bias && <Section title="Bias">{a.bias}</Section>}
-
-      {a.risks && a.risks.length > 0 && (
-        <Section title="Risks">
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {a.risks.map((r, i) => (
-              <li key={i}>{r}</li>
+      {/* Section 5 — Risk Factors */}
+      {risks.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-[10px] font-data uppercase tracking-[2px] text-trade-red">
+            Risk Factors
+          </h3>
+          <ul className="space-y-1.5">
+            {risks.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-trade-red" />
+                <span>{r}</span>
+              </li>
             ))}
           </ul>
-        </Section>
+        </div>
       )}
 
-      <p className="pt-2 text-[10px] text-muted-foreground">
+      {/* Section 6 — AI Summary */}
+      {a.summary && (
+        <div className="rounded-xl border border-trade-green/20 bg-gradient-to-br from-trade-green/8 via-card to-card p-4">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-data uppercase tracking-[2px] text-trade-green">
+            <Sparkles className="h-3 w-3" />
+            AI Summary
+          </div>
+          <p className="text-sm leading-relaxed text-foreground">{a.summary}</p>
+        </div>
+      )}
+
+      {/* Section 7 — Action Buttons */}
+      <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onUseLevels}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-trade-green px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background hover:bg-trade-green/90 transition-colors"
+        >
+          Use These Levels
+          <ArrowRight className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => void onSave()}
+          disabled={saved || saving}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-3 text-sm font-bold font-data uppercase tracking-wider hover:bg-accent disabled:opacity-60"
+        >
+          {saved ? (
+            <>
+              <Check className="h-4 w-4 text-trade-green" /> Saved
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save Analysis"}
+            </>
+          )}
+        </button>
+      </div>
+
+      <p className="pt-1 text-[10px] text-muted-foreground">
         AI analysis is informational — not financial advice. Always confirm with your own process.
       </p>
     </div>
