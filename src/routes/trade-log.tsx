@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, Search } from "lucide-react";
+import { Trash2, Search, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -16,6 +16,7 @@ import {
   type Trade,
   type TradeStats as TradeStatsType,
 } from "@/lib/tradeService";
+import { getJournalTradeIds } from "@/lib/journalService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,6 +72,7 @@ function TradeLogScreen() {
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStatsType | null>(null);
+  const [journalIds, setJournalIds] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -89,8 +91,12 @@ function TradeLogScreen() {
     let active = true;
     setLoading(true);
     setError(null);
-    Promise.all([getTrades(userId, PAGE_SIZE, 0), getTradeStats(userId)]).then(
-      ([tRes, sRes]) => {
+    Promise.all([
+      getTrades(userId, PAGE_SIZE, 0),
+      getTradeStats(userId),
+      getJournalTradeIds(userId),
+    ]).then(
+      ([tRes, sRes, jRes]) => {
         if (!active) return;
         if (tRes.error) {
           setError(tRes.error.message);
@@ -100,6 +106,7 @@ function TradeLogScreen() {
         const list = tRes.data ?? [];
         setTrades(list);
         setStats(sRes.data);
+        setJournalIds(jRes.data ?? new Set());
         setPage(1);
         setHasMore(list.length === PAGE_SIZE);
         setLoading(false);
@@ -312,6 +319,7 @@ function TradeLogScreen() {
                 key={t.id}
                 trade={t}
                 runningBalance={balanceMap.get(t.id) ?? 0}
+                hasJournal={journalIds.has(t.id)}
                 onOpen={() => {
                   setSelectedTrade(t);
                   setDetailOpen(true);
@@ -351,11 +359,13 @@ function TradeLogScreen() {
 function TradeCard({
   trade,
   runningBalance,
+  hasJournal,
   onOpen,
   onDeleted,
 }: {
   trade: Trade;
   runningBalance: number;
+  hasJournal: boolean;
   onOpen: () => void;
   onDeleted: () => void;
 }) {
@@ -453,6 +463,15 @@ function TradeCard({
                 </span>
                 <Badge className={dirColor}>{trade.direction}</Badge>
                 <Badge className={resultColor}>{trade.result}</Badge>
+                {hasJournal && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-trade-amber/40 bg-trade-amber/10 text-trade-amber px-1.5 py-0.5"
+                    title="Has journal entry"
+                    aria-label="Has journal entry"
+                  >
+                    <BookOpen className="h-3 w-3" />
+                  </span>
+                )}
               </div>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className={cn("font-data font-bold text-lg", pnlColor)}>
