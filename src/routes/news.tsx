@@ -990,6 +990,7 @@ function CalendarView() {
     data: events,
     error,
     refreshing: loading,
+    revalidate: load,
   } = useSWR<CalendarEvent[]>(
     "news.calendar",
     async () => {
