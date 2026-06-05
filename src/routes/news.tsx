@@ -782,3 +782,339 @@ function MarketStatusBar() {
     </div>
   );
 }
+
+// ---------- Economic Calendar tab ----------
+
+function startOfDay(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function formatEventTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatDayHeading(ms: number): string {
+  const today = startOfDay(Date.now());
+  const day = startOfDay(ms);
+  const diffDays = Math.round((day - today) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays === -1) return "Yesterday";
+  return new Date(ms).toLocaleDateString([], {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatCountdown(targetMs: number, nowMs: number): string {
+  const diff = Math.max(0, targetMs - nowMs);
+  const totalSec = Math.floor(diff / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${String(s).padStart(2, "0")}s`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
+  return `${s}s`;
+}
+
+function impactStyles(impact: CalendarImpact): { dot: string; chip: string; label: string } {
+  switch (impact) {
+    case "HIGH":
+      return {
+        dot: "bg-trade-red",
+        chip: "bg-trade-red/15 text-trade-red border-trade-red/30",
+        label: "High",
+      };
+    case "MEDIUM":
+      return {
+        dot: "bg-amber-500",
+        chip: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+        label: "Med",
+      };
+    case "LOW":
+      return {
+        dot: "bg-muted-foreground",
+        chip: "bg-muted text-muted-foreground border-border",
+        label: "Low",
+      };
+    case "HOLIDAY":
+      return {
+        dot: "bg-muted-foreground/50",
+        chip: "bg-muted text-muted-foreground border-border",
+        label: "Holiday",
+      };
+  }
+}
+
+function CalendarView() {
+  const fetchCal = useServerFn(getEconomicCalendar);
+  const [events, setEvents] = useState<CalendarEvent[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [usOnly, setUsOnly] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchCal();
+      if (res.ok) setEvents(res.events);
+      else setError(res.error);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load calendar.");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchCal]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!events) return [];
+    return usOnly ? events.filter((e) => e.country === "USD") : events;
+  }, [events, usOnly]);
+
+  const nextHigh = useMemo(
+    () => filtered.find((e) => e.impact === "HIGH" && e.dateMs > now) ?? null,
+    [filtered, now],
+  );
+
+  const minutesToNextHigh = nextHigh
+    ? Math.floor((nextHigh.dateMs - now) / 60000)
+    : null;
+  const showTradeWarning =
+    nextHigh !== null &&
+    minutesToNextHigh !== null &&
+    minutesToNextHigh >= 0 &&
+    minutesToNextHigh <= 15;
+
+  // Group events by day.
+  const grouped = useMemo(() => {
+    const map = new Map<number, CalendarEvent[]>();
+    for (const e of filtered) {
+      const k = startOfDay(e.dateMs);
+      const arr = map.get(k) ?? [];
+      arr.push(e);
+      map.set(k, arr);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+  }, [filtered]);
+
+  return (
+    <div className="space-y-4">
+      {/* Filter + refresh */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-lg border border-border bg-card p-1">
+          <button
+            type="button"
+            onClick={() => setUsOnly(true)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              usOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            US only
+          </button>
+          <button
+            type="button"
+            onClick={() => setUsOnly(false)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+              !usOnly ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            All currencies
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+          Refresh
+        </button>
+      </div>
+
+      {/* Trade Around News warning */}
+      {showTradeWarning && nextHigh ? (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-amber-500">
+              HIGH IMPACT in {minutesToNextHigh} min — Consider waiting
+            </div>
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+              {nextHigh.country} · {nextHigh.title} at {formatEventTime(nextHigh.dateMs)}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Countdown to next HIGH */}
+      {nextHigh ? (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Next high-impact event
+          </div>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <div className="font-data text-2xl font-semibold text-foreground">
+              {formatCountdown(nextHigh.dateMs, now)}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {nextHigh.country} · {nextHigh.title}
+            </div>
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {formatDayHeading(nextHigh.dateMs)} at {formatEventTime(nextHigh.dateMs)}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Loading / error / empty */}
+      {loading && !events ? (
+        <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+          <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
+          Loading economic calendar…
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-trade-red/30 bg-trade-red/10 p-3 text-xs text-trade-red">
+          {error}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
+          No events found for this filter.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {grouped.map(([day, dayEvents]) => (
+            <div key={day}>
+              <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                <span className="font-semibold text-foreground">{formatDayHeading(day)}</span>
+                <span className="h-px flex-1 bg-border" />
+                <span>{dayEvents.length} events</span>
+              </div>
+              <ol className="relative space-y-2 border-l border-border pl-4">
+                {dayEvents.map((e) => (
+                  <EventRow key={e.id} event={e} now={now} />
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventRow({ event, now }: { event: CalendarEvent; now: number }) {
+  const styles = impactStyles(event.impact);
+  const past = event.dateMs <= now;
+  const beat =
+    past && event.actual && event.forecast
+      ? compareNumeric(event.actual, event.forecast)
+      : null;
+
+  return (
+    <li className="relative">
+      <span
+        className={cn(
+          "absolute -left-[21px] top-1.5 size-2.5 rounded-full ring-2 ring-background",
+          styles.dot,
+        )}
+      />
+      <div
+        className={cn(
+          "rounded-lg border border-border bg-card p-3",
+          past && "opacity-70",
+        )}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="font-data text-xs text-muted-foreground">
+              {formatEventTime(event.dateMs)}
+            </span>
+            <span className="rounded border border-border bg-muted px-1.5 py-0.5 font-data text-[10px] font-semibold uppercase tracking-wider">
+              {event.country || "—"}
+            </span>
+            <span className="truncate text-sm font-medium">{event.title}</span>
+          </div>
+          <span
+            className={cn(
+              "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+              styles.chip,
+            )}
+          >
+            {styles.label}
+          </span>
+        </div>
+        {past ? (
+          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+            <Stat label="Actual" value={event.actual} tone={beat} />
+            <Stat label="Forecast" value={event.forecast} />
+            <Stat label="Previous" value={event.previous} />
+          </div>
+        ) : (event.forecast || event.previous) ? (
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <Stat label="Forecast" value={event.forecast} />
+            <Stat label="Previous" value={event.previous} />
+          </div>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string | null;
+  tone?: "beat" | "miss" | "match" | null;
+}) {
+  const toneClass =
+    tone === "beat"
+      ? "text-trade-green"
+      : tone === "miss"
+        ? "text-trade-red"
+        : "text-foreground";
+  return (
+    <div className="rounded border border-border/60 bg-background/40 px-2 py-1">
+      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className={cn("font-data text-xs font-semibold", toneClass)}>
+        {value ?? "—"}
+      </div>
+    </div>
+  );
+}
+
+function compareNumeric(actual: string, forecast: string): "beat" | "miss" | "match" {
+  const a = parseFloat(actual.replace(/[^0-9.\-]/g, ""));
+  const f = parseFloat(forecast.replace(/[^0-9.\-]/g, ""));
+  if (!Number.isFinite(a) || !Number.isFinite(f)) return "match";
+  if (a > f) return "beat";
+  if (a < f) return "miss";
+  return "match";
+}
