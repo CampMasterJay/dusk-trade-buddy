@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LogOut, KeyRound, CheckCircle2, Circle, Lock, Plus, Bell } from "lucide-react";
+import { LogOut, KeyRound, CheckCircle2, Circle, Lock, Plus, Bell, Bookmark, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,6 +15,12 @@ import {
   subscribeNotificationSettings,
   type NotificationSettings,
 } from "@/lib/notifications";
+import {
+  clearAllSavedArticles,
+  getSavedArticles,
+  subscribeSavedArticles,
+  SAVED_MAX,
+} from "@/lib/savedArticlesDb";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -62,6 +68,8 @@ function Settings() {
           </div>
 
           <NotificationsSection />
+
+          <SavedArticlesSection />
 
           <ApiKeysSection />
 
