@@ -1090,3 +1090,207 @@ function LinkTradeModal({
     </div>
   );
 }
+
+function FrameSlot({
+  slot,
+  label,
+  timeframeOptions,
+  frame,
+  onFile,
+  onTimeframeChange,
+  onClear,
+}: {
+  slot: Slot;
+  label: string;
+  timeframeOptions: string[];
+  frame: { image: ProcessedImage; timeframe: string } | null;
+  onFile: (file: File, timeframe: string) => void;
+  onTimeframeChange: (tf: string) => void;
+  onClear: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [tf, setTf] = useState<string>(
+    frame?.timeframe ?? timeframeOptions[0],
+  );
+  useEffect(() => {
+    if (frame?.timeframe) setTf(frame.timeframe);
+  }, [frame?.timeframe]);
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-data uppercase tracking-[2px] text-trade-green">
+            {slot}
+          </div>
+          <div className="truncate text-xs font-medium text-foreground">
+            {label}
+          </div>
+        </div>
+        <select
+          value={tf}
+          onChange={(e) => {
+            setTf(e.target.value);
+            if (frame) onTimeframeChange(e.target.value);
+          }}
+          className="rounded border border-border bg-card px-1.5 py-1 text-[11px] font-data"
+        >
+          {timeframeOptions.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {frame ? (
+        <div className="space-y-2">
+          <div className="overflow-hidden rounded-md border border-border bg-card">
+            <img
+              src={frame.image.dataUrl}
+              alt={`${slot} chart`}
+              className="block h-28 w-full object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-data text-muted-foreground">
+              {formatBytes(frame.image.bytes)} · {frame.image.width}×{frame.image.height}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[10px] font-medium hover:bg-accent"
+              >
+                <Upload className="h-3 w-3" />
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={onClear}
+                className="inline-flex items-center gap-1 rounded border border-trade-red/30 bg-trade-red/10 px-2 py-1 text-[10px] font-medium text-trade-red hover:bg-trade-red/20"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-trade-green/50 hover:bg-trade-green/5 hover:text-trade-green"
+        >
+          <Camera className="h-5 w-5" />
+          <span className="text-[10px] font-data uppercase tracking-wider">
+            Upload
+          </span>
+        </button>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f, tf);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+export function MtfAlignmentCard({ a }: { a: Analysis }) {
+  const m = a.mtfAlignment;
+  const fr = a.frames;
+  if (!m && !fr) return null;
+  const total = m?.total ?? Object.values(fr ?? {}).filter(Boolean).length ?? 0;
+  const aligned = m?.aligned ?? 0;
+  const fullAligned = total > 0 && aligned === total;
+  const color = fullAligned
+    ? "#00ffaa"
+    : aligned >= 2
+      ? "#4ade80"
+      : aligned === 1
+        ? "#f59e0b"
+        : "#f87171";
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[10px] font-data uppercase tracking-[3px] text-muted-foreground">
+          Multi-Timeframe Alignment
+        </h3>
+        <div className="text-right">
+          <div
+            className="font-data font-bold leading-none"
+            style={{ color, fontSize: "1.75rem" }}
+          >
+            {aligned}
+            <span className="text-sm text-muted-foreground font-normal">
+              /{total || 3}
+            </span>
+          </div>
+          <div
+            className="mt-0.5 text-[9px] font-data uppercase tracking-[2px]"
+            style={{ color }}
+          >
+            timeframes aligned
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5 text-xs">
+        {m?.htfTrend && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              HTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Trend:</span>{" "}
+              <span className="font-medium">{m.htfTrend}</span>
+            </span>
+          </div>
+        )}
+        {m?.mtfStructure && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              MTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Structure:</span>{" "}
+              <span className="font-medium">{m.mtfStructure}</span>
+            </span>
+          </div>
+        )}
+        {m?.ltfSignal && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              LTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Signal:</span>{" "}
+              <span className="font-medium">{m.ltfSignal}</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {m?.verdict && (
+        <div
+          className="mt-3 rounded-lg border px-3 py-2 text-center text-[11px] font-data font-bold uppercase tracking-[2px]"
+          style={{
+            color,
+            borderColor: `${color}66`,
+            backgroundColor: `${color}1A`,
+          }}
+        >
+          {m.verdict}
+        </div>
+      )}
+    </div>
+  );
+}
