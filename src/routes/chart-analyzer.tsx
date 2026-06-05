@@ -642,12 +642,12 @@ function AnalysisView({
   saving,
 }: {
   a: Analysis;
-  balance: number;
-  riskPct: number;
-  onUseLevels: () => void;
-  onSave: () => void | Promise<void>;
-  saved: boolean;
-  saving: boolean;
+  balance?: number;
+  riskPct?: number;
+  onUseLevels?: () => void;
+  onSave?: () => void | Promise<void>;
+  saved?: boolean;
+  saving?: boolean;
 }) {
   const setupName = (a.setupDetected ?? a.patterns?.[0] ?? "Setup")
     .toString()
