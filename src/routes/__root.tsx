@@ -15,6 +15,7 @@ import { ThemeProvider } from "../components/ThemeProvider";
 import { AuthProvider } from "../components/AuthProvider";
 import { BottomNav } from "../components/BottomNav";
 import { Toaster } from "../components/ui/sonner";
+import { CoachChat } from "../components/CoachChat";
 import { initServiceWorker } from "../lib/registerSW";
 
 function NotFoundComponent() {
@@ -191,6 +192,7 @@ function RootComponent() {
             <Outlet />
           </div>
           <BottomNav />
+          <CoachChat />
           <Toaster />
         </AuthProvider>
       </ThemeProvider>
