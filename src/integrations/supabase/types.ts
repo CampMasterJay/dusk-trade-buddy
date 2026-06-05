@@ -19,6 +19,7 @@ export type Database = {
           chart_url: string | null
           created_at: string
           date: string
+          deleted_at: string | null
           direction: string
           entry: number
           id: string
@@ -37,6 +38,7 @@ export type Database = {
           chart_url?: string | null
           created_at?: string
           date: string
+          deleted_at?: string | null
           direction: string
           entry: number
           id?: string
@@ -55,6 +57,7 @@ export type Database = {
           chart_url?: string | null
           created_at?: string
           date?: string
+          deleted_at?: string | null
           direction?: string
           entry?: number
           id?: string
