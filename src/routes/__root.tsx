@@ -18,6 +18,7 @@ import { Toaster } from "../components/ui/sonner";
 import { CoachChat } from "../components/CoachChat";
 import { HighImpactBanner } from "../components/HighImpactBanner";
 import { initServiceWorker } from "../lib/registerSW";
+import { startNotificationTriggers } from "../lib/notifications";
 
 function NotFoundComponent() {
   return (
@@ -155,6 +156,7 @@ function RootComponent() {
 
   useEffect(() => {
     initServiceWorker();
+    startNotificationTriggers();
   }, []);
 
   // Auto-recover from stale chunk hashes after a deploy: when a lazy
