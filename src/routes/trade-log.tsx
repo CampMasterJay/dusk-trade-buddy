@@ -585,7 +585,7 @@ const TradeCard = memo(function TradeCard({
     pnl > 0 ? "text-trade-green" : pnl < 0 ? "text-trade-red" : "text-muted-foreground";
 
   return (
-    <li className="relative overflow-hidden rounded-xl">
+    <li className="relative overflow-hidden rounded-xl animate-card-rise">
       {/* Delete reveal background */}
       <div className="absolute inset-y-0 right-0 flex items-center justify-end pr-5 bg-trade-red text-white">
         <Trash2 className="h-5 w-5" />
