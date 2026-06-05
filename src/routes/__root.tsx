@@ -15,6 +15,7 @@ import { ThemeProvider } from "../components/ThemeProvider";
 import { AuthProvider } from "../components/AuthProvider";
 import { BottomNav } from "../components/BottomNav";
 import { Toaster } from "../components/ui/sonner";
+import { initServiceWorker } from "../lib/registerSW";
 
 function NotFoundComponent() {
   return (
@@ -80,7 +81,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#07070d" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Edge" },
       { title: "EdgeTrader — AI Trading Assistant" },
       { name: "description", content: "AI-powered trading assistant for market analysis, portfolio tracking, and smart trade decisions." },
       { name: "author", content: "EdgeTrader" },
@@ -108,6 +113,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Sora:wght@300;400;500;600;700&display=swap",
       },
+      {
+        rel: "manifest",
+        href: "/manifest.json",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/apple-touch-icon.png",
+      },
+      {
+        rel: "icon",
+        href: "/icon-192.png",
+        type: "image/png",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -132,6 +150,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    initServiceWorker();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

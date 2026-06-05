@@ -1,0 +1,25 @@
+{
+  "name": "EdgeTrader",
+  "short_name": "Edge",
+  "description": "AI-powered trading assistant for market analysis, portfolio tracking, and smart trade decisions.",
+  "theme_color": "#07070d",
+  "background_color": "#07070d",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
