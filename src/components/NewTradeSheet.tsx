@@ -410,9 +410,15 @@ export function NewTradeSheet({
 
       if (error) {
         toast.error(error.message);
+        triggerHaptic("error");
         return;
       }
       toast.success(isEdit ? "Trade updated" : "Trade logged");
+      if (!isEdit) {
+        triggerHaptic("tradeLogged");
+        if (result === "Win") triggerHaptic("win");
+        else if (result === "Loss") triggerHaptic("loss");
+      }
       if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
