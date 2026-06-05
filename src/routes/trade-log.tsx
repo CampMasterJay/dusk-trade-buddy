@@ -220,6 +220,11 @@ function TradeLogScreen() {
           />
         </div>
 
+        {/* Stats */}
+        <div className="mb-4">
+          <TradeStats stats={stats} trades={trades} />
+        </div>
+
         {/* Filter bar */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4 scrollbar-none">
           {(["All", "Wins", "Losses"] as FilterKey[]).map((k) => (
