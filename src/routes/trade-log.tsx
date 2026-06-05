@@ -70,6 +70,7 @@ function TradeLogScreen() {
   const { settings } = useUserSettings();
 
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [stats, setStats] = useState<TradeStatsType | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
