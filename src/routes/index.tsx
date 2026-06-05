@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/components/AuthProvider";
+import { AppHeader } from "@/components/AppHeader";
 
 export const Route = createFileRoute("/")({
   head: () => ({
