@@ -33,6 +33,10 @@ import {
   AlertTriangle,
   Trash2,
   Activity,
+  Zap,
+  SkipForward,
+  Hourglass,
+  TrendingUp as MissIcon,
 } from "lucide-react";
 import {
   addSetup,
@@ -47,6 +51,7 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { OrbSetupBuilder } from "@/components/OrbSetupBuilder";
 import { VwapReclaimBuilder } from "@/components/VwapReclaimBuilder";
 import { SessionTimer } from "@/components/SessionTimer";
+import { NewTradeSheet } from "@/components/NewTradeSheet";
 
 export const Route = createFileRoute("/setup-advisor")({
   component: SetupAdvisorPage,
@@ -63,11 +68,32 @@ const SETUP_TYPES = [
   "Opening Range",
 ];
 
-const STATUSES: { key: SetupStatus; label: string; color: string; icon: typeof CircleDot }[] = [
-  { key: "watching", label: "Watching", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", icon: CircleDot },
-  { key: "triggered", label: "Triggered", color: "text-trade-green border-trade-green/40 bg-trade-green/10", icon: CheckCircle2 },
-  { key: "missed", label: "Missed", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: AlertTriangle },
-  { key: "invalidated", label: "Invalidated", color: "text-trade-red border-trade-red/40 bg-trade-red/10", icon: XCircle },
+type StatusMeta = {
+  key: SetupStatus;
+  label: string;
+  short: string;
+  color: string;
+  icon: typeof CircleDot;
+  requiresNote?: boolean;
+  opensTrade?: boolean;
+};
+
+const STATUSES: StatusMeta[] = [
+  { key: "watching", label: "Watching", short: "Watching", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", icon: CircleDot },
+  { key: "triggered_enter", label: "Triggered — Enter", short: "Enter", color: "text-trade-green border-trade-green/40 bg-trade-green/10", icon: Zap, opensTrade: true },
+  { key: "triggered_skipped", label: "Triggered — Skipped", short: "Skipped", color: "text-muted-foreground border-border bg-muted/40", icon: SkipForward, requiresNote: true },
+  { key: "invalidated", label: "Invalidated", short: "Invalidated", color: "text-trade-red border-trade-red/40 bg-trade-red/10", icon: XCircle, requiresNote: true },
+  { key: "missed", label: "Missed", short: "Missed", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: AlertTriangle, requiresNote: true },
+  { key: "waiting_news", label: "Waiting — News Delay", short: "Waiting", color: "text-amber-400 border-amber-500/40 bg-amber-500/10", icon: Hourglass },
+];
+
+const STATUS_ORDER: SetupStatus[] = [
+  "watching",
+  "waiting_news",
+  "triggered_enter",
+  "triggered_skipped",
+  "missed",
+  "invalidated",
 ];
 
 function SetupAdvisorPage() {
@@ -81,6 +107,7 @@ function SetupAdvisorPage() {
         <SessionTimer />
         <OrbSetupBuilder />
         <VwapReclaimBuilder />
+        <SetupOutcomeStats />
         <SetupWatchlistSection />
       </main>
     </ProtectedRoute>
@@ -228,8 +255,7 @@ function SetupWatchlistSection() {
   const [open, setOpen] = useState(false);
 
   const grouped = useMemo(() => {
-    const order: SetupStatus[] = ["watching", "triggered", "missed", "invalidated"];
-    return order
+    return STATUS_ORDER
       .map((status) => ({ status, items: setups.filter((s) => s.status === status) }))
       .filter((g) => g.items.length > 0);
   }, [setups]);
