@@ -11,6 +11,7 @@
 //   4. Challenge milestones — 25%, 50%, 75%, 100%
 
 import { subscribeHighImpactAlert } from "./highImpactAlerts";
+import { triggerHaptic } from "@/hooks/useHaptic";
 
 const SETTINGS_KEY = "edgetrader.notifications.v1";
 const DEDUPE_KEY = "edgetrader.notifications.dedupe.v1";
@@ -296,6 +297,7 @@ export function reportBalanceUpdate(snap: BalanceSnapshot) {
           const key = `milestone:${milestone}:${snap.targetBalance}`;
           if (!alreadyFired(key)) {
             setDedupe(key);
+            triggerHaptic("milestone");
             void notify(`🎯 ${milestone}% to your target`, {
               body: `You're at $${snap.currentBalance.toFixed(0)} of $${snap.targetBalance.toFixed(0)}. Keep your discipline.`,
               tag: `milestone-${milestone}`,

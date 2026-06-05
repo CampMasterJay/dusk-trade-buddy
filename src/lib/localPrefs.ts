@@ -16,6 +16,7 @@ export type LocalPrefs = {
   alpacaSecret: string;
   newsRefreshMinutes: number;
   displayName: string;
+  hapticsEnabled: boolean;
 };
 
 const KEY = "edgetrader.localPrefs.v1";
@@ -31,6 +32,7 @@ export const DEFAULT_PREFS: LocalPrefs = {
   alpacaSecret: "",
   newsRefreshMinutes: 5,
   displayName: "",
+  hapticsEnabled: true,
 };
 
 const listeners = new Set<(p: LocalPrefs) => void>();

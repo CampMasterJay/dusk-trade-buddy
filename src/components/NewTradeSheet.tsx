@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle, Newspaper, Search } from "lucide-react";
 import { toast } from "sonner";
+import { triggerHaptic } from "@/hooks/useHaptic";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -410,9 +411,17 @@ export function NewTradeSheet({
 
       if (error) {
         toast.error(error.message);
+        triggerHaptic("error");
         return;
       }
       toast.success(isEdit ? "Trade updated" : "Trade logged");
+      if (!isEdit) {
+        // Result pattern takes precedence (avoids two back-to-back vibrate
+        // calls overwriting each other).
+        if (result === "Win") triggerHaptic("win");
+        else if (result === "Loss") triggerHaptic("loss");
+        else triggerHaptic("tradeLogged");
+      }
       if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
