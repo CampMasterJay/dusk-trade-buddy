@@ -134,6 +134,7 @@ export type Database = {
           entry: number
           id: string
           instrument: string
+          news_id: string | null
           notes: string | null
           pnl: number | null
           r_multiple: number | null
@@ -155,6 +156,7 @@ export type Database = {
           entry: number
           id?: string
           instrument: string
+          news_id?: string | null
           notes?: string | null
           pnl?: number | null
           r_multiple?: number | null
@@ -176,6 +178,7 @@ export type Database = {
           entry?: number
           id?: string
           instrument?: string
+          news_id?: string | null
           notes?: string | null
           pnl?: number | null
           r_multiple?: number | null
