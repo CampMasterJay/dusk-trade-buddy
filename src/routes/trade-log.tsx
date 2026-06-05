@@ -86,6 +86,28 @@ function TradeLogScreen() {
   const [sort, setSort] = useState<SortKey>("Newest");
   const [reloadKey, setReloadKey] = useState(0);
 
+  // Auto-open New Trade sheet with prefill stashed by Chart Analyzer
+  const [prefill, setPrefill] = useState<{
+    entry?: string;
+    stop?: string;
+    target?: string;
+    direction?: "Long" | "Short";
+    instrument?: string;
+  } | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem("pendingTradePrefill");
+    if (!raw) return;
+    sessionStorage.removeItem("pendingTradePrefill");
+    try {
+      setPrefill(JSON.parse(raw));
+      setNewOpen(true);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Initial / reload fetch
   useEffect(() => {
     if (!userId) return;
@@ -225,6 +247,12 @@ function TradeLogScreen() {
           <NewTradeSheet
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
+            prefill={prefill}
+            open={newOpen || undefined}
+            onOpenChange={(v) => {
+              setNewOpen(v);
+              if (!v) setPrefill(null);
+            }}
           />
         </div>
 

@@ -60,6 +60,13 @@ interface Props {
   editTrade?: Trade | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  prefill?: {
+    entry?: string | number | null;
+    stop?: string | number | null;
+    target?: string | number | null;
+    direction?: "Long" | "Short" | null;
+    instrument?: string | null;
+  } | null;
 }
 
 export function NewTradeSheet({
@@ -69,6 +76,7 @@ export function NewTradeSheet({
   editTrade,
   open: openProp,
   onOpenChange,
+  prefill,
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -157,6 +165,19 @@ export function NewTradeSheet({
       setErrors({});
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+      if (prefill) {
+        if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
+        if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
+        if (prefill.target != null && prefill.target !== "") setTarget(String(prefill.target));
+        if (prefill.direction) setDirection(prefill.direction);
+        if (prefill.instrument) {
+          const known = INSTRUMENTS.includes(
+            prefill.instrument as (typeof INSTRUMENTS)[number],
+          );
+          setInstrument(known ? prefill.instrument : "Other");
+          setCustomInstrument(known ? "" : prefill.instrument);
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editTrade?.id]);
