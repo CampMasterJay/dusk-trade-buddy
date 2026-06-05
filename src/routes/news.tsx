@@ -1,11 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMacroSummary } from "@/lib/api/macroContext.functions";
+import {
+  scoreArticles,
+  pendingIdsFor,
+  clearImpactCache,
+  type ImpactScore,
+  type NewsItemInput,
+} from "@/lib/newsImpactService";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -160,6 +167,10 @@ function News() {
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
+  const [scores, setScores] = useState<Record<string, ImpactScore>>({});
+  const [pending, setPending] = useState<Set<string>>(new Set());
+  const [scoringError, setScoringError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const filtered = useMemo(() => {
     return ARTICLES.filter((a) => {
@@ -169,6 +180,47 @@ function News() {
       return true;
     }).sort((a, b) => b.publishedAt - a.publishedAt);
   }, [asset, impact, sentiment]);
+
+  const runScoring = useCallback(async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setScoringError(null);
+
+    // Pull from the most recent article list (newest first).
+    const sortedAll = [...ARTICLES].sort((a, b) => b.publishedAt - a.publishedAt);
+    const items: NewsItemInput[] = sortedAll.map((a) => ({
+      id: a.id,
+      headline: a.headline,
+      symbols: a.tags,
+    }));
+
+    setPending(pendingIdsFor(items));
+
+    const result = await scoreArticles(items, (s) => {
+      setScores((prev) => ({ ...prev, [s.id]: s }));
+      setPending((prev) => {
+        const next = new Set(prev);
+        next.delete(s.id);
+        return next;
+      });
+    });
+
+    if (result.errors.length > 0) {
+      setScoringError(result.errors[0]);
+    }
+    setPending(new Set());
+    inFlight.current = false;
+  }, []);
+
+  useEffect(() => {
+    void runScoring();
+  }, [runScoring]);
+
+  const refresh = () => {
+    clearImpactCache();
+    setScores({});
+    void runScoring();
+  };
 
   return (
     <ProtectedRoute>
@@ -190,13 +242,46 @@ function News() {
                 <FilterRow label="Impact" options={IMPACT_FILTERS} value={impact} onChange={setImpact} />
                 <FilterRow label="Sentiment" options={SENTIMENT_FILTERS} value={sentiment} onChange={setSentiment} />
               </div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <Sparkles className="size-3 text-primary" />
+                  AI-scored impact
+                  {pending.size > 0 ? (
+                    <span className="ml-1 inline-flex items-center gap-1 text-primary normal-case tracking-normal">
+                      <Loader2 className="size-3 animate-spin" />
+                      Scoring {pending.size}…
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={refresh}
+                  disabled={pending.size > 0}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                >
+                  <RefreshCw className={cn("size-3", pending.size > 0 && "animate-spin")} />
+                  Re-score
+                </button>
+              </div>
+              {scoringError ? (
+                <div className="mb-3 rounded-lg border border-trade-red/30 bg-trade-red/10 px-3 py-2 text-xs text-trade-red">
+                  {scoringError}
+                </div>
+              ) : null}
               <div className="space-y-3">
                 {filtered.length === 0 ? (
                   <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
                     No articles match the current filters.
                   </div>
                 ) : (
-                  filtered.map((a) => <NewsCard key={a.id} article={a} />)
+                  filtered.map((a) => (
+                    <NewsCard
+                      key={a.id}
+                      article={a}
+                      score={scores[a.id]}
+                      scoring={pending.has(a.id)}
+                    />
+                  ))
                 )}
               </div>
             </>
