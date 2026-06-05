@@ -253,7 +253,7 @@ function TradeLogScreen() {
             </p>
           </div>
           <TradeLockGate
-            locked={drawdown.lockTrading && !isLockOverridden_unused}
+            locked={drawdown.lockTrading}
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
             prefill={prefill}
