@@ -247,21 +247,23 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
-          <TradeLockGateWrapper
-            trades={trades}
-            startingBalance={Number(settings?.starting_balance ?? 100)}
+          <TradeLockGate
+            locked={drawdown.lockTrading && !isLockOverridden_unused}
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
             prefill={prefill}
-            newOpen={newOpen}
-            setNewOpen={setNewOpen}
-            clearPrefill={() => setPrefill(null)}
+            sheetOpen={newOpen}
+            onSheetOpenChange={(v) => {
+              setNewOpen(v);
+              if (!v) setPrefill(null);
+            }}
           />
         </div>
 
-        <TradeLockBannerSection
-          trades={trades}
-          startingBalance={Number(settings?.starting_balance ?? 100)}
+        <TradeLockBanner
+          level={drawdown.level}
+          title={drawdown.alertTitle}
+          message={drawdown.alertMessage}
         />
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
