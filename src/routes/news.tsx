@@ -17,7 +17,7 @@ import {
   type CalendarImpact,
 } from "@/lib/api/economicCalendar.functions";
 import {
-  ARTICLES,
+  getAllArticles,
   timeAgo,
   articleMatchesWatchlist,
   type Article,
