@@ -31,6 +31,13 @@ import { useLocalPrefs } from "@/lib/localPrefs";
 import { supabase } from "@/integrations/supabase/client";
 import { deleteMyAccount } from "@/lib/api/account.functions";
 import {
+  flushQueuedTrades,
+  formatLastSync,
+  getLastSync,
+  getQueuedTrades,
+} from "@/lib/offlineCache";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import {
   DEFAULT_SETTINGS,
   getNotificationPermission,
   getNotificationSettings,
@@ -78,6 +85,7 @@ function Settings() {
         <InstrumentsSection />
         <NotificationsSection />
         <NewsApiSection />
+        <OfflineSection />
         <AccountSection />
       </div>
     </ProtectedRoute>
