@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -15,6 +15,10 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Trash2,
+  Link2,
+  Star,
+  ArrowLeft,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -24,6 +28,16 @@ import {
   processImageFile,
   type ProcessedImage,
 } from "@/lib/imageUpload";
+import { useAuth } from "@/components/AuthProvider";
+import {
+  buildAnalysisInsert,
+  deleteChartAnalysis,
+  linkAnalysisToTrade,
+  listChartAnalyses,
+  saveChartAnalysis,
+  type ChartAnalysis as SavedAnalysis,
+} from "@/lib/chartAnalysisService";
+import { getTrades, type Trade } from "@/lib/tradeService";
 
 export const Route = createFileRoute("/chart-analyzer")({
   head: () => ({
