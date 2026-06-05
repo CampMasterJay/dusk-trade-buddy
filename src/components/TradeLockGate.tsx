@@ -21,13 +21,27 @@ interface Props {
   defaultInstrument: string;
   onLogged: () => void;
   prefill?: React.ComponentProps<typeof NewTradeSheet>["prefill"];
+  sheetOpen?: boolean;
+  onSheetOpenChange?: (v: boolean) => void;
 }
 
 const HOLD_MS = 3000;
 
-export function TradeLockGate({ locked, defaultInstrument, onLogged, prefill }: Props) {
+export function TradeLockGate({
+  locked,
+  defaultInstrument,
+  onLogged,
+  prefill,
+  sheetOpen: sheetOpenProp,
+  onSheetOpenChange,
+}: Props) {
   const [overridden, setOverridden] = useState<boolean>(() => isLockOverridden());
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetOpenInternal, setSheetOpenInternal] = useState(false);
+  const sheetOpen = sheetOpenProp ?? sheetOpenInternal;
+  const setSheetOpen = (v: boolean) => {
+    onSheetOpenChange?.(v);
+    if (sheetOpenProp === undefined) setSheetOpenInternal(v);
+  };
 
   // Hold-to-confirm state
   const [holding, setHolding] = useState(false);
