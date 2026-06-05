@@ -7,6 +7,7 @@ import {
   type HighImpactAlert,
 } from "@/lib/highImpactAlerts";
 import { cn } from "@/lib/utils";
+import { triggerHaptic } from "@/hooks/useHaptic";
 
 function truncate(text: string, max = 80): string {
   if (text.length <= max) return text;
@@ -18,7 +19,14 @@ export function HighImpactBanner() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  useEffect(() => subscribeHighImpactAlert(setAlert), []);
+  useEffect(
+    () =>
+      subscribeHighImpactAlert((a) => {
+        setAlert(a);
+        if (a) triggerHaptic("newsAlert");
+      }),
+    [],
+  );
 
   // Hide on auth-only screens.
   const hideOn = ["/login", "/signup", "/forgot-password", "/reset-password", "/onboarding"];
