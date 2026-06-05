@@ -3,9 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMacroSummary } from "@/lib/api/macroContext.functions";
+import {
+  getEconomicCalendar,
+  type CalendarEvent,
+  type CalendarImpact,
+} from "@/lib/api/economicCalendar.functions";
 import {
   scoreArticles,
   pendingIdsFor,
@@ -164,7 +169,7 @@ function timeAgo(ms: number): string {
 }
 
 function News() {
-  const [tab, setTab] = useState<"news" | "macro">("news");
+  const [tab, setTab] = useState<"news" | "calendar" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
@@ -239,6 +244,7 @@ function News() {
           {/* Tabs */}
           <div className="inline-flex rounded-lg border border-border bg-card p-1 mb-4">
             <TabBtn active={tab === "news"} onClick={() => setTab("news")} icon={Newspaper} label="Feed" />
+            <TabBtn active={tab === "calendar"} onClick={() => setTab("calendar")} icon={CalendarClock} label="Calendar" />
             <TabBtn active={tab === "macro"} onClick={() => setTab("macro")} icon={Activity} label="Macro" />
           </div>
 
@@ -292,6 +298,8 @@ function News() {
                 )}
               </div>
             </>
+          ) : tab === "calendar" ? (
+            <CalendarView />
           ) : (
             <MacroView />
           )}
