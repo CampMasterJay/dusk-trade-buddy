@@ -281,204 +281,57 @@ function ChartAnalyzer() {
         )}
 
         {tab === "analyzer" && (<>
-        {/* Upload area */}
-        {!image ? (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-              const f = e.dataTransfer.files?.[0];
-              if (f) void handleFile(f);
-            }}
-            onClick={() => fileRef.current?.click()}
-            className={`relative flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-              isDragging
-                ? "border-trade-green bg-trade-green/5"
-                : "border-border bg-card hover:border-trade-green/50 hover:bg-trade-green/5"
-            }`}
-          >
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-trade-green/10">
-              <Camera className="h-7 w-7 text-trade-green" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              Drop chart screenshot here or tap to upload
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              PNG, JPG, WEBP · up to 10MB
-            </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cameraRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent md:hidden"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                Camera
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  libraryRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent md:hidden"
-              >
-                <ImageIcon className="h-3.5 w-3.5" />
-                Photos
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              >
-                <FolderOpen className="h-3.5 w-3.5 hidden md:inline" />
-                <Upload className="h-3.5 w-3.5 md:hidden" />
-                Files
-              </button>
-            </div>
-
-            {uploadPct > 0 && uploadPct < 100 && (
-              <div className="mt-5 w-full max-w-xs">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-trade-green transition-all"
-                    style={{ width: `${uploadPct}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
-                  Reading… {uploadPct}%
-                </p>
-              </div>
-            )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
-            <input
-              ref={libraryRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
+        {/* Multi-Timeframe upload */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-bold font-data uppercase tracking-[3px] text-muted-foreground">
+              Multi-Timeframe Input
+            </h2>
+            <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+              {filledSlots.length}/3 frames
+            </span>
           </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-card p-3">
-            <div
-              className="relative max-h-[55vh] overflow-auto rounded-lg bg-background"
-              style={{ touchAction: "pinch-zoom" }}
-            >
-              <img
-                src={image.dataUrl}
-                alt={image.name}
-                className="block origin-top-left select-none"
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: "top left",
-                  width: zoom === 1 ? "100%" : "auto",
-                  maxWidth: zoom === 1 ? "100%" : "none",
-                }}
-                draggable={false}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {SLOT_META.map((m) => (
+              <FrameSlot
+                key={m.key}
+                slot={m.key}
+                label={m.label}
+                timeframeOptions={m.tfs}
+                frame={frames[m.key]}
+                onFile={(file, tf) => void handleSlotFile(m.key, file, tf)}
+                onTimeframeChange={(tf) => setSlotTimeframe(m.key, tf)}
+                onClear={() => clearSlot(m.key)}
               />
-            </div>
-
-            {/* Zoom controls */}
-            <div className="mt-2 flex items-center justify-between">
-              <div className="flex items-center gap-1">
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground">
+              Add 1–3 charts of the same instrument at different timeframes for a top-down read.
+            </p>
+            <div className="flex items-center gap-2">
+              {filledSlots.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Zoom out"
+                  onClick={clearAll}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
                 >
-                  <ZoomOut className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" />
+                  Clear all
                 </button>
-                <span className="min-w-[3rem] text-center text-[11px] font-data text-muted-foreground">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Zoom in"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoom(1)}
-                  className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Reset zoom"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              )}
               <button
                 type="button"
-                onClick={clearAll}
-                className="inline-flex items-center gap-1.5 rounded-md border border-trade-red/30 bg-trade-red/10 px-3 py-1.5 text-xs font-medium text-trade-red hover:bg-trade-red/20"
+                onClick={() => void runAnalysis()}
+                disabled={!canAnalyze}
+                className="inline-flex items-center gap-1.5 rounded-md bg-trade-green px-4 py-1.5 text-xs font-bold font-data uppercase tracking-wider text-background hover:bg-trade-green/90 disabled:opacity-50"
               >
-                <X className="h-3.5 w-3.5" />
-                Clear
+                <Sparkles className="h-3.5 w-3.5" />
+                {loading ? "Analyzing…" : "Analyze"}
               </button>
             </div>
-
-            {/* File metadata */}
-            <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-border bg-background/50 p-2.5 text-[11px] font-data">
-              <div className="truncate">
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Name</div>
-                <div className="truncate text-foreground" title={image.name}>{image.name}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Size</div>
-                <div className="text-foreground">
-                  {formatBytes(image.bytes)}
-                  {image.compressed && (
-                    <span className="ml-1 text-trade-green">
-                      ↓ from {formatBytes(image.originalBytes)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Dimensions</div>
-                <div className="text-foreground">{image.width}×{image.height}</div>
-              </div>
-            </div>
           </div>
-        )}
+        </div>
 
         {/* Results panel */}
         <div className="rounded-xl border border-border bg-card p-5">
