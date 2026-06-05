@@ -79,9 +79,14 @@ export type Database = {
           challenge_target: number
           created_at: string
           current_balance: number
+          instrument: string | null
+          onboarding_completed: boolean
           risk_pct: number
           rr_ratio: number
+          session: string | null
           starting_balance: number
+          tick_value: number | null
+          timeframe_days: number
           updated_at: string
           user_id: string
         }
@@ -89,9 +94,14 @@ export type Database = {
           challenge_target?: number
           created_at?: string
           current_balance?: number
+          instrument?: string | null
+          onboarding_completed?: boolean
           risk_pct?: number
           rr_ratio?: number
+          session?: string | null
           starting_balance?: number
+          tick_value?: number | null
+          timeframe_days?: number
           updated_at?: string
           user_id: string
         }
@@ -99,9 +109,14 @@ export type Database = {
           challenge_target?: number
           created_at?: string
           current_balance?: number
+          instrument?: string | null
+          onboarding_completed?: boolean
           risk_pct?: number
           rr_ratio?: number
+          session?: string | null
           starting_balance?: number
+          tick_value?: number | null
+          timeframe_days?: number
           updated_at?: string
           user_id?: string
         }
