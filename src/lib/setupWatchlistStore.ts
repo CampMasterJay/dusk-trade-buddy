@@ -32,11 +32,11 @@ function read(): WatchedSetup[] {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as Array<WatchedSetup & { status: LegacyStatus }>;
+    const parsed = JSON.parse(raw) as Array<Omit<WatchedSetup, "status"> & { status: LegacyStatus }>;
     if (!Array.isArray(parsed)) return [];
     return parsed.map((s) => ({
       ...s,
-      status: s.status === "triggered" ? "triggered_enter" : (s.status as SetupStatus),
+      status: (s.status === "triggered" ? "triggered_enter" : s.status) as SetupStatus,
     }));
   } catch {
     return [];
