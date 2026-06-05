@@ -29,6 +29,7 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  Lightbulb,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
