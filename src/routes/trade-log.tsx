@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
+import { List, type RowComponentProps } from "react-window";
 import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -387,6 +388,18 @@ function TradeLogScreen() {
                 : "Try clearing your filters."
             }
           />
+        ) : filteredSorted.length > 50 ? (
+          <VirtualizedTradeList
+            trades={filteredSorted}
+            balanceMap={balanceMap}
+            journalIds={journalIds}
+            onOpen={(t) => {
+              setSelectedTrade(t);
+              setDetailOpen(true);
+            }}
+            onDeleted={(id) => setTrades((prev) => prev.filter((x) => x.id !== id))}
+            onRestore={(t) => setTrades((prev) => [t, ...prev])}
+          />
         ) : (
           <ul className="space-y-2">
             {filteredSorted.map((t) => (
@@ -399,9 +412,8 @@ function TradeLogScreen() {
                   setSelectedTrade(t);
                   setDetailOpen(true);
                 }}
-                onDeleted={() => {
-                  setTrades((prev) => prev.filter((x) => x.id !== t.id));
-                }}
+                onDeleted={() => setTrades((prev) => prev.filter((x) => x.id !== t.id))}
+                onRestore={() => setTrades((prev) => [t, ...prev])}
               />
             ))}
           </ul>
@@ -430,19 +442,80 @@ function TradeLogScreen() {
   );
 }
 
+// ============= Virtualized list =============
+const ROW_HEIGHT = 104; // px — TradeCard height incl. 8px gap
+
+type RowProps = {
+  items: Trade[];
+  balanceMap: Map<string, number>;
+  journalIds: Set<string>;
+  onOpen: (t: Trade) => void;
+  onDeleted: (id: string) => void;
+  onRestore: (t: Trade) => void;
+};
+
+function TradeRow({ index, style, items, balanceMap, journalIds, onOpen, onDeleted, onRestore }: RowComponentProps<RowProps>) {
+  const t = items[index];
+  return (
+    <div style={style} className="pb-2">
+      <TradeCard
+        trade={t}
+        runningBalance={balanceMap.get(t.id) ?? 0}
+        hasJournal={journalIds.has(t.id)}
+        onOpen={() => onOpen(t)}
+        onDeleted={() => onDeleted(t.id)}
+        onRestore={() => onRestore(t)}
+      />
+    </div>
+  );
+}
+
+function VirtualizedTradeList({
+  trades,
+  balanceMap,
+  journalIds,
+  onOpen,
+  onDeleted,
+  onRestore,
+}: {
+  trades: Trade[];
+  balanceMap: Map<string, number>;
+  journalIds: Set<string>;
+  onOpen: (t: Trade) => void;
+  onDeleted: (id: string) => void;
+  onRestore: (t: Trade) => void;
+}) {
+  // Cap viewport at ~70vh on mobile so the page still scrolls naturally.
+  const height = Math.min(
+    typeof window !== "undefined" ? window.innerHeight * 0.7 : 600,
+    trades.length * ROW_HEIGHT,
+  );
+  return (
+    <List
+      rowCount={trades.length}
+      rowHeight={ROW_HEIGHT}
+      rowComponent={TradeRow}
+      rowProps={{ items: trades, balanceMap, journalIds, onOpen, onDeleted, onRestore }}
+      style={{ height }}
+    />
+  );
+}
+
 // ============= Trade Card =============
-function TradeCard({
+const TradeCard = memo(function TradeCard({
   trade,
   runningBalance,
   hasJournal,
   onOpen,
   onDeleted,
+  onRestore,
 }: {
   trade: Trade;
   runningBalance: number;
   hasJournal: boolean;
   onOpen: () => void;
   onDeleted: () => void;
+  onRestore?: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -470,17 +543,20 @@ function TradeCard({
   };
 
   const handleDelete = async () => {
+    // Optimistic: remove from UI immediately, sync to server in the background,
+    // restore on failure.
     setDeleting(true);
+    setConfirmOpen(false);
+    onDeleted();
     const { error } = await deleteTrade(trade.id);
     setDeleting(false);
-    setConfirmOpen(false);
     if (error) {
-      toast.error(error.message);
+      toast.error(`Couldn't delete: ${error.message}`);
+      onRestore?.();
       setDragX(0);
       return;
     }
     toast.success("Trade deleted");
-    onDeleted();
   };
 
   const fmtMoney = (v: number) =>
@@ -611,7 +687,7 @@ function TradeCard({
       </AlertDialog>
     </li>
   );
-}
+});
 
 function Badge({
   className,

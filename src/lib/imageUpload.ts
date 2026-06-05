@@ -1,9 +1,25 @@
 const ACCEPTED = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export const MAX_INPUT_BYTES = 10 * 1024 * 1024;
-export const COMPRESS_THRESHOLD = 3 * 1024 * 1024;
-const COMPRESS_QUALITY = 0.7;
-const MAX_DIMENSION = 2000;
+// Always re-encode uploads so mobile users don't ship 5MB JPEGs to APIs.
+// Anything under this size skips the canvas trip (decode-only) to save CPU.
+export const COMPRESS_THRESHOLD = 200 * 1024;
+const COMPRESS_QUALITY = 0.8;
+const MAX_DIMENSION = 1600;
+
+let cachedWebpSupport: boolean | null = null;
+function supportsWebpEncode(): boolean {
+  if (cachedWebpSupport !== null) return cachedWebpSupport;
+  if (typeof document === "undefined") return false;
+  try {
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    cachedWebpSupport = c.toDataURL("image/webp").startsWith("data:image/webp");
+  } catch {
+    cachedWebpSupport = false;
+  }
+  return cachedWebpSupport;
+}
 
 export type ProcessedImage = {
   dataUrl: string;
@@ -72,7 +88,7 @@ function dataUrlBytes(dataUrl: string): number {
 async function compressDataUrl(
   dataUrl: string,
   quality = COMPRESS_QUALITY,
-): Promise<{ dataUrl: string; width: number; height: number; bytes: number }> {
+): Promise<{ dataUrl: string; width: number; height: number; bytes: number; mime: string }> {
   const img = await loadImage(dataUrl);
   let { width, height } = img;
   if (Math.max(width, height) > MAX_DIMENSION) {
@@ -86,8 +102,9 @@ async function compressDataUrl(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
   ctx.drawImage(img, 0, 0, width, height);
-  const out = canvas.toDataURL("image/jpeg", quality);
-  return { dataUrl: out, width, height, bytes: dataUrlBytes(out) };
+  const mime = supportsWebpEncode() ? "image/webp" : "image/jpeg";
+  const out = canvas.toDataURL(mime, quality);
+  return { dataUrl: out, width, height, bytes: dataUrlBytes(out), mime };
 }
 
 export async function processImageFile(
@@ -129,7 +146,7 @@ export async function processImageFile(
     bytes: compressed.bytes,
     originalBytes,
     compressed: true,
-    mime: "image/jpeg",
+    mime: compressed.mime,
     name: file.name || "chart",
   };
 }
