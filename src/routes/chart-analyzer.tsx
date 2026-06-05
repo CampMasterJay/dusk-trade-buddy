@@ -667,7 +667,7 @@ function AnalysisView({
     entry != null && stop != null && target != null && entry !== stop
       ? Math.abs(target - entry) / Math.abs(entry - stop)
       : toNum(a.setupIdea?.rr);
-  const riskDollar = balance > 0 && riskPct > 0 ? (balance * riskPct) / 100 : 0;
+  const riskDollar = _balance > 0 && _riskPct > 0 ? (_balance * _riskPct) / 100 : 0;
   const targetDollar = rr != null && rr > 0 ? riskDollar * rr : 0;
 
   const confluence = a.confluenceFactors ?? [];
@@ -870,7 +870,7 @@ function AnalysisView({
         </button>
         <button
           type="button"
-          onClick={() => void onSave()}
+          onClick={() => void onSave?.()}
           disabled={saved || saving}
           className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-3 text-sm font-bold font-data uppercase tracking-wider hover:bg-accent disabled:opacity-60"
         >
