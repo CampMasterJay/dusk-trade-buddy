@@ -1,13 +1,16 @@
+import { useCountUp } from "@/hooks/useCountUp";
+
 export interface AppHeaderProps {
   balance: number;
 }
 
 export function AppHeader({ balance }: AppHeaderProps) {
+  const animated = useCountUp(balance, 280);
   const formattedBalance = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
-  }).format(balance);
+  }).format(animated);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
