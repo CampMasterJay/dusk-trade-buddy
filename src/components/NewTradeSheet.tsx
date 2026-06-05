@@ -553,6 +553,28 @@ export function NewTradeSheet({
                       <X className="h-3 w-3" />
                     </button>
                   </div>
+                ) : existingChart ? (
+                  <div className="flex items-center justify-between gap-2 h-10 px-3 rounded-md border border-input bg-muted/30 text-xs font-data">
+                    <span className="text-muted-foreground truncate">
+                      Chart attached
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-trade-green hover:underline"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExistingChart(null)}
+                        className="text-trade-red hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <Button
                     type="button"
