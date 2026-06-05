@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Home, BarChart3, List, Newspaper, Settings } from "lucide-react";
+import { Home, BarChart3, List, Newspaper, Settings, Target } from "lucide-react";
 import { subscribeUnreadHighImpact } from "@/lib/unreadHighImpact";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: Home },
   { to: "/chart-analyzer", label: "Analyzer", icon: BarChart3 },
+  { to: "/setup-advisor", label: "Setups", icon: Target },
   { to: "/trade-log", label: "Trade Log", icon: List },
   { to: "/news", label: "News", icon: Newspaper },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -36,7 +37,7 @@ export function BottomNav() {
             <Link
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center justify-center gap-0.5 w-16 h-full"
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full"
             >
               <div className="relative">
                 <Icon

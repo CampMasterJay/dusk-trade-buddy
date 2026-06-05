@@ -140,6 +140,11 @@ export function getArticleById(id: string): Article | undefined {
   return ARTICLES.find((a) => a.id === id);
 }
 
+/** Function wrapper so route code-splitter doesn't duplicate the ARTICLES import. */
+export function getAllArticles(): Article[] {
+  return ARTICLES;
+}
+
 export function getRelatedArticles(article: Article, limit = 4): Article[] {
   const tagSet = new Set(article.tags);
   const assetSet = new Set(article.assets);

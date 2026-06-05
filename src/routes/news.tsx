@@ -17,7 +17,7 @@ import {
   type CalendarImpact,
 } from "@/lib/api/economicCalendar.functions";
 import {
-  ARTICLES,
+  getAllArticles,
   timeAgo,
   articleMatchesWatchlist,
   type Article,
@@ -147,7 +147,7 @@ function News() {
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const { from, to } = resolveDateRange(dateRange, customFrom, customTo);
-    return ARTICLES.filter((a) => {
+    return getAllArticles().filter((a) => {
       if (asset !== "all" && !a.assets.includes(asset)) return false;
       if (impact !== "all" && a.impact !== impact) return false;
       if (sentiment !== "all" && a.sentiment !== sentiment) return false;
@@ -164,7 +164,7 @@ function News() {
     setScoringError(null);
 
     // Pull from the most recent article list (newest first).
-    const sortedAll = [...ARTICLES].sort((a, b) => b.publishedAt - a.publishedAt);
+    const sortedAll = [...getAllArticles()].sort((a, b) => b.publishedAt - a.publishedAt);
     const items: NewsItemInput[] = sortedAll.map((a) => ({
       id: a.id,
       headline: a.headline,
@@ -1281,7 +1281,7 @@ function WatchlistView({
 
   const matched = useMemo(
     () =>
-      [...ARTICLES]
+      [...getAllArticles()]
         .filter((a) => articleMatchesWatchlist(a, watchlist))
         .sort((a, b) => b.publishedAt - a.publishedAt),
     [watchlist],
