@@ -322,6 +322,98 @@ function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onCli
   );
 }
 
+function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="relative mb-4">
+      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+      <input
+        type="search"
+        placeholder="Search headlines…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-border bg-card pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+        >
+          <X className="size-4" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${safe})`, "ig"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === q.toLowerCase() ? (
+          <mark
+            key={i}
+            className="rounded bg-primary/30 text-foreground px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function BookmarkButton({ article }: { article: Article }) {
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      const all = await getSavedArticles();
+      if (active) setSaved(all.some((a) => a.id === article.id));
+    };
+    refresh();
+    return subscribeSavedArticles(refresh);
+  }, [article.id]);
+
+  const onClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const result = await toggleSavedArticle(article);
+    if (result === "limit_reached") {
+      toast.error(`Saved articles limit reached (${SAVED_MAX}). Remove one first.`);
+    } else if (result === "saved") {
+      toast.success("Article saved for offline.");
+    } else {
+      toast.success("Removed from saved.");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={saved ? "Remove from saved" : "Save article"}
+      className={cn(
+        "shrink-0 rounded-md p-1 transition-colors",
+        saved
+          ? "text-trade-green hover:text-trade-green/80"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+    </button>
+  );
+}
+
 // ---------- Macro tab ----------
 
 function daysUntil(iso: string): number {
