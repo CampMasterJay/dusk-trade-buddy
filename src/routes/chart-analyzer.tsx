@@ -26,6 +26,8 @@ import {
   Save,
   ArrowRight,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -370,6 +372,7 @@ function ChartAnalyzer() {
               riskPct={Number(settings?.risk_pct ?? 0)}
               minRr={Number(settings?.rr_ratio ?? 1.5)}
               session={settings?.session ?? null}
+                chartImageUrl={firstFrame?.image.dataUrl ?? null}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
@@ -531,6 +534,7 @@ function AnalysisView({
   riskPct,
   minRr,
   session,
+  chartImageUrl,
   onUseLevels,
   onSave,
   saved,
@@ -541,6 +545,7 @@ function AnalysisView({
   riskPct?: number;
   minRr?: number;
   session?: string | null;
+  chartImageUrl?: string | null;
   onUseLevels?: () => void;
   onSave?: () => void | Promise<void>;
   saved?: boolean;
@@ -572,6 +577,17 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* Annotated chart preview */}
+      {chartImageUrl && (
+        <AnnotatedChartPreview
+          src={chartImageUrl}
+          entry={entry}
+          stop={stop}
+          target={target}
+          bias={bias}
+        />
+      )}
+
       {/* MTF Alignment (top) */}
       {(a.mtfAlignment || a.frames) && <MtfAlignmentCard a={a} />}
 
@@ -996,15 +1012,8 @@ function DetailModal({
           </span>
         </div>
         <div className="space-y-4 p-4">
-          {item.chart_url && (
-            <img
-              src={item.chart_url}
-              alt="chart"
-              className="w-full rounded-lg border border-border"
-            />
-          )}
           {a ? (
-            <AnalysisView a={a} />
+            <AnalysisView a={a} chartImageUrl={item.chart_url ?? null} />
           ) : (
             <div className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
@@ -1294,6 +1303,82 @@ export function MtfAlignmentCard({ a }: { a: Analysis }) {
           {m.verdict}
         </div>
       )}
+    </div>
+  );
+}
+
+function AnnotatedChartPreview({
+  src,
+  entry,
+  stop,
+  target,
+  bias,
+}: {
+  src: string;
+  entry: number | null;
+  stop: number | null;
+  target: number | null;
+  bias?: string | null;
+}) {
+  const [show, setShow] = useState(true);
+  const dir = (bias ?? "").toString().toLowerCase();
+  const isShort = dir === "short";
+  const accent = isShort ? "#f87171" : "#22c55e";
+  const accentSoft = isShort ? "rgba(248,113,113,0.15)" : "rgba(34,197,94,0.15)";
+  const hasLevels = entry != null || stop != null || target != null;
+
+  const fmt = (n: number | null) =>
+    n == null ? "—" : Number.isInteger(n) ? n.toString() : n.toFixed(2);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-data uppercase tracking-[2px] text-muted-foreground">
+          Chart Preview
+        </span>
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+        >
+          {show ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+          {show ? "Hide" : "Show"} overlay
+        </button>
+      </div>
+      <div className="relative overflow-hidden rounded-lg border border-border bg-card">
+        <img src={src} alt="chart" className="block w-full" />
+        {show && hasLevels && (
+          <div
+            className="absolute bottom-2 right-2 min-w-[140px] rounded-md border p-2 backdrop-blur-md"
+            style={{
+              borderColor: `${accent}80`,
+              backgroundColor: "rgba(0,0,0,0.55)",
+              boxShadow: `0 0 0 1px ${accentSoft}`,
+            }}
+          >
+            <div
+              className="mb-1 text-[9px] font-data font-bold uppercase tracking-[2px]"
+              style={{ color: accent }}
+            >
+              {isShort ? "Short Setup" : dir === "long" ? "Long Setup" : "Setup"}
+            </div>
+            <div className="space-y-0.5 font-data text-[11px]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[9px] uppercase tracking-wider text-white/60">Entry</span>
+                <span className="font-semibold" style={{ color: "#4ade80" }}>{fmt(entry)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[9px] uppercase tracking-wider text-white/60">Stop</span>
+                <span className="font-semibold" style={{ color: "#f87171" }}>{fmt(stop)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[9px] uppercase tracking-wider text-white/60">Target</span>
+                <span className="font-semibold" style={{ color: "#4ade80" }}>{fmt(target)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
