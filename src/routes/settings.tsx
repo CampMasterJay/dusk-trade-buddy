@@ -692,6 +692,80 @@ function NewsApiSection() {
 // ---------- Account ----------
 
 function AccountSection() {
+  // (defined below)
+  return <AccountSectionImpl />;
+}
+
+// ---------- Offline / Sync ----------
+
+function OfflineSection() {
+  const { user } = useAuth();
+  const online = useOnlineStatus();
+  const [lastSync, setLastSync] = useState<number | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  const refresh = async () => {
+    setLastSync(await getLastSync());
+    if (user) {
+      const q = await getQueuedTrades(user.id);
+      setQueueCount(q.length);
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+    const id = setInterval(() => void refresh(), 30_000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, online]);
+
+  const syncNow = async () => {
+    if (!user || !online) return;
+    setSyncing(true);
+    try {
+      const { synced, failed } = await flushQueuedTrades(user.id);
+      if (synced > 0) toast.success(`Synced ${synced} trade${synced === 1 ? "" : "s"}.`);
+      if (failed > 0) toast.error(`Failed to sync ${failed}.`);
+      if (synced === 0 && failed === 0) toast.message("Nothing to sync.");
+      await refresh();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <Section icon={<RotateCcw className="size-5" />} title="Offline & Sync">
+      <Row label="Connection" sub={online ? "You're online." : "Working in offline mode. Changes will sync when you reconnect."}>
+        <span
+          className={cn(
+            "text-xs font-semibold px-2 py-1 rounded-md border",
+            online
+              ? "border-trade-green/40 bg-trade-green/10 text-trade-green"
+              : "border-amber-500/40 bg-amber-500/10 text-amber-400",
+          )}
+        >
+          {online ? "Online" : "Offline"}
+        </span>
+      </Row>
+      <Row label="Last sync" sub={formatLastSync(lastSync)}>
+        <button
+          onClick={syncNow}
+          disabled={!online || syncing}
+          className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-40"
+        >
+          {syncing && <Loader2 className="size-3 animate-spin" />}
+          Sync now
+        </button>
+      </Row>
+      <Row label="Pending trades" sub="Trades created while offline, waiting to upload.">
+        <span className="text-sm font-data">{queueCount}</span>
+      </Row>
+    </Section>
+  );
+}
+
+function AccountSectionImpl() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [prefs, setPrefs] = useLocalPrefs();
