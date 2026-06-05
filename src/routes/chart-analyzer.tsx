@@ -389,12 +389,12 @@ function ChartAnalyzer() {
                 void navigate({ to: "/trade-log" });
               }}
               onSave={async () => {
-                if (!user || !image || savedId) return;
+                if (!user || !firstFrame || savedId) return;
                 setSaving(true);
                 const { data } = await saveChartAnalysis(
                   buildAnalysisInsert({
                     userId: user.id,
-                    chartUrl: image.dataUrl,
+                    chartUrl: firstFrame.image.dataUrl,
                     analysis: analysis as unknown as Record<string, unknown>,
                   }),
                 );
