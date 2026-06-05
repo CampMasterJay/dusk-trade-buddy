@@ -437,32 +437,27 @@ function vixTone(vix: number): { label: string; accent: "green" | "amber" | "red
 
 function MacroView() {
   const fetchIndicators = useServerFn(getMacroIndicators);
-  const [m, setM] = useState<MacroIndicators | null>(null);
-  const [indicatorsError, setIndicatorsError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  // Stale-while-revalidate: serve cached macro snapshot instantly on revisits,
+  // refresh in the background.
+  const {
+    data: m,
+    error: indicatorsError,
+    refreshing,
+    revalidate: loadIndicators,
+  } = useSWR<MacroIndicators>(
+    "news.macroIndicators",
+    async () => {
+      const res = await fetchIndicators();
+      if (!res.ok) throw new Error(res.error);
+      return res.data;
+    },
+    { staleMs: 5 * 60_000, refreshIntervalMs: 5 * 60_000 },
+  );
 
   const summarize = useServerFn(getMacroSummary);
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const loadIndicators = useCallback(async () => {
-    setRefreshing(true);
-    setIndicatorsError(null);
-    try {
-      const res = await fetchIndicators();
-      if (res.ok) setM(res.data);
-      else setIndicatorsError(res.error);
-    } catch (e) {
-      setIndicatorsError(e instanceof Error ? e.message : "Failed to load indicators.");
-    } finally {
-      setRefreshing(false);
-    }
-  }, [fetchIndicators]);
-
-  useEffect(() => {
-    void loadIndicators();
-  }, [loadIndicators]);
 
   if (!m) {
     return (
@@ -990,29 +985,21 @@ function impactStyles(impact: CalendarImpact): { dot: string; chip: string; labe
 
 function CalendarView() {
   const fetchCal = useServerFn(getEconomicCalendar);
-  const [events, setEvents] = useState<CalendarEvent[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: events,
+    error,
+    refreshing: loading,
+  } = useSWR<CalendarEvent[]>(
+    "news.calendar",
+    async () => {
+      const res = await fetchCal();
+      if (!res.ok) throw new Error(res.error);
+      return res.events;
+    },
+    { staleMs: 10 * 60_000, refreshIntervalMs: 10 * 60_000 },
+  );
   const [usOnly, setUsOnly] = useState(true);
   const [now, setNow] = useState(() => Date.now());
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchCal();
-      if (res.ok) setEvents(res.events);
-      else setError(res.error);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load calendar.");
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchCal]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
