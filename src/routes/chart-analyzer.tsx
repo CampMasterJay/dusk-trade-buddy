@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Camera,
@@ -19,6 +19,13 @@ import {
   Link2,
   Star,
   ArrowLeft,
+  ArrowUp,
+  Target as TargetIcon,
+  CheckCircle2,
+  AlertTriangle,
+  Save,
+  ArrowRight,
+  Check,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -29,6 +36,7 @@ import {
   type ProcessedImage,
 } from "@/lib/imageUpload";
 import { useAuth } from "@/components/AuthProvider";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   buildAnalysisInsert,
   deleteChartAnalysis,
@@ -60,6 +68,11 @@ type Analysis = {
   patterns?: string[];
   indicators?: string[];
   bias?: string;
+  biasDirection?: "Long" | "Short" | "Neutral" | string;
+  setupDetected?: string;
+  setupQuality?: number;
+  confluenceFactors?: string[];
+  riskFactors?: string[];
   setupIdea?: { direction?: "long" | "short" | "none"; entry?: string; stop?: string; target?: string; rr?: string };
   risks?: string[];
   summary?: string;
