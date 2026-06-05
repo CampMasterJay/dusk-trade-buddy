@@ -14,7 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trades: {
+        Row: {
+          chart_url: string | null
+          created_at: string
+          date: string
+          direction: string
+          entry: number
+          id: string
+          instrument: string
+          notes: string | null
+          pnl: number | null
+          r_multiple: number | null
+          range_size: number | null
+          result: string
+          stop: number
+          target: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chart_url?: string | null
+          created_at?: string
+          date: string
+          direction: string
+          entry: number
+          id?: string
+          instrument: string
+          notes?: string | null
+          pnl?: number | null
+          r_multiple?: number | null
+          range_size?: number | null
+          result: string
+          stop: number
+          target: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chart_url?: string | null
+          created_at?: string
+          date?: string
+          direction?: string
+          entry?: number
+          id?: string
+          instrument?: string
+          notes?: string | null
+          pnl?: number | null
+          r_multiple?: number | null
+          range_size?: number | null
+          result?: string
+          stop?: number
+          target?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          challenge_target: number
+          created_at: string
+          current_balance: number
+          risk_pct: number
+          rr_ratio: number
+          starting_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_target?: number
+          created_at?: string
+          current_balance?: number
+          risk_pct?: number
+          rr_ratio?: number
+          starting_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_target?: number
+          created_at?: string
+          current_balance?: number
+          risk_pct?: number
+          rr_ratio?: number
+          starting_balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
