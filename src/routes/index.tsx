@@ -7,6 +7,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { ProjectionModal } from "@/components/ProjectionModal";
 import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
 import { SentimentGauge } from "@/components/SentimentGauge";
+import { PatternOfTheDay } from "@/components/PatternOfTheDay";
+import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -204,6 +206,9 @@ function Dashboard() {
             <StatsRow stats={stats} streak={streak} />
 
             <SentimentGauge />
+
+            <PatternOfTheDay />
+            <TradeOfTheWeek />
 
             <SparklineCard
               data={sparklineData}
