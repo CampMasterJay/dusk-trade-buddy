@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Home, BarChart3, List, Newspaper, Settings } from "lucide-react";
+import { Home, BarChart3, List, Newspaper, Settings, Target } from "lucide-react";
 import { subscribeUnreadHighImpact } from "@/lib/unreadHighImpact";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: Home },
   { to: "/chart-analyzer", label: "Analyzer", icon: BarChart3 },
+  { to: "/setup-advisor", label: "Setups", icon: Target },
   { to: "/trade-log", label: "Trade Log", icon: List },
   { to: "/news", label: "News", icon: Newspaper },
   { to: "/settings", label: "Settings", icon: Settings },
