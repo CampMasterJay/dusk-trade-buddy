@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { LogOut, KeyRound, CheckCircle2, Circle, Lock, Plus, Bell } from "lucide-react";
+import { LogOut, KeyRound, CheckCircle2, Circle, Lock, Plus, Bell, Bookmark, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,6 +15,12 @@ import {
   subscribeNotificationSettings,
   type NotificationSettings,
 } from "@/lib/notifications";
+import {
+  clearAllSavedArticles,
+  getSavedArticles,
+  subscribeSavedArticles,
+  SAVED_MAX,
+} from "@/lib/savedArticlesDb";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -63,6 +69,8 @@ function Settings() {
 
           <NotificationsSection />
 
+          <SavedArticlesSection />
+
           <ApiKeysSection />
 
           <button
@@ -78,6 +86,57 @@ function Settings() {
 }
 
 // ---------- Notifications ----------
+
+function SavedArticlesSection() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      const all = await getSavedArticles();
+      if (active) setCount(all.length);
+    };
+    refresh();
+    return subscribeSavedArticles(refresh);
+  }, []);
+
+  const handleClear = async () => {
+    if (count === 0) return;
+    await clearAllSavedArticles();
+    toast.success("Cleared all saved articles.");
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 mb-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Bookmark className="size-5 text-primary" />
+        <h2 className="text-lg font-semibold font-heading">Saved Articles</h2>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Bookmarked headlines are stored on this device for offline reading. Up to {SAVED_MAX} articles.
+      </p>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-data text-foreground">
+          {count} of {SAVED_MAX} saved
+        </span>
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={count === 0}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+            count === 0
+              ? "border-border/40 text-muted-foreground/50 cursor-not-allowed"
+              : "border-trade-red/40 text-trade-red hover:bg-trade-red/10",
+          )}
+        >
+          <Trash2 className="size-3" />
+          Clear all saved
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function NotificationsSection() {
   const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);

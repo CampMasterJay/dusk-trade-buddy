@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star, Search, Bookmark, BookmarkCheck, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getMacroSummary,
@@ -36,6 +36,17 @@ import {
   type NewsItemInput,
 } from "@/lib/newsImpactService";
 import { publishHighImpactAlert } from "@/lib/highImpactAlerts";
+import {
+  toggleSavedArticle,
+  subscribeSavedArticles,
+  getSavedArticles,
+  SAVED_MAX,
+  type SavedArticle,
+} from "@/lib/savedArticlesDb";
+import {
+  markHighImpactUnread,
+  markAllHighImpactRead,
+} from "@/lib/unreadHighImpact";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -73,24 +84,79 @@ const SENTIMENT_FILTERS: { key: Sentiment; label: string }[] = [
   { key: "neutral", label: "Neutral" },
 ];
 
+type DateRangeKey = "all" | "today" | "week" | "month" | "custom";
+
+const DATE_RANGE_FILTERS: { key: DateRangeKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "today", label: "Today" },
+  { key: "week", label: "This Week" },
+  { key: "month", label: "This Month" },
+  { key: "custom", label: "Custom" },
+];
+
+function resolveDateRange(
+  key: DateRangeKey,
+  customFrom: string,
+  customTo: string,
+): { from: number | null; to: number | null } {
+  const now = new Date();
+  if (key === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return { from: start, to: null };
+  }
+  if (key === "week") {
+    return { from: now.getTime() - 7 * 24 * 60 * 60 * 1000, to: null };
+  }
+  if (key === "month") {
+    return { from: now.getTime() - 30 * 24 * 60 * 60 * 1000, to: null };
+  }
+  if (key === "custom") {
+    const from = customFrom ? new Date(customFrom + "T00:00:00").getTime() : null;
+    const to = customTo ? new Date(customTo + "T23:59:59").getTime() : null;
+    return { from, to };
+  }
+  return { from: null, to: null };
+}
+
 function News() {
   const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeKey>("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
   const [scores, setScores] = useState<Record<string, ImpactScore>>({});
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [scoringError, setScoringError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  // Debounce search input → query.
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  // Mark HIGH-impact badge as cleared when the feed tab is viewed.
+  useEffect(() => {
+    if (tab === "news") markAllHighImpactRead();
+  }, [tab]);
+
   const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const { from, to } = resolveDateRange(dateRange, customFrom, customTo);
     return ARTICLES.filter((a) => {
       if (asset !== "all" && !a.assets.includes(asset)) return false;
       if (impact !== "all" && a.impact !== impact) return false;
       if (sentiment !== "all" && a.sentiment !== sentiment) return false;
+      if (q && !a.headline.toLowerCase().includes(q)) return false;
+      if (from != null && a.publishedAt < from) return false;
+      if (to != null && a.publishedAt > to) return false;
       return true;
     }).sort((a, b) => b.publishedAt - a.publishedAt);
-  }, [asset, impact, sentiment]);
+  }, [asset, impact, sentiment, searchQuery, dateRange, customFrom, customTo]);
 
   const runScoring = useCallback(async () => {
     if (inFlight.current) return;
@@ -118,6 +184,7 @@ function News() {
         const art = sortedAll.find((a) => a.id === s.id);
         if (art) {
           publishHighImpactAlert({ id: art.id, headline: art.headline, url: art.url });
+          markHighImpactUnread(art.id);
         }
       }
     });
@@ -156,10 +223,30 @@ function News() {
 
           {tab === "news" ? (
             <>
+              <SearchBar value={searchInput} onChange={setSearchInput} />
               <div className="space-y-3 mb-4">
                 <FilterRow label="Asset" options={ASSET_FILTERS} value={asset} onChange={setAsset} />
                 <FilterRow label="Impact" options={IMPACT_FILTERS} value={impact} onChange={setImpact} />
                 <FilterRow label="Sentiment" options={SENTIMENT_FILTERS} value={sentiment} onChange={setSentiment} />
+                <FilterRow label="Date" options={DATE_RANGE_FILTERS} value={dateRange} onChange={setDateRange} />
+                {dateRange === "custom" ? (
+                  <div className="flex flex-wrap items-center gap-2 pl-1">
+                    <label className="text-xs text-muted-foreground">From</label>
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={(e) => setCustomFrom(e.target.value)}
+                      className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    />
+                    <label className="text-xs text-muted-foreground">To</label>
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={(e) => setCustomTo(e.target.value)}
+                      className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
+                    />
+                  </div>
+                ) : null}
               </div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -199,6 +286,7 @@ function News() {
                       article={a}
                       score={scores[a.id]}
                       scoring={pending.has(a.id)}
+                      highlight={searchQuery}
                     />
                   ))
                 )}
@@ -230,6 +318,98 @@ function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onCli
     >
       <Icon className="size-4" />
       {label}
+    </button>
+  );
+}
+
+function SearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="relative mb-4">
+      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+      <input
+        type="search"
+        placeholder="Search headlines…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-border bg-card pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
+        >
+          <X className="size-4" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const q = query.trim();
+  if (!q) return <>{text}</>;
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${safe})`, "ig"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === q.toLowerCase() ? (
+          <mark
+            key={i}
+            className="rounded bg-primary/30 text-foreground px-0.5"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+function BookmarkButton({ article }: { article: Article }) {
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      const all = await getSavedArticles();
+      if (active) setSaved(all.some((a) => a.id === article.id));
+    };
+    refresh();
+    return subscribeSavedArticles(refresh);
+  }, [article.id]);
+
+  const onClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const result = await toggleSavedArticle(article);
+    if (result === "limit_reached") {
+      toast.error(`Saved articles limit reached (${SAVED_MAX}). Remove one first.`);
+    } else if (result === "saved") {
+      toast.success("Article saved for offline.");
+    } else {
+      toast.success("Removed from saved.");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={saved ? "Remove from saved" : "Save article"}
+      className={cn(
+        "shrink-0 rounded-md p-1 transition-colors",
+        saved
+          ? "text-trade-green hover:text-trade-green/80"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {saved ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
     </button>
   );
 }
@@ -485,10 +665,12 @@ function NewsCard({
   article,
   score,
   scoring,
+  highlight,
 }: {
   article: Article;
   score?: ImpactScore;
   scoring?: boolean;
+  highlight?: string;
 }) {
   // Prefer AI scores when available; fall back to static metadata.
   const impact: Exclude<Impact, "all"> = score
@@ -513,18 +695,23 @@ function NewsCard({
       className="block rounded-xl border border-border bg-card p-4 hover:border-muted-foreground/40 transition-colors"
     >
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h2 className="font-bold leading-snug text-foreground">{article.headline}</h2>
-        {article.url ? (
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-          >
-            <ExternalLink className="size-4" />
-          </a>
-        ) : null}
+        <h2 className="font-bold leading-snug text-foreground">
+          <HighlightedText text={article.headline} query={highlight ?? ""} />
+        </h2>
+        <div className="flex items-center gap-1 shrink-0">
+          <BookmarkButton article={article} />
+          {article.url ? (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ExternalLink className="size-4" />
+            </a>
+          ) : null}
+        </div>
       </div>
       <div className="text-xs text-muted-foreground mb-3 flex items-center gap-2">
         <span>

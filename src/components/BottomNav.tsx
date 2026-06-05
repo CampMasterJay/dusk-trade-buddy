@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Home, BarChart3, List, Newspaper, Settings } from "lucide-react";
+import { subscribeUnreadHighImpact } from "@/lib/unreadHighImpact";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: Home },
@@ -14,6 +16,9 @@ const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 export function BottomNav() {
   const routerState = useRouterState();
   const pathname = routerState.location.pathname;
+  const [unreadHigh, setUnreadHigh] = useState(0);
+
+  useEffect(() => subscribeUnreadHighImpact(setUnreadHigh), []);
 
   // Hide on auth pages
   if (authPaths.includes(pathname)) {
@@ -26,18 +31,26 @@ export function BottomNav() {
         {navItems.map((item) => {
           const isActive = pathname === item.to;
           const Icon = item.icon;
+          const showBadge = item.to === "/news" && unreadHigh > 0;
           return (
             <Link
               key={item.to}
               to={item.to}
               className="flex flex-col items-center justify-center gap-0.5 w-16 h-full"
             >
-              <Icon
-                className={`h-5 w-5 transition-colors ${
-                  isActive ? "text-trade-green" : "text-muted-foreground"
-                }`}
-                strokeWidth={isActive ? 2.5 : 2}
-              />
+              <div className="relative">
+                <Icon
+                  className={`h-5 w-5 transition-colors ${
+                    isActive ? "text-trade-green" : "text-muted-foreground"
+                  }`}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                {showBadge ? (
+                  <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-trade-red px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadHigh > 9 ? "9+" : unreadHigh}
+                  </span>
+                ) : null}
+              </div>
               <span
                 className={`text-[10px] font-medium transition-colors ${
                   isActive ? "text-trade-green" : "text-muted-foreground"
