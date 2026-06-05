@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, Search, BookOpen } from "lucide-react";
+import { Trash2, Search, BookOpen, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -225,6 +225,16 @@ function TradeLogScreen() {
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
           />
+        </div>
+
+        <div className="mb-3">
+          <Link
+            to="/calendar"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Calendar view
+          </Link>
         </div>
 
         {/* Stats */}
