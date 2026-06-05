@@ -90,6 +90,9 @@ export function buildAnalysisInsert(args: {
     trend?: string;
     patterns?: string[];
     bias?: string;
+    biasDirection?: string;
+    setupDetected?: string;
+    setupQuality?: number;
     summary?: string;
     setupIdea?: {
       direction?: string;
@@ -106,9 +109,12 @@ export function buildAnalysisInsert(args: {
     return Number.isFinite(n) ? n : null;
   };
 
-  const dir = a.setupIdea?.direction?.toLowerCase();
+  const dir = (a.biasDirection ?? a.setupIdea?.direction ?? "")
+    .toString()
+    .toLowerCase();
   const bias =
     dir === "long" ? "Long" : dir === "short" ? "Short" : "Neutral";
+  const quality = Number(a.setupQuality);
 
   return {
     user_id: args.userId,
@@ -116,7 +122,10 @@ export function buildAnalysisInsert(args: {
     instrument: a.instrument ?? null,
     timeframe: a.timeframe ?? null,
     trend: a.trend ?? null,
-    setup_detected: a.patterns?.[0] ?? "None detected",
+    setup_detected: a.setupDetected ?? a.patterns?.[0] ?? "None detected",
+    setup_quality: Number.isFinite(quality)
+      ? Math.max(1, Math.min(5, Math.round(quality)))
+      : null,
     suggested_entry: toNum(a.setupIdea?.entry),
     suggested_stop: toNum(a.setupIdea?.stop),
     suggested_target: toNum(a.setupIdea?.target),
