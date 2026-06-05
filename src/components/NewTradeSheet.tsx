@@ -1,0 +1,639 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Upload, X, ImageIcon } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { useAuth } from "@/components/AuthProvider";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { createTrade } from "@/lib/tradeService";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
+
+const schema = z.object({
+  date: z.string().min(1, "Date is required"),
+  instrument: z.string().min(1, "Instrument is required").max(20),
+  customInstrument: z.string().max(20).optional(),
+  direction: z.enum(["Long", "Short"]),
+  entry: z.number({ invalid_type_error: "Entry required" }).finite(),
+  stop: z.number({ invalid_type_error: "Stop required" }).finite(),
+  target: z.number({ invalid_type_error: "Target required" }).finite(),
+  result: z.enum(["Win", "Loss", "Scratch"]),
+  rMultiple: z.number().finite(),
+  notes: z.string().max(2000).optional(),
+  rangeSize: z.number().finite().optional(),
+});
+
+type Errors = Partial<Record<string, string>>;
+
+const fmtMoney = (v: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(v);
+
+interface Props {
+  onLogged?: () => void;
+  trigger?: React.ReactNode;
+  defaultInstrument?: string;
+}
+
+export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
+  const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Errors>({});
+
+  // Form state
+  const today = () => new Date().toISOString().slice(0, 10);
+  const initialInstrument = useMemo(() => {
+    const i = defaultInstrument ?? settings?.instrument ?? "MES";
+    return INSTRUMENTS.includes(i as (typeof INSTRUMENTS)[number])
+      ? (i as string)
+      : "Other";
+  }, [defaultInstrument, settings?.instrument]);
+
+  const [date, setDate] = useState(today);
+  const [instrument, setInstrument] = useState<string>(initialInstrument);
+  const [customInstrument, setCustomInstrument] = useState<string>(
+    initialInstrument === "Other" ? (defaultInstrument ?? "") : "",
+  );
+  const [direction, setDirection] = useState<"Long" | "Short">("Long");
+  const [entry, setEntry] = useState("");
+  const [stop, setStop] = useState("");
+  const [target, setTarget] = useState("");
+
+  const [result, setResult] = useState<"Win" | "Loss" | "Scratch">("Win");
+  const [rMultiple, setRMultiple] = useState<string>("");
+
+  const [notes, setNotes] = useState("");
+  const [rangeSize, setRangeSize] = useState("");
+  const [chartFile, setChartFile] = useState<File | null>(null);
+  const [chartPreview, setChartPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Defaults from settings
+  const balance = Number(settings?.current_balance ?? 100);
+  const riskPct = Number(settings?.risk_pct ?? 15);
+  const rrSetting = Number(settings?.rr_ratio ?? 1.5);
+
+  // Sync defaults when sheet opens
+  useEffect(() => {
+    if (!open) return;
+    setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+  }, [open, rrSetting]);
+
+  // Auto-flip default R multiple sign based on result
+  useEffect(() => {
+    if (result === "Win") setRMultiple(String(Math.abs(rrSetting)));
+    else if (result === "Loss") setRMultiple(String(-1));
+    else setRMultiple("0");
+  }, [result, rrSetting]);
+
+  // Live calculations
+  const entryNum = parseFloat(entry);
+  const stopNum = parseFloat(stop);
+  const targetNum = parseFloat(target);
+  const rNum = parseFloat(rMultiple);
+
+  const stopDistance =
+    Number.isFinite(entryNum) && Number.isFinite(stopNum)
+      ? Math.abs(entryNum - stopNum)
+      : null;
+
+  const riskDollar = (balance * riskPct) / 100;
+
+  const rrRatio =
+    stopDistance != null &&
+    stopDistance > 0 &&
+    Number.isFinite(entryNum) &&
+    Number.isFinite(targetNum)
+      ? Math.abs(targetNum - entryNum) / stopDistance
+      : null;
+
+  const targetDollar = rrRatio != null ? riskDollar * rrRatio : null;
+
+  const actualPnl = Number.isFinite(rNum) ? rNum * riskDollar : 0;
+
+  // Image preview
+  useEffect(() => {
+    if (!chartFile) {
+      setChartPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(chartFile);
+    setChartPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [chartFile]);
+
+  const handleFile = (file: File | null) => {
+    if (!file) {
+      setChartFile(null);
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Chart must be an image");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB");
+      return;
+    }
+    setChartFile(file);
+  };
+
+  const resolvedInstrument =
+    instrument === "Other" ? customInstrument.trim() : instrument;
+
+  const requiredOk =
+    !!date &&
+    !!resolvedInstrument &&
+    Number.isFinite(entryNum) &&
+    Number.isFinite(stopNum) &&
+    Number.isFinite(targetNum) &&
+    stopDistance != null &&
+    stopDistance > 0;
+
+  const reset = () => {
+    setDate(today());
+    setInstrument(initialInstrument);
+    setCustomInstrument(initialInstrument === "Other" ? "" : "");
+    setDirection("Long");
+    setEntry("");
+    setStop("");
+    setTarget("");
+    setResult("Win");
+    setRMultiple(String(rrSetting));
+    setNotes("");
+    setRangeSize("");
+    setChartFile(null);
+    setErrors({});
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadChart = async (): Promise<string | null> => {
+    if (!chartFile || !user) return null;
+    const ext = chartFile.name.split(".").pop()?.toLowerCase() || "png";
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("trade-charts")
+      .upload(path, chartFile, { contentType: chartFile.type });
+    if (error) throw error;
+    return path;
+  };
+
+  const submit = async () => {
+    if (!user) return;
+    const parsed = schema.safeParse({
+      date,
+      instrument: resolvedInstrument,
+      customInstrument,
+      direction,
+      entry: entryNum,
+      stop: stopNum,
+      target: targetNum,
+      result,
+      rMultiple: rNum,
+      notes,
+      rangeSize: rangeSize === "" ? undefined : parseFloat(rangeSize),
+    });
+
+    if (!parsed.success) {
+      const fieldErrors: Errors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0]?.toString() ?? "_";
+        fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+    if (stopDistance == null || stopDistance <= 0) {
+      setErrors({ stop: "Stop must differ from entry" });
+      return;
+    }
+    setErrors({});
+
+    setSubmitting(true);
+    try {
+      let chartUrl: string | null = null;
+      try {
+        chartUrl = await uploadChart();
+      } catch (err) {
+        toast.error(
+          `Chart upload failed: ${err instanceof Error ? err.message : "unknown"}`,
+        );
+      }
+
+      const { error } = await createTrade({
+        user_id: user.id,
+        date,
+        instrument: resolvedInstrument,
+        direction,
+        entry: entryNum,
+        stop: stopNum,
+        target: targetNum,
+        result,
+        pnl: actualPnl,
+        r_multiple: rNum,
+        range_size: rangeSize === "" ? null : parseFloat(rangeSize),
+        notes: notes.trim() || null,
+        chart_url: chartUrl,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Trade logged");
+      reset();
+      setOpen(false);
+      onLogged?.();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        {trigger ?? (
+          <Button
+            size="sm"
+            className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            New Trade
+          </Button>
+        )}
+      </SheetTrigger>
+      <SheetContent
+        side="bottom"
+        className="max-h-[92vh] overflow-y-auto pb-8"
+      >
+        <SheetHeader>
+          <SheetTitle className="font-heading">Log Trade</SheetTitle>
+          <SheetDescription>
+            Enter setup, result, and notes. Risk and P&L update live.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-5">
+          {/* Setup */}
+          <Section title="Setup">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Date" error={errors.date}>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  max={today()}
+                />
+              </Field>
+              <Field label="Instrument" error={errors.instrument}>
+                <Select value={instrument} onValueChange={setInstrument}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INSTRUMENTS.map((i) => (
+                      <SelectItem key={i} value={i}>
+                        {i}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              {instrument === "Other" && (
+                <Field
+                  label="Custom Instrument"
+                  error={errors.instrument}
+                  className="sm:col-span-2"
+                >
+                  <Input
+                    value={customInstrument}
+                    placeholder="e.g. CL, GC"
+                    onChange={(e) => setCustomInstrument(e.target.value)}
+                    maxLength={20}
+                  />
+                </Field>
+              )}
+
+              <Field label="Direction" className="sm:col-span-2">
+                <ToggleGroup
+                  value={direction}
+                  onChange={(v) => setDirection(v as "Long" | "Short")}
+                  options={[
+                    { value: "Long", label: "Long", color: "blue" },
+                    { value: "Short", label: "Short", color: "amber" },
+                  ]}
+                />
+              </Field>
+
+              <Field label="Entry" error={errors.entry}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={entry}
+                  onChange={(e) => setEntry(e.target.value)}
+                />
+              </Field>
+              <Field label="Stop" error={errors.stop}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={stop}
+                  onChange={(e) => setStop(e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Target"
+                error={errors.target}
+                className="sm:col-span-2"
+              >
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
+
+          {/* Live calc */}
+          <div className="rounded-xl border border-trade-green/30 bg-trade-green/5 p-3">
+            <div className="text-[10px] uppercase tracking-wider font-data text-trade-green mb-2">
+              Live Calc
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Stat
+                label="Stop dist"
+                value={
+                  stopDistance != null ? `${stopDistance.toFixed(2)} pts` : "—"
+                }
+              />
+              <Stat label="Risk" value={fmtMoney(riskDollar)} />
+              <Stat
+                label="Target $"
+                value={targetDollar != null ? fmtMoney(targetDollar) : "—"}
+              />
+              <Stat
+                label="R:R"
+                value={rrRatio != null ? `${rrRatio.toFixed(2)}R` : "—"}
+              />
+            </div>
+          </div>
+
+          {/* Result */}
+          <Section title="Result">
+            <Field label="Outcome">
+              <ToggleGroup
+                value={result}
+                onChange={(v) => setResult(v as "Win" | "Loss" | "Scratch")}
+                options={[
+                  { value: "Win", label: "Win", color: "green" },
+                  { value: "Loss", label: "Loss", color: "red" },
+                  { value: "Scratch", label: "Scratch", color: "gray" },
+                ]}
+              />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2 mt-3">
+              <Field label="Actual R multiple" error={errors.rMultiple}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={rMultiple}
+                  onChange={(e) => setRMultiple(e.target.value)}
+                />
+              </Field>
+              <Field label="Actual P&L (auto)">
+                <div
+                  className={cn(
+                    "h-10 px-3 flex items-center rounded-md border border-input bg-muted/30 font-data text-sm",
+                    actualPnl > 0 && "text-trade-green",
+                    actualPnl < 0 && "text-trade-red",
+                  )}
+                >
+                  {actualPnl >= 0 ? "+" : ""}
+                  {fmtMoney(actualPnl)}
+                </div>
+              </Field>
+            </div>
+          </Section>
+
+          {/* Optional */}
+          <Section title="Optional">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Range size (pts)" error={errors.rangeSize}>
+                <Input
+                  type="number"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={rangeSize}
+                  onChange={(e) => setRangeSize(e.target.value)}
+                />
+              </Field>
+              <Field label="Chart screenshot">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                />
+                {chartPreview ? (
+                  <div className="relative">
+                    <img
+                      src={chartPreview}
+                      alt="Chart preview"
+                      className="h-20 w-full rounded-md object-cover border border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleFile(null)}
+                      className="absolute top-1 right-1 rounded-full bg-background/80 p-1 hover:bg-background"
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-10 w-full justify-start gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload image
+                  </Button>
+                )}
+              </Field>
+              <Field label="Notes" className="sm:col-span-2" error={errors.notes}>
+                <Textarea
+                  rows={3}
+                  value={notes}
+                  maxLength={2000}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="What did you see? Why this trade?"
+                />
+              </Field>
+            </div>
+          </Section>
+        </div>
+
+        <SheetFooter className="mt-5">
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={submitting || !requiredOk}
+            className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider disabled:opacity-40"
+          >
+            {submitting ? "Saving..." : "Save Trade"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="text-[10px] uppercase tracking-wider font-data text-muted-foreground mb-2">
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  className,
+  children,
+}: {
+  label: string;
+  error?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn("space-y-1", className)}>
+      <Label className="text-xs">{label}</Label>
+      {children}
+      {error && <p className="text-[11px] text-trade-red">{error}</p>}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-data">
+        {label}
+      </div>
+      <div className="font-data text-sm text-foreground">{value}</div>
+    </div>
+  );
+}
+
+type ToggleOpt = {
+  value: string;
+  label: string;
+  color: "blue" | "amber" | "green" | "red" | "gray";
+};
+
+function ToggleGroup({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: ToggleOpt[];
+}) {
+  const colorMap: Record<ToggleOpt["color"], string> = {
+    blue: "bg-blue-500/15 border-blue-500/50 text-blue-400",
+    amber: "bg-amber-500/15 border-amber-500/50 text-amber-400",
+    green: "bg-trade-green/15 border-trade-green/50 text-trade-green",
+    red: "bg-trade-red/15 border-trade-red/50 text-trade-red",
+    gray: "bg-muted border-border text-foreground",
+  };
+  return (
+    <div className="flex gap-2">
+      {options.map((opt) => {
+        const active = value === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "flex-1 h-10 rounded-md border text-sm font-data uppercase tracking-wider transition-colors",
+              active
+                ? colorMap[opt.color]
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function NewTradeIconButton(props: Props) {
+  return (
+    <NewTradeSheet
+      {...props}
+      trigger={
+        <Button
+          className="fixed bottom-6 right-6 z-40 h-14 rounded-full px-5 bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
+          style={{ boxShadow: "0 0 24px rgba(0,255,170,0.45)" }}
+        >
+          <ImageIcon className="hidden" />
+          <Plus className="mr-1 h-5 w-5" />
+          Quick Log
+        </Button>
+      }
+    />
+  );
+}
