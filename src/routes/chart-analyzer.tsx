@@ -92,6 +92,10 @@ function ChartAnalyzer() {
   const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const navigate = useNavigate();
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"analyzer" | "history">("analyzer");
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -146,6 +150,7 @@ function ChartAnalyzer() {
     setRaw(null);
     setZoom(1);
     setUploadPct(0);
+    setSavedId(null);
     let processed: ProcessedImage;
     try {
       processed = await processImageFile(file, setUploadPct);
@@ -163,15 +168,6 @@ function ChartAnalyzer() {
         const a = (res.analysis as Analysis) ?? null;
         setAnalysis(a);
         setRaw(res.raw ?? null);
-        if (user && a) {
-          await saveChartAnalysis(
-            buildAnalysisInsert({
-              userId: user.id,
-              chartUrl: processed.dataUrl,
-              analysis: a as unknown as Record<string, unknown>,
-            }),
-          );
-        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");
@@ -187,6 +183,7 @@ function ChartAnalyzer() {
     setRaw(null);
     setZoom(1);
     setUploadPct(0);
+    setSavedId(null);
     if (fileRef.current) fileRef.current.value = "";
     if (cameraRef.current) cameraRef.current.value = "";
     if (libraryRef.current) libraryRef.current.value = "";
