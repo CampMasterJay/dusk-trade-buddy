@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
+import { List, type RowComponentProps } from "react-window";
 import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -387,6 +388,18 @@ function TradeLogScreen() {
                 : "Try clearing your filters."
             }
           />
+        ) : filteredSorted.length > 50 ? (
+          <VirtualizedTradeList
+            trades={filteredSorted}
+            balanceMap={balanceMap}
+            journalIds={journalIds}
+            onOpen={(t) => {
+              setSelectedTrade(t);
+              setDetailOpen(true);
+            }}
+            onDeleted={(id) => setTrades((prev) => prev.filter((x) => x.id !== id))}
+            onRestore={(t) => setTrades((prev) => [t, ...prev])}
+          />
         ) : (
           <ul className="space-y-2">
             {filteredSorted.map((t) => (
@@ -399,9 +412,8 @@ function TradeLogScreen() {
                   setSelectedTrade(t);
                   setDetailOpen(true);
                 }}
-                onDeleted={() => {
-                  setTrades((prev) => prev.filter((x) => x.id !== t.id));
-                }}
+                onDeleted={() => setTrades((prev) => prev.filter((x) => x.id !== t.id))}
+                onRestore={() => setTrades((prev) => [t, ...prev])}
               />
             ))}
           </ul>
