@@ -778,6 +778,19 @@ function AnalysisView({
         )}
       </div>
 
+      {/* Setup Scorer */}
+      <SetupScorer
+        inputs={{
+          trend: a.trend,
+          biasDirection: a.biasDirection ?? a.setupIdea?.direction,
+          confluenceFactors: confluence,
+          riskFactors: risks,
+          rr,
+          minRr,
+          session,
+        }}
+      />
+
       {/* Section 3 — Key Levels */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-3">
