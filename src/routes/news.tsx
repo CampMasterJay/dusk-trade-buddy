@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMacroSummary } from "@/lib/api/macroContext.functions";
 import {
@@ -15,11 +15,15 @@ import {
 import {
   ARTICLES,
   timeAgo,
+  articleMatchesWatchlist,
   type Article,
   type AssetKey,
   type Impact,
   type Sentiment,
 } from "@/lib/newsData";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { WatchlistManager } from "@/components/WatchlistManager";
+import { toast } from "sonner";
 import {
   scoreArticles,
   pendingIdsFor,
@@ -66,7 +70,7 @@ const SENTIMENT_FILTERS: { key: Sentiment; label: string }[] = [
 ];
 
 function News() {
-  const [tab, setTab] = useState<"news" | "calendar" | "macro">("news");
+  const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
@@ -141,6 +145,7 @@ function News() {
           {/* Tabs */}
           <div className="inline-flex rounded-lg border border-border bg-card p-1 mb-4">
             <TabBtn active={tab === "news"} onClick={() => setTab("news")} icon={Newspaper} label="Feed" />
+            <TabBtn active={tab === "watchlist"} onClick={() => setTab("watchlist")} icon={Star} label="Watchlist" />
             <TabBtn active={tab === "calendar"} onClick={() => setTab("calendar")} icon={CalendarClock} label="Calendar" />
             <TabBtn active={tab === "macro"} onClick={() => setTab("macro")} icon={Activity} label="Macro" />
           </div>
@@ -197,6 +202,8 @@ function News() {
             </>
           ) : tab === "calendar" ? (
             <CalendarView />
+          ) : tab === "watchlist" ? (
+            <WatchlistView scores={scores} pending={pending} />
           ) : (
             <MacroView />
           )}
