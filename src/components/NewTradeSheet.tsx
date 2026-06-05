@@ -60,6 +60,13 @@ interface Props {
   editTrade?: Trade | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  prefill?: {
+    entry?: string | number | null;
+    stop?: string | number | null;
+    target?: string | number | null;
+    direction?: "Long" | "Short" | null;
+    instrument?: string | null;
+  } | null;
 }
 
 export function NewTradeSheet({
@@ -69,6 +76,7 @@ export function NewTradeSheet({
   editTrade,
   open: openProp,
   onOpenChange,
+  prefill,
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
