@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
-import { createTrade } from "@/lib/tradeService";
+import { createTrade, updateTrade, type Trade } from "@/lib/tradeService";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -57,41 +57,72 @@ interface Props {
   onLogged?: () => void;
   trigger?: React.ReactNode;
   defaultInstrument?: string;
+  editTrade?: Trade | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
+export function NewTradeSheet({
+  onLogged,
+  trigger,
+  defaultInstrument,
+  editTrade,
+  open: openProp,
+  onOpenChange,
+}: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
-  const [open, setOpen] = useState(false);
+  const [openUncontrolled, setOpenUncontrolled] = useState(false);
+  const open = openProp ?? openUncontrolled;
+  const setOpen = (v: boolean) => {
+    onOpenChange?.(v);
+    if (openProp === undefined) setOpenUncontrolled(v);
+  };
+  const isEdit = !!editTrade;
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
 
   // Form state
   const today = () => new Date().toISOString().slice(0, 10);
   const initialInstrument = useMemo(() => {
-    const i = defaultInstrument ?? settings?.instrument ?? "MES";
-    return INSTRUMENTS.includes(i as (typeof INSTRUMENTS)[number])
-      ? (i as string)
+    const source = editTrade?.instrument ?? defaultInstrument ?? settings?.instrument ?? "MES";
+    return INSTRUMENTS.includes(source as (typeof INSTRUMENTS)[number])
+      ? (source as string)
       : "Other";
-  }, [defaultInstrument, settings?.instrument]);
+  }, [editTrade, defaultInstrument, settings?.instrument]);
 
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState<string>(editTrade?.date ?? today());
   const [instrument, setInstrument] = useState<string>(initialInstrument);
   const [customInstrument, setCustomInstrument] = useState<string>(
-    initialInstrument === "Other" ? (defaultInstrument ?? "") : "",
+    initialInstrument === "Other"
+      ? (editTrade?.instrument ?? defaultInstrument ?? "")
+      : "",
   );
-  const [direction, setDirection] = useState<"Long" | "Short">("Long");
-  const [entry, setEntry] = useState("");
-  const [stop, setStop] = useState("");
-  const [target, setTarget] = useState("");
+  const [direction, setDirection] = useState<"Long" | "Short">(
+    (editTrade?.direction as "Long" | "Short") ?? "Long",
+  );
+  const [entry, setEntry] = useState(editTrade ? String(editTrade.entry) : "");
+  const [stop, setStop] = useState(editTrade ? String(editTrade.stop) : "");
+  const [target, setTarget] = useState(editTrade ? String(editTrade.target) : "");
 
-  const [result, setResult] = useState<"Win" | "Loss" | "Scratch">("Win");
-  const [rMultiple, setRMultiple] = useState<string>("");
+  const [result, setResult] = useState<"Win" | "Loss" | "Scratch">(
+    (editTrade?.result as "Win" | "Loss" | "Scratch") ?? "Win",
+  );
+  const [rMultiple, setRMultiple] = useState<string>(
+    editTrade?.r_multiple != null ? String(editTrade.r_multiple) : "",
+  );
 
-  const [notes, setNotes] = useState("");
-  const [rangeSize, setRangeSize] = useState("");
+  const [notes, setNotes] = useState(editTrade?.notes ?? "");
+  const [rangeSize, setRangeSize] = useState(
+    editTrade?.range_size != null ? String(editTrade.range_size) : "",
+  );
+  // Track whether user manually edited the R multiple — so we don't auto-overwrite in edit mode.
+  const [rTouched, setRTouched] = useState(isEdit);
   const [chartFile, setChartFile] = useState<File | null>(null);
   const [chartPreview, setChartPreview] = useState<string | null>(null);
+  const [existingChart, setExistingChart] = useState<string | null>(
+    editTrade?.chart_url ?? null,
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Defaults from settings
@@ -99,18 +130,44 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
   const riskPct = Number(settings?.risk_pct ?? 15);
   const rrSetting = Number(settings?.rr_ratio ?? 1.5);
 
-  // Sync defaults when sheet opens
+  // Re-hydrate form whenever the sheet opens or the edit target changes
   useEffect(() => {
     if (!open) return;
-    setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
-  }, [open, rrSetting]);
+    if (editTrade) {
+      setDate(editTrade.date);
+      const src = editTrade.instrument;
+      const known = INSTRUMENTS.includes(src as (typeof INSTRUMENTS)[number]);
+      setInstrument(known ? src : "Other");
+      setCustomInstrument(known ? "" : src);
+      setDirection(editTrade.direction as "Long" | "Short");
+      setEntry(String(editTrade.entry));
+      setStop(String(editTrade.stop));
+      setTarget(String(editTrade.target));
+      setResult(editTrade.result as "Win" | "Loss" | "Scratch");
+      setRMultiple(
+        editTrade.r_multiple != null ? String(editTrade.r_multiple) : "",
+      );
+      setNotes(editTrade.notes ?? "");
+      setRangeSize(
+        editTrade.range_size != null ? String(editTrade.range_size) : "",
+      );
+      setExistingChart(editTrade.chart_url ?? null);
+      setChartFile(null);
+      setRTouched(true);
+      setErrors({});
+    } else {
+      setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editTrade?.id]);
 
-  // Auto-flip default R multiple sign based on result
+  // Auto-flip default R multiple sign based on result (only for new trades / untouched values)
   useEffect(() => {
+    if (rTouched) return;
     if (result === "Win") setRMultiple(String(Math.abs(rrSetting)));
     else if (result === "Loss") setRMultiple(String(-1));
     else setRMultiple("0");
-  }, [result, rrSetting]);
+  }, [result, rrSetting, rTouched]);
 
   // Live calculations
   const entryNum = parseFloat(entry);
@@ -186,9 +243,11 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
     setTarget("");
     setResult("Win");
     setRMultiple(String(rrSetting));
+    setRTouched(false);
     setNotes("");
     setRangeSize("");
     setChartFile(null);
+    setExistingChart(null);
     setErrors({});
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -237,17 +296,17 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
 
     setSubmitting(true);
     try {
-      let chartUrl: string | null = null;
+      let chartUrl: string | null = existingChart;
       try {
-        chartUrl = await uploadChart();
+        const uploaded = await uploadChart();
+        if (uploaded) chartUrl = uploaded;
       } catch (err) {
         toast.error(
           `Chart upload failed: ${err instanceof Error ? err.message : "unknown"}`,
         );
       }
 
-      const { error } = await createTrade({
-        user_id: user.id,
+      const payload = {
         date,
         instrument: resolvedInstrument,
         direction,
@@ -260,14 +319,18 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
         range_size: rangeSize === "" ? null : parseFloat(rangeSize),
         notes: notes.trim() || null,
         chart_url: chartUrl,
-      });
+      };
+
+      const { error } = isEdit && editTrade
+        ? await updateTrade(editTrade.id, payload)
+        : await createTrade({ user_id: user.id, ...payload });
 
       if (error) {
         toast.error(error.message);
         return;
       }
-      toast.success("Trade logged");
-      reset();
+      toast.success(isEdit ? "Trade updated" : "Trade logged");
+      if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
     } finally {
@@ -277,23 +340,27 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        {trigger ?? (
-          <Button
-            size="sm"
-            className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            New Trade
-          </Button>
-        )}
-      </SheetTrigger>
+      {trigger !== null && (
+        <SheetTrigger asChild>
+          {trigger ?? (
+            <Button
+              size="sm"
+              className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              New Trade
+            </Button>
+          )}
+        </SheetTrigger>
+      )}
       <SheetContent
         side="bottom"
         className="max-h-[92vh] overflow-y-auto pb-8"
       >
         <SheetHeader>
-          <SheetTitle className="font-heading">Log Trade</SheetTitle>
+          <SheetTitle className="font-heading">
+            {isEdit ? "Edit Trade" : "Log Trade"}
+          </SheetTitle>
           <SheetDescription>
             Enter setup, result, and notes. Risk and P&L update live.
           </SheetDescription>
@@ -429,7 +496,10 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
                   step="0.01"
                   inputMode="decimal"
                   value={rMultiple}
-                  onChange={(e) => setRMultiple(e.target.value)}
+                  onChange={(e) => {
+                    setRMultiple(e.target.value);
+                    setRTouched(true);
+                  }}
                 />
               </Field>
               <Field label="Actual P&L (auto)">
@@ -482,6 +552,28 @@ export function NewTradeSheet({ onLogged, trigger, defaultInstrument }: Props) {
                     >
                       <X className="h-3 w-3" />
                     </button>
+                  </div>
+                ) : existingChart ? (
+                  <div className="flex items-center justify-between gap-2 h-10 px-3 rounded-md border border-input bg-muted/30 text-xs font-data">
+                    <span className="text-muted-foreground truncate">
+                      Chart attached
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-trade-green hover:underline"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExistingChart(null)}
+                        className="text-trade-red hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <Button

@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Trash2, ChevronDown, Search } from "lucide-react";
+import { Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
+import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
@@ -191,6 +192,8 @@ function TradeLogScreen() {
 
   const currentBalance = Number(settings?.current_balance ?? 100);
   const refresh = () => setReloadKey((k) => k + 1);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   return (
     <>
@@ -297,6 +300,10 @@ function TradeLogScreen() {
                 key={t.id}
                 trade={t}
                 runningBalance={balanceMap.get(t.id) ?? 0}
+                onOpen={() => {
+                  setSelectedTrade(t);
+                  setDetailOpen(true);
+                }}
                 onDeleted={() => {
                   setTrades((prev) => prev.filter((x) => x.id !== t.id));
                 }}
@@ -318,6 +325,12 @@ function TradeLogScreen() {
           </div>
         )}
       </div>
+      <TradeDetailSheet
+        trade={selectedTrade}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onChanged={refresh}
+      />
     </>
   );
 }
@@ -326,13 +339,14 @@ function TradeLogScreen() {
 function TradeCard({
   trade,
   runningBalance,
+  onOpen,
   onDeleted,
 }: {
   trade: Trade;
   runningBalance: number;
+  onOpen: () => void;
   onDeleted: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -413,7 +427,7 @@ function TradeCard({
       >
         <button
           type="button"
-          onClick={() => setExpanded((x) => !x)}
+          onClick={onOpen}
           className="w-full text-left p-4"
         >
           <div className="flex items-start justify-between gap-3">
@@ -457,43 +471,8 @@ function TradeCard({
               <div className="text-sm font-data text-foreground">
                 {fmtMoney(runningBalance)}
               </div>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 ml-auto mt-1 text-muted-foreground transition-transform",
-                  expanded && "rotate-180",
-                )}
-              />
             </div>
           </div>
-
-          {expanded && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-3 text-xs font-data">
-              <Detail label="Entry" value={fmtNum(trade.entry)} />
-              <Detail label="Stop" value={fmtNum(trade.stop)} />
-              <Detail label="Target" value={fmtNum(trade.target)} />
-              {trade.range_size != null && (
-                <Detail label="Range" value={fmtNum(trade.range_size)} />
-              )}
-              {trade.notes && (
-                <div className="col-span-3 text-muted-foreground whitespace-pre-wrap">
-                  {trade.notes}
-                </div>
-              )}
-              <div className="col-span-3 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-trade-red hover:text-trade-red"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                </Button>
-              </div>
-            </div>
-          )}
         </button>
       </div>
 
@@ -547,22 +526,6 @@ function Badge({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      <div className="text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function fmtNum(v: number | null | undefined): string {
-  if (v == null) return "—";
-  const n = Number(v);
-  return Number.isFinite(n) ? n.toString() : "—";
-}
 
 function formatDate(d: string): string {
   const dt = new Date(d + "T00:00:00");
