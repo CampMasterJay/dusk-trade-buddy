@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/components/AuthProvider";
+import { AppHeader } from "@/components/AppHeader";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -20,9 +21,9 @@ function Settings() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background text-foreground">
-        <div className="p-4 lg:p-6">
-          <h1 className="text-2xl font-bold font-heading mb-4">Settings</h1>
+      <AppHeader balance={12450.0} />
+      <div className="p-4 lg:p-6">
+        <h1 className="text-2xl font-bold font-heading mb-4">Settings</h1>
 
           <div className="rounded-xl border border-border bg-card p-6 mb-4">
             <h2 className="text-lg font-semibold font-heading mb-3">Account</h2>
@@ -55,7 +56,6 @@ function Settings() {
             <LogOut className="h-4 w-4" />
             <span className="text-sm font-medium">Sign Out</span>
           </button>
-        </div>
       </div>
     </ProtectedRoute>
   );
