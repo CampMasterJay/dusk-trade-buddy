@@ -322,6 +322,7 @@ function ChartAnalyzer() {
             }}
             onLink={setLinkSheetFor}
             trades={trades}
+            onFeedbackSaved={refreshHistory}
           />
         )}
 
