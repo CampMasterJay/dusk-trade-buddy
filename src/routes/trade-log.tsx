@@ -292,7 +292,7 @@ function TradeLogScreen() {
           <ErrorCard message={error} onRetry={refresh} />
         ) : filteredSorted.length === 0 ? (
           <EmptyState
-            icon={<Search className="h-6 w-6" />}
+            icon={Search}
             title="No trades found"
             subtitle={
               trades.length === 0
