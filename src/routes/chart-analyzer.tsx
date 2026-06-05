@@ -77,20 +77,37 @@ type Analysis = {
   setupIdea?: { direction?: "long" | "short" | "none"; entry?: string; stop?: string; target?: string; rr?: string };
   risks?: string[];
   summary?: string;
+  frames?: Partial<Record<"HTF" | "MTF" | "LTF", {
+    timeframe?: string | null;
+    trend?: "bullish" | "bearish" | "sideways" | string;
+    structure?: string;
+    summary?: string;
+  } | null>>;
+  mtfAlignment?: {
+    aligned?: number;
+    total?: number;
+    verdict?: string;
+    htfTrend?: string;
+    mtfStructure?: string;
+    ltfSignal?: string;
+  };
 };
 
+type Slot = "HTF" | "MTF" | "LTF";
+const SLOT_META: { key: Slot; label: string; tfs: string[] }[] = [
+  { key: "HTF", label: "Higher Timeframe", tfs: ["4h", "1h", "Daily"] },
+  { key: "MTF", label: "Entry Timeframe", tfs: ["15m", "5m"] },
+  { key: "LTF", label: "Trigger Timeframe", tfs: ["2m", "1m"] },
+];
+
 function ChartAnalyzer() {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const libraryRef = useRef<HTMLInputElement>(null);
-  const [image, setImage] = useState<ProcessedImage | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [frames, setFrames] = useState<
+    Record<Slot, { image: ProcessedImage; timeframe: string } | null>
+  >({ HTF: null, MTF: null, LTF: null });
   const [loading, setLoading] = useState(false);
-  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -145,24 +162,49 @@ function ChartAnalyzer() {
     [history, filterSetup, filterInstrument],
   );
 
-  async function handleFile(file: File) {
+  const firstFrame = frames.HTF ?? frames.MTF ?? frames.LTF;
+  const filledSlots = (["HTF", "MTF", "LTF"] as const).filter((s) => frames[s]);
+  const canAnalyze = filledSlots.length > 0 && !loading;
+
+  async function handleSlotFile(slot: Slot, file: File, timeframe: string) {
     setError(null);
-    setAnalysis(null);
-    setRaw(null);
-    setZoom(1);
-    setUploadPct(0);
     setSavedId(null);
     let processed: ProcessedImage;
     try {
-      processed = await processImageFile(file, setUploadPct);
+      processed = await processImageFile(file);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read image.");
       return;
     }
-    setImage(processed);
+    setFrames((f) => ({ ...f, [slot]: { image: processed, timeframe } }));
+  }
+
+  function setSlotTimeframe(slot: Slot, tf: string) {
+    setFrames((f) => {
+      const cur = f[slot];
+      if (!cur) return f;
+      return { ...f, [slot]: { ...cur, timeframe: tf } };
+    });
+  }
+
+  function clearSlot(slot: Slot) {
+    setFrames((f) => ({ ...f, [slot]: null }));
+  }
+
+  async function runAnalysis() {
+    if (!canAnalyze) return;
+    setError(null);
+    setAnalysis(null);
+    setRaw(null);
+    setSavedId(null);
     setLoading(true);
     try {
-      const res = await analyze({ data: { imageDataUrl: processed.dataUrl } });
+      const payloadFrames = filledSlots.map((slot) => ({
+        slot,
+        timeframe: frames[slot]!.timeframe || undefined,
+        imageDataUrl: frames[slot]!.image.dataUrl,
+      }));
+      const res = await analyze({ data: { frames: payloadFrames } });
       if (!res.ok) {
         setError(res.error);
       } else {
@@ -178,16 +220,11 @@ function ChartAnalyzer() {
   }
 
   function clearAll() {
-    setImage(null);
+    setFrames({ HTF: null, MTF: null, LTF: null });
     setAnalysis(null);
     setError(null);
     setRaw(null);
-    setZoom(1);
-    setUploadPct(0);
     setSavedId(null);
-    if (fileRef.current) fileRef.current.value = "";
-    if (cameraRef.current) cameraRef.current.value = "";
-    if (libraryRef.current) libraryRef.current.value = "";
   }
 
   return (
@@ -244,204 +281,57 @@ function ChartAnalyzer() {
         )}
 
         {tab === "analyzer" && (<>
-        {/* Upload area */}
-        {!image ? (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragging(false);
-              const f = e.dataTransfer.files?.[0];
-              if (f) void handleFile(f);
-            }}
-            onClick={() => fileRef.current?.click()}
-            className={`relative flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-              isDragging
-                ? "border-trade-green bg-trade-green/5"
-                : "border-border bg-card hover:border-trade-green/50 hover:bg-trade-green/5"
-            }`}
-          >
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-trade-green/10">
-              <Camera className="h-7 w-7 text-trade-green" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              Drop chart screenshot here or tap to upload
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              PNG, JPG, WEBP · up to 10MB
-            </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cameraRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent md:hidden"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                Camera
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  libraryRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent md:hidden"
-              >
-                <ImageIcon className="h-3.5 w-3.5" />
-                Photos
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              >
-                <FolderOpen className="h-3.5 w-3.5 hidden md:inline" />
-                <Upload className="h-3.5 w-3.5 md:hidden" />
-                Files
-              </button>
-            </div>
-
-            {uploadPct > 0 && uploadPct < 100 && (
-              <div className="mt-5 w-full max-w-xs">
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-trade-green transition-all"
-                    style={{ width: `${uploadPct}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
-                  Reading… {uploadPct}%
-                </p>
-              </div>
-            )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
-            <input
-              ref={libraryRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
-              }}
-            />
+        {/* Multi-Timeframe upload */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-bold font-data uppercase tracking-[3px] text-muted-foreground">
+              Multi-Timeframe Input
+            </h2>
+            <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+              {filledSlots.length}/3 frames
+            </span>
           </div>
-        ) : (
-          <div className="rounded-xl border border-border bg-card p-3">
-            <div
-              className="relative max-h-[55vh] overflow-auto rounded-lg bg-background"
-              style={{ touchAction: "pinch-zoom" }}
-            >
-              <img
-                src={image.dataUrl}
-                alt={image.name}
-                className="block origin-top-left select-none"
-                style={{
-                  transform: `scale(${zoom})`,
-                  transformOrigin: "top left",
-                  width: zoom === 1 ? "100%" : "auto",
-                  maxWidth: zoom === 1 ? "100%" : "none",
-                }}
-                draggable={false}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {SLOT_META.map((m) => (
+              <FrameSlot
+                key={m.key}
+                slot={m.key}
+                label={m.label}
+                timeframeOptions={m.tfs}
+                frame={frames[m.key]}
+                onFile={(file, tf) => void handleSlotFile(m.key, file, tf)}
+                onTimeframeChange={(tf) => setSlotTimeframe(m.key, tf)}
+                onClear={() => clearSlot(m.key)}
               />
-            </div>
-
-            {/* Zoom controls */}
-            <div className="mt-2 flex items-center justify-between">
-              <div className="flex items-center gap-1">
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] text-muted-foreground">
+              Add 1–3 charts of the same instrument at different timeframes for a top-down read.
+            </p>
+            <div className="flex items-center gap-2">
+              {filledSlots.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Zoom out"
+                  onClick={clearAll}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
                 >
-                  <ZoomOut className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" />
+                  Clear all
                 </button>
-                <span className="min-w-[3rem] text-center text-[11px] font-data text-muted-foreground">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Zoom in"
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoom(1)}
-                  className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
-                  aria-label="Reset zoom"
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              )}
               <button
                 type="button"
-                onClick={clearAll}
-                className="inline-flex items-center gap-1.5 rounded-md border border-trade-red/30 bg-trade-red/10 px-3 py-1.5 text-xs font-medium text-trade-red hover:bg-trade-red/20"
+                onClick={() => void runAnalysis()}
+                disabled={!canAnalyze}
+                className="inline-flex items-center gap-1.5 rounded-md bg-trade-green px-4 py-1.5 text-xs font-bold font-data uppercase tracking-wider text-background hover:bg-trade-green/90 disabled:opacity-50"
               >
-                <X className="h-3.5 w-3.5" />
-                Clear
+                <Sparkles className="h-3.5 w-3.5" />
+                {loading ? "Analyzing…" : "Analyze"}
               </button>
             </div>
-
-            {/* File metadata */}
-            <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-border bg-background/50 p-2.5 text-[11px] font-data">
-              <div className="truncate">
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Name</div>
-                <div className="truncate text-foreground" title={image.name}>{image.name}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Size</div>
-                <div className="text-foreground">
-                  {formatBytes(image.bytes)}
-                  {image.compressed && (
-                    <span className="ml-1 text-trade-green">
-                      ↓ from {formatBytes(image.originalBytes)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Dimensions</div>
-                <div className="text-foreground">{image.width}×{image.height}</div>
-              </div>
-            </div>
           </div>
-        )}
+        </div>
 
         {/* Results panel */}
         <div className="rounded-xl border border-border bg-card p-5">
@@ -499,12 +389,12 @@ function ChartAnalyzer() {
                 void navigate({ to: "/trade-log" });
               }}
               onSave={async () => {
-                if (!user || !image || savedId) return;
+                if (!user || !firstFrame || savedId) return;
                 setSaving(true);
                 const { data } = await saveChartAnalysis(
                   buildAnalysisInsert({
                     userId: user.id,
-                    chartUrl: image.dataUrl,
+                    chartUrl: firstFrame.image.dataUrl,
                     analysis: analysis as unknown as Record<string, unknown>,
                   }),
                 );
@@ -682,6 +572,9 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* MTF Alignment (top) */}
+      {(a.mtfAlignment || a.frames) && <MtfAlignmentCard a={a} />}
+
       {/* Section 1 — Setup Overview */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -1197,6 +1090,210 @@ function LinkTradeModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FrameSlot({
+  slot,
+  label,
+  timeframeOptions,
+  frame,
+  onFile,
+  onTimeframeChange,
+  onClear,
+}: {
+  slot: Slot;
+  label: string;
+  timeframeOptions: string[];
+  frame: { image: ProcessedImage; timeframe: string } | null;
+  onFile: (file: File, timeframe: string) => void;
+  onTimeframeChange: (tf: string) => void;
+  onClear: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [tf, setTf] = useState<string>(
+    frame?.timeframe ?? timeframeOptions[0],
+  );
+  useEffect(() => {
+    if (frame?.timeframe) setTf(frame.timeframe);
+  }, [frame?.timeframe]);
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-data uppercase tracking-[2px] text-trade-green">
+            {slot}
+          </div>
+          <div className="truncate text-xs font-medium text-foreground">
+            {label}
+          </div>
+        </div>
+        <select
+          value={tf}
+          onChange={(e) => {
+            setTf(e.target.value);
+            if (frame) onTimeframeChange(e.target.value);
+          }}
+          className="rounded border border-border bg-card px-1.5 py-1 text-[11px] font-data"
+        >
+          {timeframeOptions.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {frame ? (
+        <div className="space-y-2">
+          <div className="overflow-hidden rounded-md border border-border bg-card">
+            <img
+              src={frame.image.dataUrl}
+              alt={`${slot} chart`}
+              className="block h-28 w-full object-cover"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-data text-muted-foreground">
+              {formatBytes(frame.image.bytes)} · {frame.image.width}×{frame.image.height}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[10px] font-medium hover:bg-accent"
+              >
+                <Upload className="h-3 w-3" />
+                Replace
+              </button>
+              <button
+                type="button"
+                onClick={onClear}
+                className="inline-flex items-center gap-1 rounded border border-trade-red/30 bg-trade-red/10 px-2 py-1 text-[10px] font-medium text-trade-red hover:bg-trade-red/20"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-trade-green/50 hover:bg-trade-green/5 hover:text-trade-green"
+        >
+          <Camera className="h-5 w-5" />
+          <span className="text-[10px] font-data uppercase tracking-wider">
+            Upload
+          </span>
+        </button>
+      )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f, tf);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
+export function MtfAlignmentCard({ a }: { a: Analysis }) {
+  const m = a.mtfAlignment;
+  const fr = a.frames;
+  if (!m && !fr) return null;
+  const total = m?.total ?? Object.values(fr ?? {}).filter(Boolean).length ?? 0;
+  const aligned = m?.aligned ?? 0;
+  const fullAligned = total > 0 && aligned === total;
+  const color = fullAligned
+    ? "#00ffaa"
+    : aligned >= 2
+      ? "#4ade80"
+      : aligned === 1
+        ? "#f59e0b"
+        : "#f87171";
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-[10px] font-data uppercase tracking-[3px] text-muted-foreground">
+          Multi-Timeframe Alignment
+        </h3>
+        <div className="text-right">
+          <div
+            className="font-data font-bold leading-none"
+            style={{ color, fontSize: "1.75rem" }}
+          >
+            {aligned}
+            <span className="text-sm text-muted-foreground font-normal">
+              /{total || 3}
+            </span>
+          </div>
+          <div
+            className="mt-0.5 text-[9px] font-data uppercase tracking-[2px]"
+            style={{ color }}
+          >
+            timeframes aligned
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5 text-xs">
+        {m?.htfTrend && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              HTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Trend:</span>{" "}
+              <span className="font-medium">{m.htfTrend}</span>
+            </span>
+          </div>
+        )}
+        {m?.mtfStructure && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              MTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Structure:</span>{" "}
+              <span className="font-medium">{m.mtfStructure}</span>
+            </span>
+          </div>
+        )}
+        {m?.ltfSignal && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+              LTF
+            </span>
+            <span className="text-foreground">
+              <span className="text-muted-foreground">Signal:</span>{" "}
+              <span className="font-medium">{m.ltfSignal}</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {m?.verdict && (
+        <div
+          className="mt-3 rounded-lg border px-3 py-2 text-center text-[11px] font-data font-bold uppercase tracking-[2px]"
+          style={{
+            color,
+            borderColor: `${color}66`,
+            backgroundColor: `${color}1A`,
+          }}
+        >
+          {m.verdict}
+        </div>
+      )}
     </div>
   );
 }
