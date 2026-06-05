@@ -247,17 +247,22 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
-          <NewTradeSheet
+          <TradeLockGateWrapper
+            trades={trades}
+            startingBalance={Number(settings?.starting_balance ?? 100)}
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
             prefill={prefill}
-            open={newOpen || undefined}
-            onOpenChange={(v) => {
-              setNewOpen(v);
-              if (!v) setPrefill(null);
-            }}
+            newOpen={newOpen}
+            setNewOpen={setNewOpen}
+            clearPrefill={() => setPrefill(null)}
           />
         </div>
+
+        <TradeLockBannerSection
+          trades={trades}
+          startingBalance={Number(settings?.starting_balance ?? 100)}
+        />
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Link
