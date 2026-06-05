@@ -416,9 +416,11 @@ export function NewTradeSheet({
       }
       toast.success(isEdit ? "Trade updated" : "Trade logged");
       if (!isEdit) {
-        triggerHaptic("tradeLogged");
+        // Result pattern takes precedence (avoids two back-to-back vibrate
+        // calls overwriting each other).
         if (result === "Win") triggerHaptic("win");
         else if (result === "Loss") triggerHaptic("loss");
+        else triggerHaptic("tradeLogged");
       }
       if (!isEdit) reset();
       setOpen(false);
