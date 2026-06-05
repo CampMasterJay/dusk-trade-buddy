@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      trade_journals: {
+        Row: {
+          created_at: string
+          emotion: string | null
+          execution_quality: number | null
+          id: string
+          post_reflection: string | null
+          pre_thoughts: string | null
+          trade_id: string
+          updated_at: string
+          user_id: string
+          would_repeat: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          emotion?: string | null
+          execution_quality?: number | null
+          id?: string
+          post_reflection?: string | null
+          pre_thoughts?: string | null
+          trade_id: string
+          updated_at?: string
+          user_id: string
+          would_repeat?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          emotion?: string | null
+          execution_quality?: number | null
+          id?: string
+          post_reflection?: string | null
+          pre_thoughts?: string | null
+          trade_id?: string
+          updated_at?: string
+          user_id?: string
+          would_repeat?: boolean | null
+        }
+        Relationships: []
+      }
       trades: {
         Row: {
           chart_url: string | null
