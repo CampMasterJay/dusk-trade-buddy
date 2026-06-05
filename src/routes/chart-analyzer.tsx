@@ -168,9 +168,11 @@ function ChartAnalyzer() {
   }, [history]);
   const instrumentOptions = useMemo(() => {
     const s = new Set<string>();
+    // Pre-seed with the user's watchlist so frequent tickers always appear.
+    (settings?.watchlist ?? []).forEach((w) => s.add(w));
     history.forEach((h) => h.instrument && s.add(h.instrument));
     return Array.from(s);
-  }, [history]);
+  }, [history, settings?.watchlist]);
   const filtered = useMemo(
     () =>
       history.filter(

@@ -186,3 +186,38 @@ export function timeAgo(ms: number): string {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+
+// Map asset keys → common ticker aliases used to match against a user's watchlist.
+const ASSET_TICKER_ALIASES: Record<Exclude<AssetKey, "all">, string[]> = {
+  es: ["ES", "SPY", "SPX", "S&P500"],
+  nq: ["NQ", "QQQ", "NDX"],
+  btc: ["BTC", "BTCUSD", "BTC/USD"],
+  gold: ["GC", "GLD", "GOLD"],
+  oil: ["CL", "USO", "OIL", "WTI"],
+  bonds: ["ZB", "ZN", "TLT", "BONDS"],
+};
+
+function tickersForArticle(article: Article): Set<string> {
+  const set = new Set<string>();
+  for (const tag of article.tags) set.add(tag.toUpperCase());
+  for (const asset of article.assets) {
+    if (asset === "all") continue;
+    for (const alias of ASSET_TICKER_ALIASES[asset] ?? []) set.add(alias);
+  }
+  return set;
+}
+
+/** Returns true if any of the watchlist tickers matches the article. */
+export function articleMatchesWatchlist(
+  article: Article,
+  watchlist: string[],
+): boolean {
+  if (watchlist.length === 0) return false;
+  const tickers = tickersForArticle(article);
+  for (const w of watchlist) {
+    const norm = w.trim().toUpperCase();
+    if (!norm) continue;
+    if (tickers.has(norm)) return true;
+  }
+  return false;
+}

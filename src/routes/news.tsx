@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMacroSummary } from "@/lib/api/macroContext.functions";
 import {
@@ -15,11 +15,15 @@ import {
 import {
   ARTICLES,
   timeAgo,
+  articleMatchesWatchlist,
   type Article,
   type AssetKey,
   type Impact,
   type Sentiment,
 } from "@/lib/newsData";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import { WatchlistManager } from "@/components/WatchlistManager";
+import { toast } from "sonner";
 import {
   scoreArticles,
   pendingIdsFor,
@@ -66,7 +70,7 @@ const SENTIMENT_FILTERS: { key: Sentiment; label: string }[] = [
 ];
 
 function News() {
-  const [tab, setTab] = useState<"news" | "calendar" | "macro">("news");
+  const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
@@ -141,6 +145,7 @@ function News() {
           {/* Tabs */}
           <div className="inline-flex rounded-lg border border-border bg-card p-1 mb-4">
             <TabBtn active={tab === "news"} onClick={() => setTab("news")} icon={Newspaper} label="Feed" />
+            <TabBtn active={tab === "watchlist"} onClick={() => setTab("watchlist")} icon={Star} label="Watchlist" />
             <TabBtn active={tab === "calendar"} onClick={() => setTab("calendar")} icon={CalendarClock} label="Calendar" />
             <TabBtn active={tab === "macro"} onClick={() => setTab("macro")} icon={Activity} label="Macro" />
           </div>
@@ -197,6 +202,8 @@ function News() {
             </>
           ) : tab === "calendar" ? (
             <CalendarView />
+          ) : tab === "watchlist" ? (
+            <WatchlistView scores={scores} pending={pending} />
           ) : (
             <MacroView />
           )}
@@ -1024,4 +1031,78 @@ function compareNumeric(actual: string, forecast: string): "beat" | "miss" | "ma
   if (a > f) return "beat";
   if (a < f) return "miss";
   return "match";
+}
+
+// ---------- Watchlist tab ----------
+
+function WatchlistView({
+  scores,
+  pending,
+}: {
+  scores: Record<string, ImpactScore>;
+  pending: Set<string>;
+}) {
+  const { settings, updateSettings, loading } = useUserSettings();
+  const watchlist = settings?.watchlist ?? [];
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = async (next: string[]) => {
+    setSaving(true);
+    try {
+      await updateSettings({ watchlist: next });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not update watchlist");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const matched = useMemo(
+    () =>
+      [...ARTICLES]
+        .filter((a) => articleMatchesWatchlist(a, watchlist))
+        .sort((a, b) => b.publishedAt - a.publishedAt),
+    [watchlist],
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-card p-4">
+        <WatchlistManager
+          tickers={watchlist}
+          onChange={handleChange}
+          saving={saving || loading}
+        />
+      </div>
+
+      {watchlist.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <Star className="mx-auto mb-2 size-6 text-muted-foreground" />
+          <h3 className="font-semibold text-foreground">Build your watchlist</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add up to 10 tickers you actively trade to see only the news that matters to you.
+          </p>
+        </div>
+      ) : matched.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center">
+          <Newspaper className="mx-auto mb-2 size-6 text-muted-foreground" />
+          <h3 className="font-semibold text-foreground">No news for your watchlist</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Nothing has hit your tickers yet. Try adding more instruments above.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {matched.map((a) => (
+            <NewsCard
+              key={a.id}
+              article={a}
+              score={scores[a.id]}
+              scoring={pending.has(a.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

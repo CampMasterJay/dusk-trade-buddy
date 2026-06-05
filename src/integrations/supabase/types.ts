@@ -203,6 +203,7 @@ export type Database = {
           timeframe_days: number
           updated_at: string
           user_id: string
+          watchlist: string[]
         }
         Insert: {
           challenge_target?: number
@@ -218,6 +219,7 @@ export type Database = {
           timeframe_days?: number
           updated_at?: string
           user_id: string
+          watchlist?: string[]
         }
         Update: {
           challenge_target?: number
@@ -233,6 +235,7 @@ export type Database = {
           timeframe_days?: number
           updated_at?: string
           user_id?: string
+          watchlist?: string[]
         }
         Relationships: []
       }
