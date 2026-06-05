@@ -12,6 +12,14 @@ import {
   type CalendarImpact,
 } from "@/lib/api/economicCalendar.functions";
 import {
+  ARTICLES,
+  timeAgo,
+  type Article,
+  type AssetKey,
+  type Impact,
+  type Sentiment,
+} from "@/lib/newsData";
+import {
   scoreArticles,
   pendingIdsFor,
   clearImpactCache,
@@ -31,22 +39,6 @@ export const Route = createFileRoute("/news")({
   }),
   component: News,
 });
-
-type AssetKey = "all" | "es" | "nq" | "btc" | "gold" | "oil" | "bonds";
-type Impact = "all" | "high" | "med" | "low";
-type Sentiment = "all" | "bullish" | "bearish" | "neutral";
-
-type Article = {
-  id: string;
-  headline: string;
-  source: string;
-  publishedAt: number; // ms epoch
-  assets: AssetKey[];
-  tags: string[];
-  impact: Exclude<Impact, "all">;
-  sentiment: Exclude<Sentiment, "all">;
-  url?: string;
-};
 
 const ASSET_FILTERS: { key: AssetKey; label: string }[] = [
   { key: "all", label: "All" },
