@@ -101,17 +101,13 @@ const SLOT_META: { key: Slot; label: string; tfs: string[] }[] = [
 ];
 
 function ChartAnalyzer() {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const libraryRef = useRef<HTMLInputElement>(null);
-  const [image, setImage] = useState<ProcessedImage | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [frames, setFrames] = useState<
+    Record<Slot, { image: ProcessedImage; timeframe: string } | null>
+  >({ HTF: null, MTF: null, LTF: null });
   const [loading, setLoading] = useState(false);
-  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
