@@ -55,9 +55,7 @@ function Settings() {
           >
             <LogOut className="h-4 w-4" />
             <span className="text-sm font-medium">Sign Out</span>
-          </button>
-        </div>
-      </div>
+        </button>
     </ProtectedRoute>
   );
 }
