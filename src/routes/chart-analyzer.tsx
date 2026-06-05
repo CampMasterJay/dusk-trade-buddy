@@ -472,7 +472,46 @@ function ChartAnalyzer() {
 
           {loading && <AnalysisSkeleton />}
 
-          {!loading && analysis && <AnalysisView a={analysis} />}
+          {!loading && analysis && (
+            <AnalysisView
+              a={analysis}
+              balance={Number(settings?.current_balance ?? 0)}
+              riskPct={Number(settings?.risk_pct ?? 0)}
+              onUseLevels={() => {
+                const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
+                  .toString()
+                  .toLowerCase();
+                const direction =
+                  dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+                sessionStorage.setItem(
+                  "pendingTradePrefill",
+                  JSON.stringify({
+                    entry: analysis.setupIdea?.entry ?? "",
+                    stop: analysis.setupIdea?.stop ?? "",
+                    target: analysis.setupIdea?.target ?? "",
+                    direction,
+                    instrument: analysis.instrument ?? undefined,
+                  }),
+                );
+                void navigate({ to: "/trade-log" });
+              }}
+              onSave={async () => {
+                if (!user || !image || savedId) return;
+                setSaving(true);
+                const { data } = await saveChartAnalysis(
+                  buildAnalysisInsert({
+                    userId: user.id,
+                    chartUrl: image.dataUrl,
+                    analysis: analysis as unknown as Record<string, unknown>,
+                  }),
+                );
+                if (data) setSavedId(data.id);
+                setSaving(false);
+              }}
+              saved={!!savedId}
+              saving={saving}
+            />
+          )}
 
           {!loading && !analysis && raw && (
             <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg border border-border bg-background p-3 text-xs font-data text-muted-foreground">
