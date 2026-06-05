@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle, Newspaper, Search } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { createTrade, updateTrade, type Trade } from "@/lib/tradeService";
 import { supabase } from "@/integrations/supabase/client";
+import { ARTICLES, type Article } from "@/lib/newsData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,6 +155,10 @@ export function NewTradeSheet({
       : null,
   );
 
+  // News event tag
+  const initialNewsId = (editTrade as { news_id?: string | null } | null | undefined)?.news_id ?? null;
+  const [newsId, setNewsId] = useState<string | null>(initialNewsId);
+
   // Defaults from settings
   const balance = Number(settings?.current_balance ?? 100);
   const riskPct = Number(settings?.risk_pct ?? 15);
@@ -195,9 +200,11 @@ export function NewTradeSheet({
             }
           : null,
       );
+      setNewsId((editTrade as { news_id?: string | null }).news_id ?? null);
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
       setChecklist(null);
+      setNewsId(null);
       if (prefill) {
         if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
         if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
@@ -375,6 +382,7 @@ export function NewTradeSheet({
         chart_url: chartUrl,
         checklist_score: checklist?.score ?? null,
         checklist_verdict: checklist?.verdict ?? null,
+        news_id: newsId,
       };
 
       const { error } = isEdit && editTrade
@@ -664,6 +672,11 @@ export function NewTradeSheet({
               onOpen={() => setChecklistOpen(true)}
             />
           </Section>
+
+          {/* News Event */}
+          <Section title="News Event (optional)">
+            <NewsPicker value={newsId} onChange={setNewsId} />
+          </Section>
         </div>
 
         <SheetFooter className="mt-5">
@@ -859,5 +872,103 @@ export function NewTradeIconButton(props: Props) {
         </Button>
       }
     />
+  );
+}
+
+function NewsPicker({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const selected: Article | null = useMemo(
+    () => (value ? ARTICLES.find((a) => a.id === value) ?? null : null),
+    [value],
+  );
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const base = [...ARTICLES].sort((a, b) => b.publishedAt - a.publishedAt);
+    if (!q) return base.slice(0, 8);
+    return base
+      .filter((a) =>
+        [a.headline, a.source, ...a.tags].some((s) =>
+          s.toLowerCase().includes(q),
+        ),
+      )
+      .slice(0, 12);
+  }, [query]);
+
+  if (selected) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+        <Newspaper className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium leading-snug">{selected.headline}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            {selected.source}
+            {selected.impact === "high" ? " · HIGH impact" : ""}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Remove news link"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search news that influenced this trade…"
+          className="pl-8"
+          maxLength={120}
+        />
+      </div>
+      {open ? (
+        <div className="max-h-56 overflow-y-auto rounded-md border border-border bg-card">
+          {results.length === 0 ? (
+            <div className="p-3 text-xs text-muted-foreground">No matching articles.</div>
+          ) : (
+            results.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => {
+                  onChange(a.id);
+                  setOpen(false);
+                  setQuery("");
+                }}
+                className="block w-full border-b border-border/60 px-3 py-2 text-left last:border-b-0 hover:bg-muted/40"
+              >
+                <div className="text-xs font-medium leading-snug line-clamp-2">
+                  {a.headline}
+                </div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {a.source} · {a.impact} impact
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
   );
 }
