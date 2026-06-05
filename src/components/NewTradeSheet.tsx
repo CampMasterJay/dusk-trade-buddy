@@ -395,6 +395,7 @@ export function NewTradeSheet({
   };
 
   return (
+    <>
     <Sheet open={open} onOpenChange={setOpen}>
       {trigger !== null && (
         <SheetTrigger asChild>
