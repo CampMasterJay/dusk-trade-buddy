@@ -37,6 +37,7 @@ import {
 } from "@/lib/imageUpload";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { SetupScorer } from "@/components/SetupScorer";
 import {
   buildAnalysisInsert,
   deleteChartAnalysis,
