@@ -89,19 +89,22 @@ function TradeLogScreen() {
     let active = true;
     setLoading(true);
     setError(null);
-    getTrades(userId, PAGE_SIZE, 0).then((res) => {
-      if (!active) return;
-      if (res.error) {
-        setError(res.error.message);
+    Promise.all([getTrades(userId, PAGE_SIZE, 0), getTradeStats(userId)]).then(
+      ([tRes, sRes]) => {
+        if (!active) return;
+        if (tRes.error) {
+          setError(tRes.error.message);
+          setLoading(false);
+          return;
+        }
+        const list = tRes.data ?? [];
+        setTrades(list);
+        setStats(sRes.data);
+        setPage(1);
+        setHasMore(list.length === PAGE_SIZE);
         setLoading(false);
-        return;
-      }
-      const list = res.data ?? [];
-      setTrades(list);
-      setPage(1);
-      setHasMore(list.length === PAGE_SIZE);
-      setLoading(false);
-    });
+      },
+    );
     return () => {
       active = false;
     };
