@@ -37,6 +37,7 @@ import {
   getQueuedTrades,
 } from "@/lib/offlineCache";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { triggerHaptic } from "@/hooks/useHaptic";
 import {
   DEFAULT_SETTINGS,
   getNotificationPermission,
@@ -761,7 +762,48 @@ function OfflineSection() {
       <Row label="Pending trades" sub="Trades created while offline, waiting to upload.">
         <span className="text-sm font-data">{queueCount}</span>
       </Row>
+      <HapticsRow />
     </Section>
+  );
+}
+
+function HapticsRow() {
+  const [prefs, setPrefs] = useLocalPrefs();
+  const supported =
+    typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+  const enabled = prefs.hapticsEnabled && supported;
+
+  const onToggle = () => {
+    const next = !prefs.hapticsEnabled;
+    setPrefs({ hapticsEnabled: next });
+    if (next) triggerHaptic("tap");
+  };
+
+  return (
+    <Row
+      label="Haptic feedback"
+      sub={
+        supported
+          ? "Vibrate on trade results, alerts, and key actions."
+          : "Your device doesn't support vibration."
+      }
+    >
+      <button
+        onClick={onToggle}
+        disabled={!supported}
+        className={cn(
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40",
+          enabled ? "bg-primary" : "bg-muted",
+        )}
+      >
+        <span
+          className={cn(
+            "inline-block h-5 w-5 transform rounded-full bg-white transition-transform",
+            enabled ? "translate-x-5" : "translate-x-1",
+          )}
+        />
+      </button>
+    </Row>
   );
 }
 
