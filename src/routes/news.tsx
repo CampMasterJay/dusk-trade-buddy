@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star, Search, Bookmark, BookmarkCheck, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getMacroSummary,
@@ -36,6 +36,17 @@ import {
   type NewsItemInput,
 } from "@/lib/newsImpactService";
 import { publishHighImpactAlert } from "@/lib/highImpactAlerts";
+import {
+  toggleSavedArticle,
+  subscribeSavedArticles,
+  getSavedArticles,
+  SAVED_MAX,
+  type SavedArticle,
+} from "@/lib/savedArticlesDb";
+import {
+  markHighImpactUnread,
+  markAllHighImpactRead,
+} from "@/lib/unreadHighImpact";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -78,19 +89,40 @@ function News() {
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeKey>("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
   const [scores, setScores] = useState<Record<string, ImpactScore>>({});
   const [pending, setPending] = useState<Set<string>>(new Set());
   const [scoringError, setScoringError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
+  // Debounce search input → query.
+  useEffect(() => {
+    const id = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
+
+  // Mark HIGH-impact badge as cleared when the feed tab is viewed.
+  useEffect(() => {
+    if (tab === "news") markAllHighImpactRead();
+  }, [tab]);
+
   const filtered = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    const { from, to } = resolveDateRange(dateRange, customFrom, customTo);
     return ARTICLES.filter((a) => {
       if (asset !== "all" && !a.assets.includes(asset)) return false;
       if (impact !== "all" && a.impact !== impact) return false;
       if (sentiment !== "all" && a.sentiment !== sentiment) return false;
+      if (q && !a.headline.toLowerCase().includes(q)) return false;
+      if (from != null && a.publishedAt < from) return false;
+      if (to != null && a.publishedAt > to) return false;
       return true;
     }).sort((a, b) => b.publishedAt - a.publishedAt);
-  }, [asset, impact, sentiment]);
+  }, [asset, impact, sentiment, searchQuery, dateRange, customFrom, customTo]);
 
   const runScoring = useCallback(async () => {
     if (inFlight.current) return;
@@ -118,6 +150,7 @@ function News() {
         const art = sortedAll.find((a) => a.id === s.id);
         if (art) {
           publishHighImpactAlert({ id: art.id, headline: art.headline, url: art.url });
+          markHighImpactUnread(art.id);
         }
       }
     });
