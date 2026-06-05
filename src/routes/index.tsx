@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
+import { ProjectionModal } from "@/components/ProjectionModal";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
@@ -171,6 +172,14 @@ function Dashboard() {
               rrRatio={rrRatio}
               riskDollar={riskDollar}
               targetDollar={targetDollar}
+            />
+
+            <ProjectionSection
+              currentBalance={currentBalance}
+              targetBalance={targetBalance}
+              riskPct={riskPct}
+              rrRatio={rrRatio}
+              winRate={stats?.winRate ?? undefined}
             />
           </>
         )}
