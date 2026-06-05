@@ -254,6 +254,24 @@ function ChartAnalyzer() {
             CHART ANALYZER
           </h1>
           <div className="flex items-center gap-2">
+            {(() => {
+              const { total, accuracyPct } = computeAnalysisAccuracy(history);
+              if (total < 10) return null;
+              const color =
+                accuracyPct >= 70
+                  ? "border-trade-green/30 bg-trade-green/10 text-trade-green"
+                  : accuracyPct >= 50
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                    : "border-trade-red/30 bg-trade-red/10 text-trade-red";
+              return (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-data uppercase tracking-wider ${color}`}
+                  title={`Based on ${total} rated analyses`}
+                >
+                  Accuracy {accuracyPct}%
+                </span>
+              );
+            })()}
             <Link
               to="/setup-library"
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground"
