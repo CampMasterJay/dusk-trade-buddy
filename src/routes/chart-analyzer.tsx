@@ -296,6 +296,7 @@ function ChartAnalyzer() {
         )}
 
         {tab === "analyzer" && (<>
+        <TipsCarousel />
         {/* Multi-Timeframe upload */}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
