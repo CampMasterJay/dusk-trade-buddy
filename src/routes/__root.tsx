@@ -17,6 +17,7 @@ import { BottomNav } from "../components/BottomNav";
 import { Toaster } from "../components/ui/sonner";
 import { CoachChat } from "../components/CoachChat";
 import { HighImpactBanner } from "../components/HighImpactBanner";
+import { OfflineBanner } from "../components/OfflineBanner";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 
@@ -191,6 +192,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
+          <OfflineBanner />
           <HighImpactBanner />
           <div className="pb-16 md:pb-0">
             <Outlet />

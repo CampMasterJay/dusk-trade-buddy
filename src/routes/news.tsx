@@ -48,6 +48,7 @@ import {
   markHighImpactUnread,
   markAllHighImpactRead,
 } from "@/lib/unreadHighImpact";
+import { cacheNewsArticles } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -166,6 +167,8 @@ function News() {
 
     // Pull from the most recent article list (newest first).
     const sortedAll = [...getAllArticles()].sort((a, b) => b.publishedAt - a.publishedAt);
+    // Cache top 20 articles for offline reading.
+    void cacheNewsArticles(sortedAll.slice(0, 20));
     const items: NewsItemInput[] = sortedAll.map((a) => ({
       id: a.id,
       headline: a.headline,
