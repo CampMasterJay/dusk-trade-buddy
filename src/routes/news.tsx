@@ -13,6 +13,7 @@ import {
   type ImpactScore,
   type NewsItemInput,
 } from "@/lib/newsImpactService";
+import { publishHighImpactAlert } from "@/lib/highImpactAlerts";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -203,6 +204,12 @@ function News() {
         next.delete(s.id);
         return next;
       });
+      if (s.impactLevel === "HIGH") {
+        const art = sortedAll.find((a) => a.id === s.id);
+        if (art) {
+          publishHighImpactAlert({ id: art.id, headline: art.headline, url: art.url });
+        }
+      }
     });
 
     if (result.errors.length > 0) {
