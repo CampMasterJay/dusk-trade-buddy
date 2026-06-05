@@ -84,6 +84,40 @@ const SENTIMENT_FILTERS: { key: Sentiment; label: string }[] = [
   { key: "neutral", label: "Neutral" },
 ];
 
+type DateRangeKey = "all" | "today" | "week" | "month" | "custom";
+
+const DATE_RANGE_FILTERS: { key: DateRangeKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "today", label: "Today" },
+  { key: "week", label: "This Week" },
+  { key: "month", label: "This Month" },
+  { key: "custom", label: "Custom" },
+];
+
+function resolveDateRange(
+  key: DateRangeKey,
+  customFrom: string,
+  customTo: string,
+): { from: number | null; to: number | null } {
+  const now = new Date();
+  if (key === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return { from: start, to: null };
+  }
+  if (key === "week") {
+    return { from: now.getTime() - 7 * 24 * 60 * 60 * 1000, to: null };
+  }
+  if (key === "month") {
+    return { from: now.getTime() - 30 * 24 * 60 * 60 * 1000, to: null };
+  }
+  if (key === "custom") {
+    const from = customFrom ? new Date(customFrom + "T00:00:00").getTime() : null;
+    const to = customTo ? new Date(customTo + "T23:59:59").getTime() : null;
+    return { from, to };
+  }
+  return { from: null, to: null };
+}
+
 function News() {
   const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
