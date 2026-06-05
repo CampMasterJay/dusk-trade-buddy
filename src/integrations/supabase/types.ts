@@ -19,6 +19,8 @@ export type Database = {
           bias_direction: string | null
           chart_url: string | null
           created_at: string
+          feedback_note: string | null
+          feedback_rating: string | null
           id: string
           instrument: string | null
           linked_trade_id: string | null
@@ -39,6 +41,8 @@ export type Database = {
           bias_direction?: string | null
           chart_url?: string | null
           created_at?: string
+          feedback_note?: string | null
+          feedback_rating?: string | null
           id?: string
           instrument?: string | null
           linked_trade_id?: string | null
@@ -59,6 +63,8 @@ export type Database = {
           bias_direction?: string | null
           chart_url?: string | null
           created_at?: string
+          feedback_note?: string | null
+          feedback_rating?: string | null
           id?: string
           instrument?: string | null
           linked_trade_id?: string | null

@@ -52,6 +52,10 @@ import {
 } from "@/lib/chartAnalysisService";
 import { getTrades, type Trade } from "@/lib/tradeService";
 import { TipsCarousel } from "@/components/TipsCarousel";
+import {
+  AnalysisFeedbackPrompt,
+  computeAnalysisAccuracy,
+} from "@/components/AnalysisFeedbackPrompt";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
@@ -148,6 +152,14 @@ function ChartAnalyzer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, user?.id]);
 
+  // Always load history + trades once on mount so the header accuracy stat works.
+  useEffect(() => {
+    if (!user) return;
+    void refreshHistory();
+    void getTrades(user.id, 100).then(({ data }) => setTrades(data ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const setupOptions = useMemo(() => {
     const s = new Set<string>();
     history.forEach((h) => h.setup_detected && s.add(h.setup_detected));
@@ -242,6 +254,24 @@ function ChartAnalyzer() {
             CHART ANALYZER
           </h1>
           <div className="flex items-center gap-2">
+            {(() => {
+              const { total, accuracyPct } = computeAnalysisAccuracy(history);
+              if (total < 10) return null;
+              const color =
+                accuracyPct >= 70
+                  ? "border-trade-green/30 bg-trade-green/10 text-trade-green"
+                  : accuracyPct >= 50
+                    ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                    : "border-trade-red/30 bg-trade-red/10 text-trade-red";
+              return (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-data uppercase tracking-wider ${color}`}
+                  title={`Based on ${total} rated analyses`}
+                >
+                  Accuracy {accuracyPct}%
+                </span>
+              );
+            })()}
             <Link
               to="/setup-library"
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -292,6 +322,7 @@ function ChartAnalyzer() {
             }}
             onLink={setLinkSheetFor}
             trades={trades}
+            onFeedbackSaved={refreshHistory}
           />
         )}
 
@@ -868,11 +899,12 @@ function HistoryView(props: {
   onDelete: (id: string) => void | Promise<void>;
   onLink: (item: SavedAnalysis) => void;
   trades: Trade[];
+  onFeedbackSaved?: () => void | Promise<void>;
 }) {
   const {
     items, loading, error, setupOptions, instrumentOptions,
     filterSetup, filterInstrument, onFilterSetup, onFilterInstrument,
-    onOpen, onDelete, onLink, trades,
+    onOpen, onDelete, onLink, trades, onFeedbackSaved,
   } = props;
 
   return (
@@ -920,11 +952,15 @@ function HistoryView(props: {
         <ul className="space-y-2">
           {items.map((it) => {
             const linkedTrade = trades.find((t) => t.id === it.linked_trade_id);
+            const result = linkedTrade?.result?.toLowerCase();
+            const showFeedback =
+              linkedTrade && (result === "win" || result === "loss" || result === "won" || result === "lost");
             return (
               <li
                 key={it.id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                className="rounded-xl border border-border bg-card p-3"
               >
+                <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => onOpen(it)}
@@ -986,6 +1022,22 @@ function HistoryView(props: {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                </div>
+                {showFeedback && (
+                  <div className="mt-3">
+                    <AnalysisFeedbackPrompt
+                      analysisId={it.id}
+                      setupLabel={it.setup_detected ?? "this setup"}
+                      direction={it.bias_direction ?? "Neutral"}
+                      result={
+                        result === "win" || result === "won" ? "won" : "lost"
+                      }
+                      existingRating={it.feedback_rating}
+                      existingNote={it.feedback_note}
+                      onSaved={onFeedbackSaved}
+                    />
+                  </div>
+                )}
               </li>
             );
           })}
