@@ -6,12 +6,15 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
+import { TradeStats } from "@/components/TradeStats";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   getTrades,
+  getTradeStats,
   deleteTrade,
   type Trade,
+  type TradeStats as TradeStatsType,
 } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +70,7 @@ function TradeLogScreen() {
   const { settings } = useUserSettings();
 
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [stats, setStats] = useState<TradeStatsType | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -85,19 +89,22 @@ function TradeLogScreen() {
     let active = true;
     setLoading(true);
     setError(null);
-    getTrades(userId, PAGE_SIZE, 0).then((res) => {
-      if (!active) return;
-      if (res.error) {
-        setError(res.error.message);
+    Promise.all([getTrades(userId, PAGE_SIZE, 0), getTradeStats(userId)]).then(
+      ([tRes, sRes]) => {
+        if (!active) return;
+        if (tRes.error) {
+          setError(tRes.error.message);
+          setLoading(false);
+          return;
+        }
+        const list = tRes.data ?? [];
+        setTrades(list);
+        setStats(sRes.data);
+        setPage(1);
+        setHasMore(list.length === PAGE_SIZE);
         setLoading(false);
-        return;
-      }
-      const list = res.data ?? [];
-      setTrades(list);
-      setPage(1);
-      setHasMore(list.length === PAGE_SIZE);
-      setLoading(false);
-    });
+      },
+    );
     return () => {
       active = false;
     };
@@ -211,6 +218,11 @@ function TradeLogScreen() {
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
           />
+        </div>
+
+        {/* Stats */}
+        <div className="mb-4">
+          <TradeStats stats={stats} trades={trades} />
         </div>
 
         {/* Filter bar */}
