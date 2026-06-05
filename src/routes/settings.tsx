@@ -513,7 +513,9 @@ function InstrumentsSection() {
       <div className="pt-4">
         <WatchlistManager
           tickers={settings.watchlist ?? []}
-          onChange={(next) => updateSettings({ watchlist: next })}
+          onChange={async (next) => {
+            await updateSettings({ watchlist: next });
+          }}
         />
       </div>
     </Section>
