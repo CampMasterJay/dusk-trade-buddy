@@ -242,6 +242,84 @@ export type Database = {
         }
         Relationships: []
       }
+      watch_setups: {
+        Row: {
+          avg_range: number | null
+          buffer_ticks: number
+          created_at: string
+          direction_pref: string
+          id: string
+          instrument: string
+          linked_trade_id: string | null
+          long_entry: number | null
+          long_stop: number | null
+          long_target: number | null
+          notes: string | null
+          quality_score: number | null
+          range_high: number
+          range_low: number
+          range_size: number
+          rr_ratio: number
+          short_entry: number | null
+          short_stop: number | null
+          short_target: number | null
+          status: string
+          tick_size: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_range?: number | null
+          buffer_ticks?: number
+          created_at?: string
+          direction_pref?: string
+          id?: string
+          instrument: string
+          linked_trade_id?: string | null
+          long_entry?: number | null
+          long_stop?: number | null
+          long_target?: number | null
+          notes?: string | null
+          quality_score?: number | null
+          range_high: number
+          range_low: number
+          range_size: number
+          rr_ratio?: number
+          short_entry?: number | null
+          short_stop?: number | null
+          short_target?: number | null
+          status?: string
+          tick_size?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_range?: number | null
+          buffer_ticks?: number
+          created_at?: string
+          direction_pref?: string
+          id?: string
+          instrument?: string
+          linked_trade_id?: string | null
+          long_entry?: number | null
+          long_stop?: number | null
+          long_target?: number | null
+          notes?: string | null
+          quality_score?: number | null
+          range_high?: number
+          range_low?: number
+          range_size?: number
+          rr_ratio?: number
+          short_entry?: number | null
+          short_stop?: number | null
+          short_target?: number | null
+          status?: string
+          tick_size?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
