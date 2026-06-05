@@ -531,6 +531,7 @@ function AnalysisView({
   riskPct,
   minRr,
   session,
+  chartImageUrl,
   onUseLevels,
   onSave,
   saved,
@@ -541,6 +542,7 @@ function AnalysisView({
   riskPct?: number;
   minRr?: number;
   session?: string | null;
+  chartImageUrl?: string | null;
   onUseLevels?: () => void;
   onSave?: () => void | Promise<void>;
   saved?: boolean;
@@ -572,6 +574,17 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* Annotated chart preview */}
+      {chartImageUrl && (
+        <AnnotatedChartPreview
+          src={chartImageUrl}
+          entry={entry}
+          stop={stop}
+          target={target}
+          bias={bias}
+        />
+      )}
+
       {/* MTF Alignment (top) */}
       {(a.mtfAlignment || a.frames) && <MtfAlignmentCard a={a} />}
 
