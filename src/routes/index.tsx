@@ -6,11 +6,7 @@ import {
   Activity,
   Wallet,
   BarChart3,
-  Zap,
-  Bell,
-  Search,
   Menu,
-  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
