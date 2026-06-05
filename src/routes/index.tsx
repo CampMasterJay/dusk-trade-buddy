@@ -6,6 +6,7 @@ import {
   Activity,
   Wallet,
   BarChart3,
+  Zap,
   Menu,
 } from "lucide-react";
 import { useState } from "react";
