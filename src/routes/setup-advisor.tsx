@@ -68,9 +68,11 @@ const STATUSES: { key: SetupStatus; label: string; color: string; icon: typeof C
 ];
 
 function SetupAdvisorPage() {
+  const { settings } = useUserSettings();
+  const balance = Number(settings?.current_balance ?? 0);
   return (
     <ProtectedRoute>
-      <AppHeader />
+      <AppHeader balance={balance} />
       <main className="mx-auto max-w-3xl space-y-4 px-4 pb-28 pt-4">
         <SessionStatusCard />
         <SetupWatchlistSection />
