@@ -204,7 +204,7 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
-          <NewTradeButton
+          <NewTradeSheet
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
           />
