@@ -526,22 +526,6 @@ function Badge({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      <div className="text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function fmtNum(v: number | null | undefined): string {
-  if (v == null) return "—";
-  const n = Number(v);
-  return Number.isFinite(n) ? n.toString() : "—";
-}
 
 function formatDate(d: string): string {
   const dt = new Date(d + "T00:00:00");
