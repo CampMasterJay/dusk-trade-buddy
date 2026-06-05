@@ -746,6 +746,58 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ChecklistSummary({
+  result,
+  onOpen,
+}: {
+  result: ChecklistResult | null;
+  onOpen: () => void;
+}) {
+  if (!result) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onOpen}
+        className="h-10 w-full justify-start gap-2"
+      >
+        <ListChecks className="h-4 w-4" />
+        Run Pre-Trade Checklist
+      </Button>
+    );
+  }
+  const v = result.verdict;
+  const cls =
+    v === "GO"
+      ? "border-trade-green/40 bg-trade-green/10 text-trade-green"
+      : v === "CAUTION"
+        ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
+        : "border-trade-red/40 bg-trade-red/10 text-trade-red";
+  const Icon = v === "GO" ? CheckCircle2 : v === "CAUTION" ? AlertTriangle : XCircle;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left transition-colors hover:opacity-90",
+        cls,
+      )}
+    >
+      <span className="flex items-center gap-2">
+        <Icon className="h-4 w-4" />
+        <span className="font-data text-sm font-bold uppercase tracking-wider">{v}</span>
+      </span>
+      <span className="font-data text-sm">
+        {result.score}<span className="text-muted-foreground">/10</span>
+        <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+          Edit
+        </span>
+      </span>
+    </button>
+  );
+}
+
 type ToggleOpt = {
   value: string;
   label: string;
