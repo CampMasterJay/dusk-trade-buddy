@@ -37,11 +37,16 @@ export function BottomNav() {
             <Link
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full"
+              className="relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full transition-colors duration-200"
             >
+              <span
+                className={`pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-trade-green transition-all duration-300 ease-out ${
+                  isActive ? "w-8 opacity-100" : "w-0 opacity-0"
+                }`}
+              />
               <div className="relative">
                 <Icon
-                  className={`h-5 w-5 transition-colors ${
+                  className={`h-5 w-5 transition-all duration-200 ${
                     isActive ? "text-trade-green" : "text-muted-foreground"
                   }`}
                   strokeWidth={isActive ? 2.5 : 2}
