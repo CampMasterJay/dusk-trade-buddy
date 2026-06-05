@@ -140,6 +140,7 @@ export type Database = {
           r_multiple: number | null
           range_size: number | null
           result: string
+          setup_tag: string | null
           stop: number
           target: number
           updated_at: string
@@ -162,6 +163,7 @@ export type Database = {
           r_multiple?: number | null
           range_size?: number | null
           result: string
+          setup_tag?: string | null
           stop: number
           target: number
           updated_at?: string
@@ -184,6 +186,7 @@ export type Database = {
           r_multiple?: number | null
           range_size?: number | null
           result?: string
+          setup_tag?: string | null
           stop?: number
           target?: number
           updated_at?: string
