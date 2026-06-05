@@ -10,8 +10,11 @@ import {
   Bell,
   Search,
   Menu,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth } from "@/components/AuthProvider";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -51,7 +54,16 @@ const signalsData = [
 ];
 
 function Index() {
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+}
+
+function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   const totalPortfolio = portfolioData.reduce((sum, item) => sum + item.value, 0);
   const totalPnl = portfolioData.reduce((sum, item) => sum + item.pnl, 0);
@@ -92,6 +104,18 @@ function Index() {
               <Bell className="h-5 w-5 text-muted-foreground" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-trade-red" />
             </button>
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-border">
+              <span className="text-xs text-muted-foreground font-data max-w-[160px] truncate">
+                {user?.email}
+              </span>
+              <button
+                onClick={() => signOut()}
+                title="Sign out"
+                className="p-2 hover:bg-accent rounded-md text-muted-foreground hover:text-trade-red transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
