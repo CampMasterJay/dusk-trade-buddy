@@ -267,10 +267,10 @@ function fmtDate(iso: string): string {
   });
 }
 
-function vixTone(vix: number) {
-  if (vix < 15) return { label: "Low vol", classes: "border-trade-green/30 bg-trade-green/10 text-trade-green" };
-  if (vix <= 25) return { label: "Elevated", classes: "border-amber-500/30 bg-amber-500/10 text-amber-500" };
-  return { label: "High vol", classes: "border-trade-red/30 bg-trade-red/10 text-trade-red" };
+function vixTone(vix: number): { label: string; accent: "green" | "amber" | "red" } {
+  if (vix < 15) return { label: "Low vol", accent: "green" };
+  if (vix <= 25) return { label: "Elevated", accent: "amber" };
+  return { label: "High vol", accent: "red" };
 }
 
 function MacroView() {
@@ -353,12 +353,7 @@ function MacroView() {
           sub={fmtDate(m.nextFomcDate)}
           accent={fomcIn <= 7 ? "amber" : undefined}
         />
-        <IndicatorCard
-          label="VIX"
-          value={m.vix.toFixed(1)}
-          sub={vix.label}
-          badgeClass={vix.classes}
-        />
+        <IndicatorCard label="VIX" value={m.vix.toFixed(1)} sub={vix.label} accent={vix.accent} />
         <IndicatorCard label="US 10Y" value={`${m.us10y}%`} sub="Yield" />
         <IndicatorCard
           label="DXY"
@@ -386,27 +381,24 @@ function IndicatorCard({
   value,
   sub,
   accent,
-  badgeClass,
 }: {
   label: string;
   value: string;
   sub?: string;
   accent?: "green" | "red" | "amber";
-  badgeClass?: string;
 }) {
   const valueColor =
-    accent === "green" ? "text-trade-green" : accent === "red" ? "text-trade-red" : accent === "amber" ? "text-amber-500" : "text-foreground";
+    accent === "green"
+      ? "text-trade-green"
+      : accent === "red"
+        ? "text-trade-red"
+        : accent === "amber"
+          ? "text-amber-500"
+          : "text-foreground";
   return (
     <div className="rounded-xl border border-border bg-card p-3">
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
-      <div className="flex items-baseline justify-between gap-2">
-        <div className={cn("text-xl font-bold font-heading tabular-nums", valueColor)}>{value}</div>
-        {badgeClass ? (
-          <span className={cn("rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide", badgeClass)}>
-            {/* label shown in sub below; keep dot only if needed */}
-          </span>
-        ) : null}
-      </div>
+      <div className={cn("text-xl font-bold font-heading tabular-nums", valueColor)}>{value}</div>
       {sub ? <div className="text-[11px] text-muted-foreground mt-1">{sub}</div> : null}
     </div>
   );
