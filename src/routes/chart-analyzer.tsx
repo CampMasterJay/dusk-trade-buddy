@@ -370,6 +370,7 @@ function ChartAnalyzer() {
               riskPct={Number(settings?.risk_pct ?? 0)}
               minRr={Number(settings?.rr_ratio ?? 1.5)}
               session={settings?.session ?? null}
+                chartImageUrl={firstFrame?.image.dataUrl ?? null}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
