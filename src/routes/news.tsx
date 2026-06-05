@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,14 @@ import {
   type CalendarEvent,
   type CalendarImpact,
 } from "@/lib/api/economicCalendar.functions";
+import {
+  ARTICLES,
+  timeAgo,
+  type Article,
+  type AssetKey,
+  type Impact,
+  type Sentiment,
+} from "@/lib/newsData";
 import {
   scoreArticles,
   pendingIdsFor,
@@ -31,22 +40,6 @@ export const Route = createFileRoute("/news")({
   }),
   component: News,
 });
-
-type AssetKey = "all" | "es" | "nq" | "btc" | "gold" | "oil" | "bonds";
-type Impact = "all" | "high" | "med" | "low";
-type Sentiment = "all" | "bullish" | "bearish" | "neutral";
-
-type Article = {
-  id: string;
-  headline: string;
-  source: string;
-  publishedAt: number; // ms epoch
-  assets: AssetKey[];
-  tags: string[];
-  impact: Exclude<Impact, "all">;
-  sentiment: Exclude<Sentiment, "all">;
-  url?: string;
-};
 
 const ASSET_FILTERS: { key: AssetKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -71,102 +64,6 @@ const SENTIMENT_FILTERS: { key: Sentiment; label: string }[] = [
   { key: "bearish", label: "Bearish" },
   { key: "neutral", label: "Neutral" },
 ];
-
-const NOW = Date.now();
-const MIN = 60_000;
-
-const ARTICLES: Article[] = [
-  {
-    id: "1",
-    headline: "Fed minutes signal hawkish hold as inflation remains sticky",
-    source: "Reuters",
-    publishedAt: NOW - 12 * MIN,
-    assets: ["es", "nq", "bonds"],
-    tags: ["S&P500", "Fed", "Rates"],
-    impact: "high",
-    sentiment: "bearish",
-  },
-  {
-    id: "2",
-    headline: "Bitcoin breaks above $74k as ETF inflows accelerate",
-    source: "Bloomberg",
-    publishedAt: NOW - 28 * MIN,
-    assets: ["btc"],
-    tags: ["BTC", "ETF"],
-    impact: "high",
-    sentiment: "bullish",
-  },
-  {
-    id: "3",
-    headline: "Gold steady ahead of CPI print, traders eye $2,400",
-    source: "CNBC",
-    publishedAt: NOW - 45 * MIN,
-    assets: ["gold"],
-    tags: ["Gold", "CPI"],
-    impact: "med",
-    sentiment: "neutral",
-  },
-  {
-    id: "4",
-    headline: "Nasdaq futures jump as Nvidia raises guidance",
-    source: "WSJ",
-    publishedAt: NOW - 60 * MIN,
-    assets: ["nq"],
-    tags: ["NQ", "Nvidia", "Tech"],
-    impact: "high",
-    sentiment: "bullish",
-  },
-  {
-    id: "5",
-    headline: "Crude oil slides on surprise inventory build",
-    source: "Reuters",
-    publishedAt: NOW - 95 * MIN,
-    assets: ["oil"],
-    tags: ["Oil", "EIA"],
-    impact: "med",
-    sentiment: "bearish",
-  },
-  {
-    id: "6",
-    headline: "10-year yield dips below 4.2% as buyers return",
-    source: "MarketWatch",
-    publishedAt: NOW - 130 * MIN,
-    assets: ["bonds"],
-    tags: ["Bonds", "Yields"],
-    impact: "low",
-    sentiment: "bullish",
-  },
-  {
-    id: "7",
-    headline: "S&P 500 closes at record high on soft-landing optimism",
-    source: "FT",
-    publishedAt: NOW - 3 * 60 * MIN,
-    assets: ["es"],
-    tags: ["S&P500", "Macro"],
-    impact: "med",
-    sentiment: "bullish",
-  },
-  {
-    id: "8",
-    headline: "ECB official warns of premature rate cut expectations",
-    source: "Reuters",
-    publishedAt: NOW - 5 * 60 * MIN,
-    assets: ["bonds", "es"],
-    tags: ["ECB", "Rates"],
-    impact: "low",
-    sentiment: "neutral",
-  },
-];
-
-function timeAgo(ms: number): string {
-  const diff = Math.max(0, Date.now() - ms);
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
-}
 
 function News() {
   const [tab, setTab] = useState<"news" | "calendar" | "macro">("news");
@@ -568,11 +465,21 @@ function NewsCard({
     : article.sentiment;
 
   return (
-    <article className="rounded-xl border border-border bg-card p-4 hover:border-muted-foreground/40 transition-colors">
+    <Link
+      to="/news/$id"
+      params={{ id: article.id }}
+      className="block rounded-xl border border-border bg-card p-4 hover:border-muted-foreground/40 transition-colors"
+    >
       <div className="flex items-start justify-between gap-3 mb-2">
         <h2 className="font-bold leading-snug text-foreground">{article.headline}</h2>
         {article.url ? (
-          <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground shrink-0">
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+          >
             <ExternalLink className="size-4" />
           </a>
         ) : null}
@@ -609,7 +516,7 @@ function NewsCard({
         <SentimentBadge sentiment={sentiment} />
         {score ? <ActionBadge action={score.tradingAction} /> : null}
       </div>
-    </article>
+    </Link>
   );
 }
 

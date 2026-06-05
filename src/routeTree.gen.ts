@@ -23,6 +23,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ChartAnalyzerRouteImport } from './routes/chart-analyzer'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NewsIdRouteImport } from './routes/news.$id'
 
 const WeeklyReportRoute = WeeklyReportRouteImport.update({
   id: '/weekly-report',
@@ -94,6 +95,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NewsIdRoute = NewsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => NewsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,7 +107,7 @@ export interface FileRoutesByFullPath {
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/news': typeof NewsRoute
+  '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
   '/weekly-report': typeof WeeklyReportRoute
+  '/news/$id': typeof NewsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,7 +124,7 @@ export interface FileRoutesByTo {
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/news': typeof NewsRoute
+  '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
   '/weekly-report': typeof WeeklyReportRoute
+  '/news/$id': typeof NewsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,7 +142,7 @@ export interface FileRoutesById {
   '/chart-analyzer': typeof ChartAnalyzerRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
-  '/news': typeof NewsRoute
+  '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
   '/weekly-report': typeof WeeklyReportRoute
+  '/news/$id': typeof NewsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/trade-log'
     | '/weekly-report'
+    | '/news/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/trade-log'
     | '/weekly-report'
+    | '/news/$id'
   id:
     | '__root__'
     | '/'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/trade-log'
     | '/weekly-report'
+    | '/news/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,7 +213,7 @@ export interface RootRouteChildren {
   ChartAnalyzerRoute: typeof ChartAnalyzerRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
-  NewsRoute: typeof NewsRoute
+  NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskOfRuinRoute: typeof RiskOfRuinRoute
@@ -312,8 +324,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/news/$id': {
+      id: '/news/$id'
+      path: '/$id'
+      fullPath: '/news/$id'
+      preLoaderRoute: typeof NewsIdRouteImport
+      parentRoute: typeof NewsRoute
+    }
   }
 }
+
+interface NewsRouteChildren {
+  NewsIdRoute: typeof NewsIdRoute
+}
+
+const NewsRouteChildren: NewsRouteChildren = {
+  NewsIdRoute: NewsIdRoute,
+}
+
+const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -321,7 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChartAnalyzerRoute: ChartAnalyzerRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
-  NewsRoute: NewsRoute,
+  NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RiskOfRuinRoute: RiskOfRuinRoute,
