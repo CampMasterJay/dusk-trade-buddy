@@ -8,6 +8,8 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
+import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
+import { computeDrawdown } from "@/lib/drawdown";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
@@ -233,6 +235,11 @@ function TradeLogScreen() {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  const drawdown = useMemo(
+    () => computeDrawdown(trades, Number(settings?.starting_balance ?? 100)),
+    [trades, settings?.starting_balance],
+  );
+
   return (
     <>
       <AppHeader balance={currentBalance} />
@@ -245,17 +252,24 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
-          <NewTradeSheet
+          <TradeLockGate
+            locked={drawdown.lockTrading}
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
             prefill={prefill}
-            open={newOpen || undefined}
-            onOpenChange={(v) => {
+            sheetOpen={newOpen}
+            onSheetOpenChange={(v) => {
               setNewOpen(v);
               if (!v) setPrefill(null);
             }}
           />
         </div>
+
+        <TradeLockBanner
+          level={drawdown.level}
+          title={drawdown.alertTitle}
+          message={drawdown.alertMessage}
+        />
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Link

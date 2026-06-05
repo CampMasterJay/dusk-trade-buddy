@@ -9,6 +9,7 @@ import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
 import { SentimentGauge } from "@/components/SentimentGauge";
 import { PatternOfTheDay } from "@/components/PatternOfTheDay";
 import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
+import { DrawdownTracker } from "@/components/DrawdownTracker";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -204,6 +205,8 @@ function Dashboard() {
             />
 
             <StatsRow stats={stats} streak={streak} />
+
+            <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
             <SentimentGauge />
 
