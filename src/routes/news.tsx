@@ -48,6 +48,7 @@ import {
   markHighImpactUnread,
   markAllHighImpactRead,
 } from "@/lib/unreadHighImpact";
+import { cacheNewsArticles } from "@/lib/offlineCache";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
