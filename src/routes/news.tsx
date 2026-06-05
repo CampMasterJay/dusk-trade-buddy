@@ -3,7 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { getMacroSummary } from "@/lib/api/macroContext.functions";
 
 export const Route = createFileRoute("/news")({
   head: () => ({
@@ -154,6 +156,7 @@ function timeAgo(ms: number): string {
 }
 
 function News() {
+  const [tab, setTab] = useState<"news" | "macro">("news");
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
@@ -174,27 +177,230 @@ function News() {
         <div className="p-4 lg:p-6">
           <h1 className="text-2xl font-bold font-heading mb-4">Market News</h1>
 
-          {/* Filter bar */}
-          <div className="space-y-3 mb-4">
-            <FilterRow label="Asset" options={ASSET_FILTERS} value={asset} onChange={setAsset} />
-            <FilterRow label="Impact" options={IMPACT_FILTERS} value={impact} onChange={setImpact} />
-            <FilterRow label="Sentiment" options={SENTIMENT_FILTERS} value={sentiment} onChange={setSentiment} />
+          {/* Tabs */}
+          <div className="inline-flex rounded-lg border border-border bg-card p-1 mb-4">
+            <TabBtn active={tab === "news"} onClick={() => setTab("news")} icon={Newspaper} label="Feed" />
+            <TabBtn active={tab === "macro"} onClick={() => setTab("macro")} icon={Activity} label="Macro" />
           </div>
 
-          {/* Feed */}
-          <div className="space-y-3">
-            {filtered.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
-                No articles match the current filters.
+          {tab === "news" ? (
+            <>
+              <div className="space-y-3 mb-4">
+                <FilterRow label="Asset" options={ASSET_FILTERS} value={asset} onChange={setAsset} />
+                <FilterRow label="Impact" options={IMPACT_FILTERS} value={impact} onChange={setImpact} />
+                <FilterRow label="Sentiment" options={SENTIMENT_FILTERS} value={sentiment} onChange={setSentiment} />
               </div>
-            ) : (
-              filtered.map((a) => <NewsCard key={a.id} article={a} />)
-            )}
-          </div>
+              <div className="space-y-3">
+                {filtered.length === 0 ? (
+                  <div className="rounded-xl border border-border bg-card p-6 text-center text-muted-foreground">
+                    No articles match the current filters.
+                  </div>
+                ) : (
+                  filtered.map((a) => <NewsCard key={a.id} article={a} />)
+                )}
+              </div>
+            </>
+          ) : (
+            <MacroView />
+          )}
         </div>
       </div>
       <MarketStatusBar />
     </ProtectedRoute>
+  );
+}
+
+function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Newspaper; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <Icon className="size-4" />
+      {label}
+    </button>
+  );
+}
+
+// ---------- Macro tab ----------
+
+type MacroIndicators = {
+  fedFundsRate: number;
+  fedFundsLastChange: string; // ISO date
+  nextFomcDate: string; // ISO date
+  vix: number;
+  us10y: number;
+  dxy: number;
+  dxyChangePct: number;
+  advancing: number;
+  declining: number;
+};
+
+// Representative snapshot. In production, swap with a free data feed
+// (FRED for Fed Funds/10Y, CBOE for VIX, etc.).
+const MACRO_SNAPSHOT: MacroIndicators = {
+  fedFundsRate: 4.5,
+  fedFundsLastChange: "2025-12-18",
+  nextFomcDate: "2026-06-17",
+  vix: 17.8,
+  us10y: 4.21,
+  dxy: 103.4,
+  dxyChangePct: -0.18,
+  advancing: 1820,
+  declining: 1140,
+};
+
+function daysUntil(iso: string): number {
+  const target = new Date(iso + "T14:00:00Z").getTime();
+  return Math.max(0, Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000)));
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso + "T12:00:00Z").toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function vixTone(vix: number): { label: string; accent: "green" | "amber" | "red" } {
+  if (vix < 15) return { label: "Low vol", accent: "green" };
+  if (vix <= 25) return { label: "Elevated", accent: "amber" };
+  return { label: "High vol", accent: "red" };
+}
+
+function MacroView() {
+  const m = MACRO_SNAPSHOT;
+  const fomcIn = daysUntil(m.nextFomcDate);
+  const vix = vixTone(m.vix);
+  const breadthRatio = m.advancing / Math.max(1, m.declining);
+  const breadthPos = m.advancing > m.declining;
+
+  const summarize = useServerFn(getMacroSummary);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const indicatorsText = useMemo(
+    () =>
+      [
+        `Fed Funds Rate: ${m.fedFundsRate}% (last changed ${fmtDate(m.fedFundsLastChange)})`,
+        `Next FOMC meeting: ${fmtDate(m.nextFomcDate)} (${fomcIn} days)`,
+        `VIX: ${m.vix} (${vix.label})`,
+        `US 10Y yield: ${m.us10y}%`,
+        `DXY: ${m.dxy} (${m.dxyChangePct >= 0 ? "+" : ""}${m.dxyChangePct}% today)`,
+        `Market breadth: ${m.advancing} advancing vs ${m.declining} declining (${breadthRatio.toFixed(2)}:1)`,
+      ].join("\n"),
+    [m, fomcIn, vix.label, breadthRatio],
+  );
+
+  const loadSummary = async () => {
+    setLoading(true);
+    setError(null);
+    const res = await summarize({ data: { indicators: indicatorsText } });
+    if (res.ok) setSummary(res.summary);
+    else setError(res.error);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="space-y-4">
+      {/* AI Market Context */}
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary">
+            <Sparkles className="size-3.5" />
+            Market Context
+          </div>
+          <button
+            type="button"
+            onClick={loadSummary}
+            disabled={loading}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
+        {loading && !summary ? (
+          <div className="space-y-2">
+            <div className="h-3 w-full rounded bg-muted/40 animate-pulse" />
+            <div className="h-3 w-5/6 rounded bg-muted/40 animate-pulse" />
+            <div className="h-3 w-4/6 rounded bg-muted/40 animate-pulse" />
+          </div>
+        ) : error ? (
+          <p className="text-sm text-trade-red">{error}</p>
+        ) : (
+          <p className="text-sm leading-relaxed text-foreground">{summary}</p>
+        )}
+      </div>
+
+      {/* Indicator grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <IndicatorCard label="Fed Funds Rate" value={`${m.fedFundsRate}%`} sub={`Last changed ${fmtDate(m.fedFundsLastChange)}`} />
+        <IndicatorCard
+          label="Next FOMC"
+          value={`${fomcIn}d`}
+          sub={fmtDate(m.nextFomcDate)}
+          accent={fomcIn <= 7 ? "amber" : undefined}
+        />
+        <IndicatorCard label="VIX" value={m.vix.toFixed(1)} sub={vix.label} accent={vix.accent} />
+        <IndicatorCard label="US 10Y" value={`${m.us10y}%`} sub="Yield" />
+        <IndicatorCard
+          label="DXY"
+          value={m.dxy.toFixed(1)}
+          sub={`${m.dxyChangePct >= 0 ? "+" : ""}${m.dxyChangePct}% today`}
+          accent={m.dxyChangePct >= 0 ? "green" : "red"}
+        />
+        <IndicatorCard
+          label="Breadth"
+          value={`${breadthRatio.toFixed(2)}:1`}
+          sub={`${m.advancing} adv / ${m.declining} dec`}
+          accent={breadthPos ? "green" : "red"}
+        />
+      </div>
+
+      <p className="text-[11px] text-muted-foreground px-1">
+        Macro snapshot is indicative. Connect a market data feed for live values.
+      </p>
+    </div>
+  );
+}
+
+function IndicatorCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: "green" | "red" | "amber";
+}) {
+  const valueColor =
+    accent === "green"
+      ? "text-trade-green"
+      : accent === "red"
+        ? "text-trade-red"
+        : accent === "amber"
+          ? "text-amber-500"
+          : "text-foreground";
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
+      <div className={cn("text-xl font-bold font-heading tabular-nums", valueColor)}>{value}</div>
+      {sub ? <div className="text-[11px] text-muted-foreground mt-1">{sub}</div> : null}
+    </div>
   );
 }
 
