@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Upload, X, ImageIcon } from "lucide-react";
+import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
@@ -27,6 +27,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  PreTradeChecklist,
+  type ChecklistResult,
+  type ChecklistPrefill,
+} from "@/components/PreTradeChecklist";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -67,6 +72,7 @@ interface Props {
     direction?: "Long" | "Short" | null;
     instrument?: string | null;
   } | null;
+  checklistPrefill?: ChecklistPrefill | null;
 }
 
 export function NewTradeSheet({
@@ -77,6 +83,7 @@ export function NewTradeSheet({
   open: openProp,
   onOpenChange,
   prefill,
+  checklistPrefill,
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -133,6 +140,20 @@ export function NewTradeSheet({
   );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Pre-trade checklist
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklist, setChecklist] = useState<ChecklistResult | null>(
+    editTrade && (editTrade as { checklist_score?: number | null }).checklist_score != null
+      ? {
+          score: Number((editTrade as { checklist_score?: number }).checklist_score ?? 0),
+          verdict:
+            ((editTrade as { checklist_verdict?: string }).checklist_verdict as ChecklistResult["verdict"]) ??
+            "CAUTION",
+          items: {},
+        }
+      : null,
+  );
+
   // Defaults from settings
   const balance = Number(settings?.current_balance ?? 100);
   const riskPct = Number(settings?.risk_pct ?? 15);
@@ -163,8 +184,20 @@ export function NewTradeSheet({
       setChartFile(null);
       setRTouched(true);
       setErrors({});
+      const cs = (editTrade as { checklist_score?: number | null }).checklist_score;
+      const cv = (editTrade as { checklist_verdict?: string | null }).checklist_verdict;
+      setChecklist(
+        cs != null
+          ? {
+              score: Number(cs),
+              verdict: (cv as ChecklistResult["verdict"]) ?? "CAUTION",
+              items: {},
+            }
+          : null,
+      );
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
+      setChecklist(null);
       if (prefill) {
         if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
         if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
@@ -340,6 +373,8 @@ export function NewTradeSheet({
         range_size: rangeSize === "" ? null : parseFloat(rangeSize),
         notes: notes.trim() || null,
         chart_url: chartUrl,
+        checklist_score: checklist?.score ?? null,
+        checklist_verdict: checklist?.verdict ?? null,
       };
 
       const { error } = isEdit && editTrade
