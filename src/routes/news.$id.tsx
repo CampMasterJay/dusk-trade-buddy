@@ -19,7 +19,6 @@ import { AppHeader } from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  ARTICLES,
   ASSET_LABELS,
   ASSET_PRICE_SNAPSHOT,
   getArticleById,
@@ -488,6 +487,3 @@ function RelatedRow({ article }: { article: Article }) {
     </Link>
   );
 }
-
-// Re-export so TypeScript doesn't whine about unused imports during build-dev.
-export { ARTICLES };
