@@ -7,6 +7,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { ProjectionModal } from "@/components/ProjectionModal";
 import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
 import { SentimentGauge } from "@/components/SentimentGauge";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  reportBalanceUpdate,
+} from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
@@ -108,6 +113,42 @@ function Dashboard() {
   }, [targetBalance, currentBalance, daysRemaining]);
 
   const streak = useMemo(() => calcStreak(trades), [trades]);
+
+  // Prompt for notification permission on first dashboard load after onboarding.
+  useEffect(() => {
+    if (!settings?.onboarding_completed) return;
+    const KEY = "edgetrader.notifications.prompted.v1";
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem(KEY)) return;
+    if (getNotificationPermission() !== "default") {
+      localStorage.setItem(KEY, "1");
+      return;
+    }
+    const t = setTimeout(() => {
+      localStorage.setItem(KEY, "1");
+      void requestNotificationPermission();
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [settings?.onboarding_completed]);
+
+  // Today's P&L for loss-limit checks.
+  const todayPnl = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return trades
+      .filter((t) => (t.date ?? "").slice(0, 10) === today)
+      .reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
+  }, [trades]);
+
+  // Push balance/milestone snapshot into the notification system.
+  useEffect(() => {
+    if (!settings) return;
+    reportBalanceUpdate({
+      startingBalance,
+      currentBalance,
+      targetBalance,
+      todayPnl,
+    });
+  }, [settings, startingBalance, currentBalance, targetBalance, todayPnl]);
 
   // Sparkline: balance progression across last 20 trades.
   const sparklineData = useMemo(() => {
