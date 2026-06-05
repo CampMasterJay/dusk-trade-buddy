@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, Clock, ExternalLink, Newspaper, Activity, RefreshCw, Sparkles, Loader2, Zap, CalendarClock, AlertTriangle, Star } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMacroSummary } from "@/lib/api/macroContext.functions";
+import { getMacroIndicators, type MacroIndicators } from "@/lib/api/macroContext.functions";
 import {
   getEconomicCalendar,
   type CalendarEvent,
