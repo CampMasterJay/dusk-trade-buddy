@@ -478,6 +478,8 @@ function ChartAnalyzer() {
               a={analysis}
               balance={Number(settings?.current_balance ?? 0)}
               riskPct={Number(settings?.risk_pct ?? 0)}
+              minRr={Number(settings?.rr_ratio ?? 1.5)}
+              session={settings?.session ?? null}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
