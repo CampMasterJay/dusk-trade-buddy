@@ -191,6 +191,7 @@ function Dashboard() {
 }
 
 function calcStreak(trades: Trade[]): { type: "W" | "L" | null; count: number } {
+  // placeholder anchor
   const ordered = [...trades]
     .filter((t) => t.result === "Win" || t.result === "Loss")
     .sort((a, b) => {
