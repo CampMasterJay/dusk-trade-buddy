@@ -22,6 +22,8 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { deleteTrade, type Trade } from "@/lib/tradeService";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { JournalTab } from "@/components/JournalTab";
 
 interface Props {
   trade: Trade | null;
@@ -175,7 +177,12 @@ export function TradeDetailSheet({
             </div>
           </SheetHeader>
 
-          <div className="mt-4 space-y-5">
+          <Tabs defaultValue="details" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="journal">Journal</TabsTrigger>
+            </TabsList>
+            <TabsContent value="details" className="mt-4 space-y-5">
             {/* Summary card */}
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -253,7 +260,11 @@ export function TradeDetailSheet({
             <div className="text-[10px] uppercase tracking-wider font-data text-muted-foreground">
               Created {new Date(trade.created_at).toLocaleString()}
             </div>
-          </div>
+            </TabsContent>
+            <TabsContent value="journal" className="mt-4">
+              <JournalTab tradeId={trade.id} onSaved={onChanged} />
+            </TabsContent>
+          </Tabs>
         </SheetContent>
       </Sheet>
 
