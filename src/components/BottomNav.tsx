@@ -37,7 +37,7 @@ export function BottomNav() {
             <Link
               key={item.to}
               to={item.to}
-              className="flex flex-col items-center justify-center gap-0.5 w-16 h-full"
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full"
             >
               <div className="relative">
                 <Icon
