@@ -1,20 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Plus, Trash2, ChevronDown, Search } from "lucide-react";
+import { Trash2, ChevronDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
+import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import {
   getTrades,
-  createTrade,
   deleteTrade,
   type Trade,
 } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,15 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -214,7 +204,7 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
-          <NewTradeButton
+          <NewTradeSheet
             defaultInstrument={settings?.instrument ?? "MES"}
             onLogged={refresh}
           />
@@ -583,210 +573,3 @@ function formatDate(d: string): string {
   });
 }
 
-// ============= New Trade Sheet =============
-function NewTradeButton({
-  defaultInstrument,
-  onLogged,
-}: {
-  defaultInstrument: string;
-  onLogged: () => void;
-}) {
-  const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [instrument, setInstrument] = useState(defaultInstrument);
-  const [direction, setDirection] = useState<"Long" | "Short">("Long");
-  const [result, setResult] = useState<"Win" | "Loss" | "Scratch">("Win");
-  const [entry, setEntry] = useState("");
-  const [stop, setStop] = useState("");
-  const [target, setTarget] = useState("");
-  const [pnl, setPnl] = useState("");
-  const [rMultiple, setRMultiple] = useState("");
-  const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    setInstrument(defaultInstrument);
-  }, [defaultInstrument]);
-
-  const reset = () => {
-    setEntry("");
-    setStop("");
-    setTarget("");
-    setPnl("");
-    setRMultiple("");
-    setNotes("");
-    setResult("Win");
-    setDirection("Long");
-    setDate(new Date().toISOString().slice(0, 10));
-  };
-
-  const submit = async () => {
-    if (!user) return;
-    setSubmitting(true);
-    const { error } = await createTrade({
-      user_id: user.id,
-      date,
-      instrument,
-      direction,
-      entry: Number(entry) || 0,
-      stop: Number(stop) || 0,
-      target: Number(target) || 0,
-      result,
-      pnl: pnl === "" ? null : Number(pnl),
-      r_multiple: rMultiple === "" ? null : Number(rMultiple),
-      notes: notes || null,
-    });
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success("Trade logged");
-    reset();
-    setOpen(false);
-    onLogged();
-  };
-
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          size="sm"
-          className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          New Trade
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>New Trade</SheetTitle>
-          <SheetDescription>Record a trade.</SheetDescription>
-        </SheetHeader>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label htmlFor="nt-date">Date</Label>
-            <Input
-              id="nt-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-inst">Instrument</Label>
-            <Input
-              id="nt-inst"
-              value={instrument}
-              onChange={(e) => setInstrument(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>Direction</Label>
-            <Select
-              value={direction}
-              onValueChange={(v) => setDirection(v as "Long" | "Short")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Long">Long</SelectItem>
-                <SelectItem value="Short">Short</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label>Result</Label>
-            <Select
-              value={result}
-              onValueChange={(v) =>
-                setResult(v as "Win" | "Loss" | "Scratch")
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Win">Win</SelectItem>
-                <SelectItem value="Loss">Loss</SelectItem>
-                <SelectItem value="Scratch">Scratch</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-pnl">P&L ($)</Label>
-            <Input
-              id="nt-pnl"
-              type="number"
-              step="0.01"
-              value={pnl}
-              onChange={(e) => setPnl(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-r">R Multiple</Label>
-            <Input
-              id="nt-r"
-              type="number"
-              step="0.01"
-              value={rMultiple}
-              onChange={(e) => setRMultiple(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-entry">Entry</Label>
-            <Input
-              id="nt-entry"
-              type="number"
-              step="0.01"
-              value={entry}
-              onChange={(e) => setEntry(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-stop">Stop</Label>
-            <Input
-              id="nt-stop"
-              type="number"
-              step="0.01"
-              value={stop}
-              onChange={(e) => setStop(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="nt-target">Target</Label>
-            <Input
-              id="nt-target"
-              type="number"
-              step="0.01"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="nt-notes">Notes</Label>
-            <Input
-              id="nt-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        </div>
-        <SheetFooter className="mt-4">
-          <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={submit}
-            disabled={submitting}
-            className="bg-trade-green text-background hover:bg-trade-green/90"
-          >
-            {submitting ? "Saving..." : "Log Trade"}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
-  );
-}
