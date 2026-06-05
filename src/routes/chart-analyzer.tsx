@@ -26,6 +26,8 @@ import {
   Save,
   ArrowRight,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
