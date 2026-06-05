@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/setup-library")({
   component: SetupLibraryPage,
 });
 
-type SetupDiagram = (props: { className?: string }) => JSX.Element;
+type SetupDiagram = (props: { className?: string }) => ReactElement;
 
 type Setup = {
   id: string;
