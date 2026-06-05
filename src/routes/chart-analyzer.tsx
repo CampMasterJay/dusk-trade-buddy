@@ -51,6 +51,8 @@ import {
   type ChartAnalysis as SavedAnalysis,
 } from "@/lib/chartAnalysisService";
 import { getTrades, type Trade } from "@/lib/tradeService";
+import { TipsCarousel } from "@/components/TipsCarousel";
+
 
 export const Route = createFileRoute("/chart-analyzer")({
   head: () => ({
