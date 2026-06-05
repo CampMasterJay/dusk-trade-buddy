@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { OrbSetupBuilder } from "@/components/OrbSetupBuilder";
+import { VwapReclaimBuilder } from "@/components/VwapReclaimBuilder";
 
 export const Route = createFileRoute("/setup-advisor")({
   component: SetupAdvisorPage,
@@ -77,6 +78,7 @@ function SetupAdvisorPage() {
       <main className="mx-auto max-w-3xl space-y-4 px-4 pb-28 pt-4">
         <SessionStatusCard />
         <OrbSetupBuilder />
+        <VwapReclaimBuilder />
         <SetupWatchlistSection />
       </main>
     </ProtectedRoute>
