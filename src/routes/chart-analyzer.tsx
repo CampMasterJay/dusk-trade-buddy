@@ -470,7 +470,25 @@ function ChartAnalyzer() {
             </pre>
           )}
         </div>
+        </>)}
       </div>
+
+      {selected && (
+        <DetailModal item={selected} onClose={() => setSelected(null)} />
+      )}
+
+      {linkSheetFor && (
+        <LinkTradeModal
+          item={linkSheetFor}
+          trades={trades}
+          onClose={() => setLinkSheetFor(null)}
+          onLinked={async (tradeId) => {
+            await linkAnalysisToTrade(linkSheetFor.id, tradeId);
+            setLinkSheetFor(null);
+            await refreshHistory();
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }
