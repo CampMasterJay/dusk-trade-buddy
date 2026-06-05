@@ -465,11 +465,21 @@ function NewsCard({
     : article.sentiment;
 
   return (
-    <article className="rounded-xl border border-border bg-card p-4 hover:border-muted-foreground/40 transition-colors">
+    <Link
+      to="/news/$id"
+      params={{ id: article.id }}
+      className="block rounded-xl border border-border bg-card p-4 hover:border-muted-foreground/40 transition-colors"
+    >
       <div className="flex items-start justify-between gap-3 mb-2">
         <h2 className="font-bold leading-snug text-foreground">{article.headline}</h2>
         {article.url ? (
-          <a href={article.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground shrink-0">
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+          >
             <ExternalLink className="size-4" />
           </a>
         ) : null}
@@ -506,7 +516,7 @@ function NewsCard({
         <SentimentBadge sentiment={sentiment} />
         {score ? <ActionBadge action={score.tradingAction} /> : null}
       </div>
-    </article>
+    </Link>
   );
 }
 
