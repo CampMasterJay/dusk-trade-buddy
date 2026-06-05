@@ -1,5 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  cacheTrades,
+  readCachedTrades,
+  cacheStats,
+  readCachedStats,
+  queueTrade,
+  getQueuedTrades,
+  markSynced,
+} from "@/lib/offlineCache";
 
 export type Trade = Database["public"]["Tables"]["trades"]["Row"];
 export type TradeInsert = Database["public"]["Tables"]["trades"]["Insert"];
@@ -29,6 +38,42 @@ function toError(err: unknown): Error {
   return new Error("Unknown error");
 }
 
+function isOffline(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+// Materialize queued (offline) trades into Trade rows for display.
+// Marked with a `pending` flag via the id prefix ("pending-...").
+function queuedToTrades(userId: string, queue: Awaited<ReturnType<typeof getQueuedTrades>>): Trade[] {
+  const nowIso = new Date().toISOString();
+  return queue.map((q) => {
+    const t = q.trade;
+    return {
+      id: q.id,
+      user_id: userId,
+      created_at: nowIso,
+      updated_at: nowIso,
+      deleted_at: null,
+      date: t.date,
+      instrument: t.instrument,
+      direction: t.direction,
+      entry: Number(t.entry),
+      stop: Number(t.stop),
+      target: Number(t.target),
+      result: t.result,
+      r_multiple: t.r_multiple ?? null,
+      pnl: t.pnl ?? null,
+      range_size: t.range_size ?? null,
+      notes: t.notes ?? null,
+      chart_url: t.chart_url ?? null,
+      checklist_score: t.checklist_score ?? null,
+      checklist_verdict: t.checklist_verdict ?? null,
+      news_id: t.news_id ?? null,
+      setup_tag: t.setup_tag ?? null,
+    } as Trade;
+  });
+}
+
 export async function getTrades(
   userId: string,
   limit = 50,
@@ -45,8 +90,19 @@ export async function getTrades(
       .range(offset, offset + limit - 1);
 
     if (error) throw error;
-    return { data: data ?? [], error: null };
+    const rows = data ?? [];
+    // Only cache the first page — enough for offline browsing.
+    if (offset === 0) await cacheTrades<Trade[]>(userId, rows);
+    return { data: rows, error: null };
   } catch (err) {
+    // Offline fallback: serve cached page + any queued (pending) trades.
+    const cached = await readCachedTrades<Trade[]>(userId);
+    if (cached) {
+      const queue = await getQueuedTrades(userId);
+      const pending = queuedToTrades(userId, queue);
+      const merged = [...pending, ...cached].slice(offset, offset + limit);
+      return { data: merged, error: null };
+    }
     return { data: null, error: toError(err) };
   }
 }
@@ -71,8 +127,14 @@ export async function getAllTrades(userId: string): Promise<ServiceResult<Trade[
       if (rows.length < chunk) break;
       offset += chunk;
     }
+    await cacheTrades<Trade[]>(userId, all);
     return { data: all, error: null };
   } catch (err) {
+    const cached = await readCachedTrades<Trade[]>(userId);
+    if (cached) {
+      const queue = await getQueuedTrades(userId);
+      return { data: [...cached, ...queuedToTrades(userId, queue)], error: null };
+    }
     return { data: null, error: toError(err) };
   }
 }
@@ -95,7 +157,8 @@ export async function getTradeById(
   }
 }
 
-export async function createTrade(
+// Raw remote-only insert (used by the offline queue flusher).
+export async function createTradeRemote(
   trade: TradeInsert,
 ): Promise<ServiceResult<Trade>> {
   try {
@@ -104,10 +167,40 @@ export async function createTrade(
       .insert(trade)
       .select("*")
       .single();
-
     if (error) throw error;
     return { data, error: null };
   } catch (err) {
+    return { data: null, error: toError(err) };
+  }
+}
+
+export async function createTrade(
+  trade: TradeInsert,
+): Promise<ServiceResult<Trade>> {
+  // Offline path — queue the trade and return a synthetic row so the UI
+  // can render it immediately. It will be flushed on reconnect.
+  if (isOffline() && trade.user_id) {
+    const entry = await queueTrade(trade.user_id, trade);
+    const [pending] = queuedToTrades(trade.user_id, [entry]);
+    return { data: pending, error: null };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("trades")
+      .insert(trade)
+      .select("*")
+      .single();
+
+    if (error) throw error;
+    await markSynced();
+    return { data, error: null };
+  } catch (err) {
+    // Network failure mid-request — fall back to queue.
+    if (trade.user_id) {
+      const entry = await queueTrade(trade.user_id, trade);
+      const [pending] = queuedToTrades(trade.user_id, [entry]);
+      return { data: pending, error: null };
+    }
     return { data: null, error: toError(err) };
   }
 }
@@ -198,8 +291,7 @@ export async function getTradeStats(
     const largestWin = allPnl.length > 0 ? Math.max(0, ...allPnl) : 0;
     const largestLoss = allPnl.length > 0 ? Math.min(0, ...allPnl) : 0;
 
-    return {
-      data: {
+    const stats: TradeStats = {
         totalTrades,
         wins,
         losses,
@@ -211,10 +303,12 @@ export async function getTradeStats(
         totalR,
         largestWin,
         largestLoss,
-      },
-      error: null,
     };
+    await cacheStats<TradeStats>(userId, stats);
+    return { data: stats, error: null };
   } catch (err) {
+    const cached = await readCachedStats<TradeStats>(userId);
+    if (cached) return { data: cached, error: null };
     return { data: null, error: toError(err) };
   }
 }
