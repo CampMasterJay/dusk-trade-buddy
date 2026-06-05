@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Camera,
@@ -28,6 +28,7 @@ import {
   Check,
   Eye,
   EyeOff,
+  BookOpen,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -237,10 +238,19 @@ function ChartAnalyzer() {
           <h1 className="text-sm font-bold font-data uppercase tracking-[4px]">
             CHART ANALYZER
           </h1>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-trade-green/30 bg-trade-green/10 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-green">
-            <Sparkles className="h-3 w-3" />
-            AI
-          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/setup-library"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <BookOpen className="h-3 w-3" />
+              Library
+            </Link>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-trade-green/30 bg-trade-green/10 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-green">
+              <Sparkles className="h-3 w-3" />
+              AI
+            </span>
+          </div>
         </div>
 
         {/* Tabs */}
