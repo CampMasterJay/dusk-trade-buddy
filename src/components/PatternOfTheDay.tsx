@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactElement } from "react";
 import { Link } from "@tanstack/react-router";
 import { Sparkles, ArrowRight, Check } from "lucide-react";
 
@@ -8,7 +8,7 @@ type Pattern = {
   short: string;
   conditions: string;
   checklist: [string, string, string];
-  Diagram: (p: { className?: string }) => JSX.Element;
+  Diagram: (p: { className?: string }) => ReactElement;
 };
 
 // Order is the rotation order: index = day-of-week mod 6 (Sun=0 → ORB).
