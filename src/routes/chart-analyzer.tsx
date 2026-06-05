@@ -1,10 +1,29 @@
 import { useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Camera, Sparkles, X, Upload, AlertCircle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+  Camera,
+  Sparkles,
+  X,
+  Upload,
+  AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Image as ImageIcon,
+  FolderOpen,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+} from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { analyzeChart } from "@/lib/api/chartAnalysis.functions";
+import {
+  formatBytes,
+  processImageFile,
+  type ProcessedImage,
+} from "@/lib/imageUpload";
 
 export const Route = createFileRoute("/chart-analyzer")({
   head: () => ({
@@ -32,41 +51,37 @@ type Analysis = {
   summary?: string;
 };
 
-const MAX_BYTES = 6 * 1024 * 1024;
-
 function ChartAnalyzer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const libraryRef = useRef<HTMLInputElement>(null);
+  const [image, setImage] = useState<ProcessedImage | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadPct, setUploadPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
   const analyze = useServerFn(analyzeChart);
 
   async function handleFile(file: File) {
     setError(null);
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file.");
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      setError("Image is too large. Max 6MB.");
-      return;
-    }
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result as string);
-      r.onerror = () => reject(r.error);
-      r.readAsDataURL(file);
-    });
-    setImageUrl(dataUrl);
     setAnalysis(null);
     setRaw(null);
+    setZoom(1);
+    setUploadPct(0);
+    let processed: ProcessedImage;
+    try {
+      processed = await processImageFile(file, setUploadPct);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not read image.");
+      return;
+    }
+    setImage(processed);
     setLoading(true);
     try {
-      const res = await analyze({ data: { imageDataUrl: dataUrl } });
+      const res = await analyze({ data: { imageDataUrl: processed.dataUrl } });
       if (!res.ok) {
         setError(res.error);
       } else {
@@ -81,12 +96,15 @@ function ChartAnalyzer() {
   }
 
   function clearAll() {
-    setImageUrl(null);
+    setImage(null);
     setAnalysis(null);
     setError(null);
     setRaw(null);
+    setZoom(1);
+    setUploadPct(0);
     if (fileRef.current) fileRef.current.value = "";
     if (cameraRef.current) cameraRef.current.value = "";
+    if (libraryRef.current) libraryRef.current.value = "";
   }
 
   return (
@@ -104,7 +122,7 @@ function ChartAnalyzer() {
         </div>
 
         {/* Upload area */}
-        {!imageUrl ? (
+        {!image ? (
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -131,20 +149,9 @@ function ChartAnalyzer() {
               Drop chart screenshot here or tap to upload
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              PNG, JPG, WEBP · up to 6MB
+              PNG, JPG, WEBP · up to 10MB
             </p>
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  fileRef.current?.click();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Choose file
-              </button>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={(e) => {
@@ -156,11 +163,49 @@ function ChartAnalyzer() {
                 <Camera className="h-3.5 w-3.5" />
                 Camera
               </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  libraryRef.current?.click();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent md:hidden"
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Photos
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileRef.current?.click();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+              >
+                <FolderOpen className="h-3.5 w-3.5 hidden md:inline" />
+                <Upload className="h-3.5 w-3.5 md:hidden" />
+                Files
+              </button>
             </div>
+
+            {uploadPct > 0 && uploadPct < 100 && (
+              <div className="mt-5 w-full max-w-xs">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-trade-green transition-all"
+                    style={{ width: `${uploadPct}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+                  Reading… {uploadPct}%
+                </p>
+              </div>
+            )}
+
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -178,21 +223,68 @@ function ChartAnalyzer() {
                 if (f) void handleFile(f);
               }}
             />
+            <input
+              ref={libraryRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleFile(f);
+              }}
+            />
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-card p-3">
-            <div className="relative overflow-hidden rounded-lg bg-background">
+            <div
+              className="relative max-h-[55vh] overflow-auto rounded-lg bg-background"
+              style={{ touchAction: "pinch-zoom" }}
+            >
               <img
-                src={imageUrl}
-                alt="Uploaded chart"
-                className="mx-auto block max-h-[55vh] w-auto resize overflow-auto object-contain"
-                style={{ resize: "both" }}
+                src={image.dataUrl}
+                alt={image.name}
+                className="block origin-top-left select-none"
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: "top left",
+                  width: zoom === 1 ? "100%" : "auto",
+                  maxWidth: zoom === 1 ? "100%" : "none",
+                }}
+                draggable={false}
               />
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-data">
-                Chart loaded · pinch / drag corner to resize
-              </span>
+
+            {/* Zoom controls */}
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  aria-label="Zoom out"
+                >
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </button>
+                <span className="min-w-[3rem] text-center text-[11px] font-data text-muted-foreground">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  aria-label="Zoom in"
+                >
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  aria-label="Reset zoom"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={clearAll}
@@ -201,6 +293,29 @@ function ChartAnalyzer() {
                 <X className="h-3.5 w-3.5" />
                 Clear
               </button>
+            </div>
+
+            {/* File metadata */}
+            <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-border bg-background/50 p-2.5 text-[11px] font-data">
+              <div className="truncate">
+                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Name</div>
+                <div className="truncate text-foreground" title={image.name}>{image.name}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Size</div>
+                <div className="text-foreground">
+                  {formatBytes(image.bytes)}
+                  {image.compressed && (
+                    <span className="ml-1 text-trade-green">
+                      ↓ from {formatBytes(image.originalBytes)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground uppercase tracking-wider text-[9px]">Dimensions</div>
+                <div className="text-foreground">{image.width}×{image.height}</div>
+              </div>
             </div>
           </div>
         )}
