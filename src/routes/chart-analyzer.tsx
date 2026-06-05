@@ -572,6 +572,9 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* MTF Alignment (top) */}
+      {(a.mtfAlignment || a.frames) && <MtfAlignmentCard a={a} />}
+
       {/* Section 1 — Setup Overview */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
