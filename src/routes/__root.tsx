@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "../components/ThemeProvider";
 import { AuthProvider } from "../components/AuthProvider";
+import { BottomNav } from "../components/BottomNav";
 
 function NotFoundComponent() {
   return (
