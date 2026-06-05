@@ -624,3 +624,289 @@ function AnalysisView({ a }: { a: Analysis }) {
     </div>
   );
 }
+
+function QualityStars({ q }: { q: number | null | undefined }) {
+  const v = q ?? 0;
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={`h-3 w-3 ${
+            i < v ? "fill-trade-green text-trade-green" : "text-muted-foreground"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HistoryView(props: {
+  items: SavedAnalysis[];
+  loading: boolean;
+  error: string | null;
+  setupOptions: string[];
+  instrumentOptions: string[];
+  filterSetup: string;
+  filterInstrument: string;
+  onFilterSetup: (v: string) => void;
+  onFilterInstrument: (v: string) => void;
+  onOpen: (item: SavedAnalysis) => void;
+  onDelete: (id: string) => void | Promise<void>;
+  onLink: (item: SavedAnalysis) => void;
+  trades: Trade[];
+}) {
+  const {
+    items, loading, error, setupOptions, instrumentOptions,
+    filterSetup, filterInstrument, onFilterSetup, onFilterInstrument,
+    onOpen, onDelete, onLink, trades,
+  } = props;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={filterInstrument}
+          onChange={(e) => onFilterInstrument(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-data"
+        >
+          <option value="all">All instruments</option>
+          {instrumentOptions.map((i) => (
+            <option key={i} value={i}>{i}</option>
+          ))}
+        </select>
+        <select
+          value={filterSetup}
+          onChange={(e) => onFilterSetup(e.target.value)}
+          className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-data"
+        >
+          <option value="all">All setups</option>
+          {setupOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-trade-red/40 bg-trade-red/5 p-3 text-sm text-trade-red">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center">
+          <p className="text-sm text-muted-foreground">No analyses yet</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((it) => {
+            const linkedTrade = trades.find((t) => t.id === it.linked_trade_id);
+            return (
+              <li
+                key={it.id}
+                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => onOpen(it)}
+                  className="flex flex-1 items-center gap-3 text-left"
+                >
+                  {it.chart_url ? (
+                    <img
+                      src={it.chart_url}
+                      alt="chart"
+                      className="h-14 w-14 shrink-0 rounded-md border border-border object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {it.setup_detected ?? "—"}
+                      </span>
+                      {it.instrument && (
+                        <span className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-data">
+                          {it.instrument}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <QualityStars q={it.setup_quality} />
+                      <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+                        {new Date(it.created_at).toLocaleDateString()}
+                      </span>
+                      {linkedTrade && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-data uppercase tracking-wider text-trade-green">
+                          <Link2 className="h-3 w-3" />
+                          linked
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onLink(it)}
+                    aria-label="Link to trade"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background hover:bg-accent"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Delete this analysis?")) void onDelete(it.id);
+                    }}
+                    aria-label="Delete"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-trade-red/30 bg-trade-red/10 text-trade-red hover:bg-trade-red/20"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DetailModal({
+  item,
+  onClose,
+}: {
+  item: SavedAnalysis;
+  onClose: () => void;
+}) {
+  const a = (item.raw_analysis as unknown as Analysis | null) ?? null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-border bg-card sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-data uppercase tracking-wider text-muted-foreground hover:bg-accent"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
+          <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            {new Date(item.created_at).toLocaleString()}
+          </span>
+        </div>
+        <div className="space-y-4 p-4">
+          {item.chart_url && (
+            <img
+              src={item.chart_url}
+              alt="chart"
+              className="w-full rounded-lg border border-border"
+            />
+          )}
+          {a ? (
+            <AnalysisView a={a} />
+          ) : (
+            <div className="space-y-2 text-sm">
+              <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
+              <p><span className="text-muted-foreground">Bias:</span> {item.bias_direction ?? "—"}</p>
+              <p className="text-foreground">{item.summary ?? "—"}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinkTradeModal({
+  item,
+  trades,
+  onClose,
+  onLinked,
+}: {
+  item: SavedAnalysis;
+  trades: Trade[];
+  onClose: () => void;
+  onLinked: (tradeId: string | null) => void | Promise<void>;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border bg-card sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-border p-3">
+          <h3 className="text-xs font-data uppercase tracking-[2px] text-muted-foreground">
+            Link to trade
+          </h3>
+        </div>
+        <div className="divide-y divide-border">
+          {item.linked_trade_id && (
+            <button
+              type="button"
+              onClick={() => onLinked(null)}
+              className="block w-full px-4 py-3 text-left text-sm text-trade-red hover:bg-accent"
+            >
+              Unlink current trade
+            </button>
+          )}
+          {trades.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              No trades to link
+            </div>
+          ) : (
+            trades.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onLinked(t.id)}
+                className="block w-full px-4 py-3 text-left hover:bg-accent"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {t.instrument} · {t.direction}
+                  </span>
+                  <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+                    {t.date}
+                  </span>
+                </div>
+                <div className="text-[11px] font-data text-muted-foreground">
+                  {t.result} · R {t.r_multiple ?? "—"}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs font-data uppercase tracking-wider hover:bg-accent"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
