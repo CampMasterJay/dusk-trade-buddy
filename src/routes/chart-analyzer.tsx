@@ -162,24 +162,49 @@ function ChartAnalyzer() {
     [history, filterSetup, filterInstrument],
   );
 
-  async function handleFile(file: File) {
+  const firstFrame = frames.HTF ?? frames.MTF ?? frames.LTF;
+  const filledSlots = (["HTF", "MTF", "LTF"] as const).filter((s) => frames[s]);
+  const canAnalyze = filledSlots.length > 0 && !loading;
+
+  async function handleSlotFile(slot: Slot, file: File, timeframe: string) {
     setError(null);
-    setAnalysis(null);
-    setRaw(null);
-    setZoom(1);
-    setUploadPct(0);
     setSavedId(null);
     let processed: ProcessedImage;
     try {
-      processed = await processImageFile(file, setUploadPct);
+      processed = await processImageFile(file);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read image.");
       return;
     }
-    setImage(processed);
+    setFrames((f) => ({ ...f, [slot]: { image: processed, timeframe } }));
+  }
+
+  function setSlotTimeframe(slot: Slot, tf: string) {
+    setFrames((f) => {
+      const cur = f[slot];
+      if (!cur) return f;
+      return { ...f, [slot]: { ...cur, timeframe: tf } };
+    });
+  }
+
+  function clearSlot(slot: Slot) {
+    setFrames((f) => ({ ...f, [slot]: null }));
+  }
+
+  async function runAnalysis() {
+    if (!canAnalyze) return;
+    setError(null);
+    setAnalysis(null);
+    setRaw(null);
+    setSavedId(null);
     setLoading(true);
     try {
-      const res = await analyze({ data: { imageDataUrl: processed.dataUrl } });
+      const payloadFrames = filledSlots.map((slot) => ({
+        slot,
+        timeframe: frames[slot]!.timeframe || undefined,
+        imageDataUrl: frames[slot]!.image.dataUrl,
+      }));
+      const res = await analyze({ data: { frames: payloadFrames } });
       if (!res.ok) {
         setError(res.error);
       } else {
@@ -195,16 +220,11 @@ function ChartAnalyzer() {
   }
 
   function clearAll() {
-    setImage(null);
+    setFrames({ HTF: null, MTF: null, LTF: null });
     setAnalysis(null);
     setError(null);
     setRaw(null);
-    setZoom(1);
-    setUploadPct(0);
     setSavedId(null);
-    if (fileRef.current) fileRef.current.value = "";
-    if (cameraRef.current) cameraRef.current.value = "";
-    if (libraryRef.current) libraryRef.current.value = "";
   }
 
   return (
