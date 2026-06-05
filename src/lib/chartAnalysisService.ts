@@ -78,6 +78,31 @@ export async function linkAnalysisToTrade(
   }
 }
 
+export type FeedbackRating =
+  | "spot_on"
+  | "partially_correct"
+  | "wrong_direction"
+  | "mis_executed";
+
+export async function updateAnalysisFeedback(
+  id: string,
+  rating: FeedbackRating,
+  note?: string | null,
+): Promise<ServiceResult<ChartAnalysis>> {
+  try {
+    const { data, error } = await supabase
+      .from("chart_analyses")
+      .update({ feedback_rating: rating, feedback_note: note ?? null })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return { data, error: null };
+  } catch (err) {
+    return { data: null, error: toError(err) };
+  }
+}
+
 /** Map the AI analysis JSON returned by analyzeChart into a row insert. */
 export function buildAnalysisInsert(args: {
   userId: string;
