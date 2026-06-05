@@ -70,7 +70,7 @@ const STATUSES: { key: SetupStatus; label: string; color: string; icon: typeof C
 function SetupAdvisorPage() {
   return (
     <ProtectedRoute>
-      <AppHeader title="Setup Advisor" />
+      <AppHeader />
       <main className="mx-auto max-w-3xl space-y-4 px-4 pb-28 pt-4">
         <SessionStatusCard />
         <SetupWatchlistSection />
