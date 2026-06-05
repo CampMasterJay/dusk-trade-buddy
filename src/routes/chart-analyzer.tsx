@@ -152,6 +152,14 @@ function ChartAnalyzer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, user?.id]);
 
+  // Always load history + trades once on mount so the header accuracy stat works.
+  useEffect(() => {
+    if (!user) return;
+    void refreshHistory();
+    void getTrades(user.id, 100).then(({ data }) => setTrades(data ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const setupOptions = useMemo(() => {
     const s = new Set<string>();
     history.forEach((h) => h.setup_detected && s.add(h.setup_detected));
