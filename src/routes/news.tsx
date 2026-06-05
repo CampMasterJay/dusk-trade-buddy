@@ -28,6 +28,7 @@ import {
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { WatchlistManager } from "@/components/WatchlistManager";
 import { toast } from "sonner";
+import { useSWR } from "@/lib/swrFetch";
 import {
   scoreArticles,
   pendingIdsFor,
