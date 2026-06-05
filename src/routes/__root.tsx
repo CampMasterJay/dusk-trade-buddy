@@ -155,6 +155,34 @@ function RootComponent() {
     initServiceWorker();
   }, []);
 
+  // Auto-recover from stale chunk hashes after a deploy: when a lazy
+  // route chunk fails to load, do a hard reload to pick up fresh assets.
+  useEffect(() => {
+    const isChunkError = (msg: string) =>
+      /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(
+        msg,
+      );
+    const key = "__edgetrader_chunk_reload";
+    const reloadOnce = () => {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+      window.location.reload();
+    };
+    const onError = (e: ErrorEvent) => {
+      if (isChunkError(e.message ?? "")) reloadOnce();
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const msg = String((e.reason as { message?: string })?.message ?? e.reason ?? "");
+      if (isChunkError(msg)) reloadOnce();
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
