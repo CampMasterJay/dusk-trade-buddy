@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, Upload, X, ImageIcon, ListChecks, CheckCircle2, AlertTriangle, XCircle, Newspaper, Search } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { createTrade, updateTrade, type Trade } from "@/lib/tradeService";
 import { supabase } from "@/integrations/supabase/client";
+import { ARTICLES, type Article } from "@/lib/newsData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,6 +155,10 @@ export function NewTradeSheet({
       : null,
   );
 
+  // News event tag
+  const initialNewsId = (editTrade as { news_id?: string | null } | null | undefined)?.news_id ?? null;
+  const [newsId, setNewsId] = useState<string | null>(initialNewsId);
+
   // Defaults from settings
   const balance = Number(settings?.current_balance ?? 100);
   const riskPct = Number(settings?.risk_pct ?? 15);
@@ -195,9 +200,11 @@ export function NewTradeSheet({
             }
           : null,
       );
+      setNewsId((editTrade as { news_id?: string | null }).news_id ?? null);
     } else {
       setRMultiple((prev) => (prev === "" ? String(rrSetting) : prev));
       setChecklist(null);
+      setNewsId(null);
       if (prefill) {
         if (prefill.entry != null && prefill.entry !== "") setEntry(String(prefill.entry));
         if (prefill.stop != null && prefill.stop !== "") setStop(String(prefill.stop));
@@ -375,6 +382,7 @@ export function NewTradeSheet({
         chart_url: chartUrl,
         checklist_score: checklist?.score ?? null,
         checklist_verdict: checklist?.verdict ?? null,
+        news_id: newsId,
       };
 
       const { error } = isEdit && editTrade
@@ -663,6 +671,11 @@ export function NewTradeSheet({
               result={checklist}
               onOpen={() => setChecklistOpen(true)}
             />
+          </Section>
+
+          {/* News Event */}
+          <Section title="News Event (optional)">
+            <NewsPicker value={newsId} onChange={setNewsId} />
           </Section>
         </div>
 
