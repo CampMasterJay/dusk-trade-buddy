@@ -228,6 +228,18 @@
   }
 }
 
+/* Global reduced-motion: kill animations & transitions app-wide. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ===== Dark theme polish (4px grid, depth, glow, noise) ===== */
 
 /* Subtle SVG noise overlay applied via ::after to avoid extra DOM.
