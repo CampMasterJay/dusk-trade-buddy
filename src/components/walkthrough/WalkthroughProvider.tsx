@@ -73,6 +73,10 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
         if (token === tokenRef.current) setResolving(false);
         return;
       }
+      // If the step targets the side nav, make sure it's open
+      if (s.selector.includes('data-tour="nav-')) {
+        window.dispatchEvent(new Event("sidenav:open"));
+      }
       const el = await waitForElement(s.selector);
       if (token !== tokenRef.current) return;
       if (el) {
