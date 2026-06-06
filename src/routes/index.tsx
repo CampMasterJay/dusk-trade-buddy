@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, CalendarRange } from "lucide-react";
+import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -210,6 +210,8 @@ function Dashboard() {
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
             <ConsistencyStreak />
+
+            <WeekendDebriefCard />
 
             <SentimentGauge />
 
@@ -753,5 +755,29 @@ function QuickLogFab({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function WeekendDebriefCard() {
+  const day = new Date().getDay(); // 0=Sun, 6=Sat
+  if (day !== 0 && day !== 6) return null;
+  return (
+    <Link
+      to="/weekly-debrief"
+      className="flex items-center gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4 transition-colors hover:bg-primary/10"
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+        <Brain className="h-5 w-5" />
+      </div>
+      <div className="flex-1">
+        <div className="font-heading text-sm font-semibold text-foreground">
+          Weekly Debrief ready
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Get an AI breakdown of this week's trades, patterns, and rule slips.
+        </div>
+      </div>
+      <span className="text-[10px] font-data uppercase tracking-wider text-primary">Open →</span>
+    </Link>
   );
 }
