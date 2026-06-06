@@ -997,7 +997,14 @@ function CalendarView() {
   } = useSWR<CalendarEvent[]>(
     "news.calendar",
     async () => {
+      const __t = performance.now();
       const res = await fetchCal();
+      {
+        const { logPerf } = await import("@/lib/perfLog");
+        void logPerf("news_fetch", performance.now() - __t, {
+          meta: { ok: res.ok, count: res.ok ? res.events.length : 0 },
+        });
+      }
       if (!res.ok) throw new Error(res.error);
       return res.events;
     },
