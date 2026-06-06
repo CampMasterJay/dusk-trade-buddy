@@ -254,7 +254,10 @@ function RootComponent() {
           <WalkthroughProvider>
             <OfflineBanner />
             <HighImpactBanner />
-            <div className="pl-16 md:pl-0">
+            <div
+              className="md:!pl-0 transition-[padding] duration-300 ease-out"
+              style={{ paddingLeft: "var(--sidenav-w, 4rem)" }}
+            >
               <div key={pathname} className="animate-route-slide">
                 <ErrorBoundary screen={pathname}>
                   <Outlet />
