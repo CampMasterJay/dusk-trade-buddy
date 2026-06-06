@@ -24,10 +24,7 @@ export function AppHeader({ balance }: AppHeaderProps) {
 
         {/* Balance Badge */}
         <div
-          className="flex items-center gap-2 rounded-full border border-trade-green/30 bg-trade-green/10 px-3 py-1 text-sm font-data text-trade-green"
-          style={{
-            boxShadow: "0 0 12px rgba(0, 255, 170, 0.25), 0 0 4px rgba(0, 255, 170, 0.15)",
-          }}
+          className="balance-glow flex items-center gap-2 rounded-full border border-trade-green/30 bg-trade-green/10 px-3 py-1 text-sm font-data text-trade-green"
         >
           <span className="h-2 w-2 rounded-full bg-trade-green animate-pulse" />
           {formattedBalance}
