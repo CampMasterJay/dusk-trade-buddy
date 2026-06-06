@@ -676,6 +676,7 @@ function QuickLogFab({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
+          data-tour="new-trade-fab"
           className="fixed bottom-6 right-6 z-40 h-14 rounded-full px-5 bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
           style={{ boxShadow: "0 0 24px rgba(0,255,170,0.45)" }}
         >
