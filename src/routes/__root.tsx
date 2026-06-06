@@ -163,6 +163,26 @@ function RootComponent() {
   useEffect(() => {
     initServiceWorker();
     startNotificationTriggers();
+    // App load timing — time to interactive (after first commit).
+    try {
+      const nav = performance.getEntriesByType("navigation")[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+      const ttiMs = nav
+        ? Math.max(nav.domInteractive - nav.startTime, performance.now())
+        : performance.now();
+      // Defer until user is likely authenticated (Auth listener mounts shortly after).
+      const t = window.setTimeout(() => {
+        void import("../lib/perfLog").then((m) =>
+          m.logPerf("app_load", ttiMs, {
+            meta: { ua: navigator.userAgent.slice(0, 120) },
+          }),
+        );
+      }, 2500);
+      return () => window.clearTimeout(t);
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Auto-recover from stale chunk hashes after a deploy: when a lazy
