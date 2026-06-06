@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { computeTradeStats } from "@/lib/tradeStats";
 import {
   cacheTrades,
   readCachedTrades,
@@ -255,55 +256,7 @@ export async function getTradeStats(
     if (error) throw error;
 
     const trades = data ?? [];
-    const num = (v: unknown) => (v == null ? 0 : Number(v) || 0);
-
-    const winTrades = trades.filter((t) => t.result === "Win");
-    const lossTrades = trades.filter((t) => t.result === "Loss");
-
-    const wins = winTrades.length;
-    const losses = lossTrades.length;
-    const totalTrades = trades.length;
-    const decided = wins + losses;
-    const winRate = decided > 0 ? wins / decided : 0;
-
-    const totalPnl = trades.reduce((a, t) => a + num(t.pnl), 0);
-    const totalR = trades.reduce((a, t) => a + num(t.r_multiple), 0);
-
-    const winsPnl = winTrades.map((t) => num(t.pnl));
-    const lossesPnl = lossTrades.map((t) => num(t.pnl));
-
-    const avgWin =
-      winsPnl.length > 0
-        ? winsPnl.reduce((a, b) => a + b, 0) / winsPnl.length
-        : 0;
-    const avgLoss =
-      lossesPnl.length > 0
-        ? lossesPnl.reduce((a, b) => a + b, 0) / lossesPnl.length
-        : 0;
-
-    // Expected value per trade based on observed win/loss frequencies and averages.
-    const ev =
-      decided > 0
-        ? (wins / decided) * avgWin + (losses / decided) * avgLoss
-        : 0;
-
-    const allPnl = trades.map((t) => num(t.pnl));
-    const largestWin = allPnl.length > 0 ? Math.max(0, ...allPnl) : 0;
-    const largestLoss = allPnl.length > 0 ? Math.min(0, ...allPnl) : 0;
-
-    const stats: TradeStats = {
-        totalTrades,
-        wins,
-        losses,
-        winRate,
-        totalPnl,
-        avgWin,
-        avgLoss,
-        ev,
-        totalR,
-        largestWin,
-        largestLoss,
-    };
+    const stats = computeTradeStats(trades);
     await cacheStats<TradeStats>(userId, stats);
     return { data: stats, error: null };
   } catch (err) {
