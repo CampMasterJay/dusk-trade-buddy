@@ -445,12 +445,15 @@ function ChartAnalyzer() {
                   .toLowerCase();
                 const direction =
                   dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+                const entryN = toNum(analysis.setupIdea?.entry);
+                const stopN = toNum(analysis.setupIdea?.stop);
+                const targetN = toNum(analysis.setupIdea?.target);
                 sessionStorage.setItem(
                   "pendingTradePrefill",
                   JSON.stringify({
-                    entry: analysis.setupIdea?.entry ?? "",
-                    stop: analysis.setupIdea?.stop ?? "",
-                    target: analysis.setupIdea?.target ?? "",
+                    entry: entryN != null ? String(entryN) : "",
+                    stop: stopN != null ? String(stopN) : "",
+                    target: targetN != null ? String(targetN) : "",
                     direction,
                     instrument: analysis.instrument ?? undefined,
                   }),
