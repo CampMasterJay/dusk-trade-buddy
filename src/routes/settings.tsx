@@ -88,6 +88,7 @@ function Settings() {
         </p>
 
         <ChallengeSection />
+        <ChallengeHistorySection />
         <RiskSection />
         <InstrumentsSection />
         <NotificationsSection />
