@@ -436,6 +436,8 @@ export function NewTradeSheet({
       if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
+      // Re-evaluate achievements after a successful save.
+      void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
     } finally {
       setSubmitting(false);
     }

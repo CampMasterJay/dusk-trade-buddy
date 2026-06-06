@@ -26,6 +26,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { WatchlistManager } from "@/components/WatchlistManager";
 import { BackupSection } from "@/components/BackupSection";
 import { DebugSection } from "@/components/DebugSection";
+import { AchievementsSection } from "@/components/AchievementsSection";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -89,6 +90,7 @@ function Settings() {
         <NotificationsSection />
         <NewsApiSection />
         <OfflineSection />
+        <AchievementsSection />
         <BackupSection />
         <AccountSection />
         <DebugSection />
