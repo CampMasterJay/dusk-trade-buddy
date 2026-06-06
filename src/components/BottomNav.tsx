@@ -27,8 +27,8 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm md:hidden">
-      <div className="flex items-center justify-around h-16">
+    <nav className="fixed top-0 bottom-0 left-0 z-50 w-16 border-r border-border bg-background/95 backdrop-blur-sm md:hidden">
+      <div className="flex flex-col items-center justify-start gap-1 w-16 h-full py-3 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.to;
           const Icon = item.icon;
@@ -38,11 +38,11 @@ export function BottomNav() {
               key={item.to}
               to={item.to}
               data-tour={`nav-${item.to}`}
-              className="relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full transition-colors duration-200"
+              className="relative flex flex-col items-center justify-center gap-0.5 w-full py-2 transition-colors duration-200"
             >
               <span
-                className={`pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-trade-green transition-all duration-300 ease-out ${
-                  isActive ? "w-8 opacity-100" : "w-0 opacity-0"
+                className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full bg-trade-green transition-all duration-300 ease-out ${
+                  isActive ? "h-8 opacity-100" : "h-0 opacity-0"
                 }`}
               />
               <div className="relative">
