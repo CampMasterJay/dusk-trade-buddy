@@ -225,7 +225,19 @@ function ChartAnalyzer() {
         timeframe: frames[slot]!.timeframe || undefined,
         imageDataUrl: frames[slot]!.image.dataUrl,
       }));
+      const __aiStart = performance.now();
       const res = await analyze({ data: { frames: payloadFrames } });
+      {
+        const { logPerf } = await import("@/lib/perfLog");
+        void logPerf(
+          "ai_chart_analysis",
+          (res as { durationMs?: number }).durationMs ?? performance.now() - __aiStart,
+          {
+            tokensUsed: (res as { tokensUsed?: number | null }).tokensUsed ?? null,
+            meta: { ok: res.ok, frames: payloadFrames.length },
+          },
+        );
+      }
       if (!res.ok) {
         setError(res.error);
         const { announce } = await import("@/hooks/useAnnouncer");
