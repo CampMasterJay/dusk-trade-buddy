@@ -382,7 +382,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      trades_with_stats: {
+        Row: {
+          avg_pnl: number | null
+          avg_r: number | null
+          breakevens: number | null
+          last_trade_at: string | null
+          losses: number | null
+          total_pnl: number | null
+          total_r: number | null
+          total_trades: number | null
+          user_id: string | null
+          win_rate: number | null
+          wins: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
