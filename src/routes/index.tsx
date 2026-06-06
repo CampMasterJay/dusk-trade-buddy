@@ -356,6 +356,7 @@ function ChallengeCard({
 }) {
   return (
     <section
+      data-tour="dashboard-balance"
       className="rounded-2xl border border-trade-green/30 bg-card p-5"
       style={{
         boxShadow:
@@ -466,7 +467,7 @@ function StatsRow({
   ];
 
   return (
-    <section className="-mx-4">
+    <section data-tour="dashboard-stats" className="-mx-4">
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((it) => {
           const color =
