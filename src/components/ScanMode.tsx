@@ -100,9 +100,21 @@ export function ScanMode() {
     await Promise.all(
       queue.map(async (it) => {
         try {
+          const __aiStart = performance.now();
           const res = await analyze({
             data: { imageDataUrl: it.image.dataUrl },
           });
+          {
+            const { logPerf } = await import("@/lib/perfLog");
+            void logPerf(
+              "ai_chart_analysis",
+              (res as { durationMs?: number }).durationMs ?? performance.now() - __aiStart,
+              {
+                tokensUsed: (res as { tokensUsed?: number | null }).tokensUsed ?? null,
+                meta: { ok: res.ok, scan: true },
+              },
+            );
+          }
           if (!res.ok) {
             setItems((prev) =>
               prev.map((p) =>
