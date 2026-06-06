@@ -254,7 +254,7 @@ function RootComponent() {
           <WalkthroughProvider>
             <OfflineBanner />
             <HighImpactBanner />
-            <div className="pb-16 md:pb-0">
+            <div className="pt-16 md:pt-0">
               <div key={pathname} className="animate-route-slide">
                 <ErrorBoundary screen={pathname}>
                   <Outlet />
