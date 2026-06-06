@@ -69,8 +69,9 @@ export function useUserSettings() {
   // Recalculate balance whenever trades change for this user.
   useEffect(() => {
     if (!userId) return;
+    const channelName = `trades-balance-${userId}-${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase
-      .channel(`trades-balance-${userId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
