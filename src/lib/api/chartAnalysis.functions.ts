@@ -106,6 +106,7 @@ export const analyzeChart = createServerFn({ method: "POST" })
     }
 
     try {
+      const aiStart = Date.now();
       const res = await retryWithBackoff(
         () =>
           fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -147,7 +148,10 @@ export const analyzeChart = createServerFn({ method: "POST" })
 
       const json = (await res.json()) as {
         choices?: { message?: { content?: string } }[];
+        usage?: { total_tokens?: number; prompt_tokens?: number; completion_tokens?: number };
       };
+      const tokensUsed = json.usage?.total_tokens ?? null;
+      const durationMs = Date.now() - aiStart;
       const raw = json.choices?.[0]?.message?.content?.trim() ?? "";
       const cleaned = raw
         .replace(/^```(?:json)?/i, "")
@@ -171,9 +175,11 @@ export const analyzeChart = createServerFn({ method: "POST" })
         return {
           ok: false as const,
           error: "Analysis unavailable — try a clearer screenshot.",
+          tokensUsed,
+          durationMs,
         };
       }
-      return { ok: true as const, analysis: parsed, raw: cleaned };
+      return { ok: true as const, analysis: parsed, raw: cleaned, tokensUsed, durationMs };
     } catch (err) {
       if (err instanceof TimeoutError) {
         return {

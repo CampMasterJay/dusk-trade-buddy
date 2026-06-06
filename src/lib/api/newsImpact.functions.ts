@@ -60,6 +60,7 @@ export const scoreNewsBatch = createServerFn({ method: "POST" })
       .join("\n---\n");
 
     try {
+      const aiStart = Date.now();
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -87,7 +88,10 @@ export const scoreNewsBatch = createServerFn({ method: "POST" })
 
       const json = (await res.json()) as {
         choices?: { message?: { content?: string } }[];
+        usage?: { total_tokens?: number };
       };
+      const tokensUsed = json.usage?.total_tokens ?? null;
+      const durationMs = Date.now() - aiStart;
       const raw = json.choices?.[0]?.message?.content?.trim() ?? "";
       if (!raw) return { ok: false as const, error: "Empty response." };
 
@@ -119,7 +123,12 @@ export const scoreNewsBatch = createServerFn({ method: "POST" })
         return { ok: false as const, error: "AI returned unexpected shape." };
       }
 
-      return { ok: true as const, scores: validated.data.scores as ImpactScore[] };
+      return {
+        ok: true as const,
+        scores: validated.data.scores as ImpactScore[],
+        tokensUsed,
+        durationMs,
+      };
     } catch (err) {
       return {
         ok: false as const,

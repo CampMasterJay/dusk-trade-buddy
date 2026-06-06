@@ -140,6 +140,36 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_logs: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          id: string
+          meta: Json | null
+          metric: string
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          id?: string
+          meta?: Json | null
+          metric: string
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          id?: string
+          meta?: Json | null
+          metric?: string
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
