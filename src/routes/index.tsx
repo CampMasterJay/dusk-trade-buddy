@@ -667,6 +667,7 @@ function QuickLogFab({
     reset();
     setOpen(false);
     onLogged();
+    void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
   };
 
   return (
