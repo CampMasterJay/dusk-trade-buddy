@@ -27,7 +27,7 @@ export async function logPerf(
       metric,
       duration_ms: Math.round(durationMs),
       tokens_used: opts.tokensUsed ?? null,
-      meta: opts.meta ?? null,
+      meta: (opts.meta ?? null) as never,
     });
   } catch {
     // swallow — perf logging must never break the app
