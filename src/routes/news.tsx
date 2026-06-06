@@ -122,6 +122,7 @@ function resolveDateRange(
 
 function News() {
   const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
+  const { settings } = useUserSettings();
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
