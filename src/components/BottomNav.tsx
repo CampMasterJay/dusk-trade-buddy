@@ -26,6 +26,13 @@ export function BottomNav() {
 
   useEffect(() => subscribeUnreadHighImpact(setUnreadHigh), []);
 
+  // Allow other parts of the app (e.g. walkthroughs) to force the nav open
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener("sidenav:open", onOpen);
+    return () => window.removeEventListener("sidenav:open", onOpen);
+  }, []);
+
   // Restore persisted state
   useEffect(() => {
     try {
