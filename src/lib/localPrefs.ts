@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 
 export type LocalPrefs = {
   challengeEndDate: string | null; // ISO yyyy-mm-dd
+  challengeStartedAt: string | null; // ISO timestamp; set on new challenge
   maxTradesPerDay: number;
   dailyLossLimit: number | null; // null = auto-calc from risk
   dailyLossLimitOverride: boolean;
@@ -23,6 +24,7 @@ const KEY = "edgetrader.localPrefs.v1";
 
 export const DEFAULT_PREFS: LocalPrefs = {
   challengeEndDate: null,
+  challengeStartedAt: null,
   maxTradesPerDay: 2,
   dailyLossLimit: null,
   dailyLossLimitOverride: false,
