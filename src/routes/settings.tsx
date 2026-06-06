@@ -17,6 +17,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  PlayCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +28,8 @@ import { WatchlistManager } from "@/components/WatchlistManager";
 import { BackupSection } from "@/components/BackupSection";
 import { DebugSection } from "@/components/DebugSection";
 import { AchievementsSection } from "@/components/AchievementsSection";
+import { ChallengeHistorySection } from "@/components/ChallengeHistorySection";
+import { archiveAndResetChallenge } from "@/lib/challengeArchive";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useUserSettings } from "@/hooks/useUserSettings";
