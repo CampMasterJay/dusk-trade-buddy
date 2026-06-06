@@ -2,6 +2,7 @@ import {
   scoreNewsBatch,
   type ImpactScore,
 } from "@/lib/api/newsImpact.functions";
+import { logPerf } from "@/lib/perfLog";
 
 export type {
   ImpactScore,
@@ -74,8 +75,17 @@ export async function scoreArticles(
 
   for (let i = 0; i < todo.length; i += BATCH_SIZE) {
     const batch = todo.slice(i, i + BATCH_SIZE);
+    const __t = performance.now();
     try {
       const res = await scoreNewsBatch({ data: { items: batch } });
+      void logPerf(
+        "ai_news_impact",
+        (res as { durationMs?: number }).durationMs ?? performance.now() - __t,
+        {
+          tokensUsed: (res as { tokensUsed?: number | null }).tokensUsed ?? null,
+          meta: { ok: res.ok, batch: batch.length },
+        },
+      );
       if (!res.ok) {
         errors.push(res.error);
         continue;
