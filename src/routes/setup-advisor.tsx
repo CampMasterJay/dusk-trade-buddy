@@ -52,6 +52,7 @@ import { OrbSetupBuilder } from "@/components/OrbSetupBuilder";
 import { VwapReclaimBuilder } from "@/components/VwapReclaimBuilder";
 import { SessionTimer } from "@/components/SessionTimer";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
+import { PriceAlertsPanel } from "@/components/PriceAlertsPanel";
 
 export const Route = createFileRoute("/setup-advisor")({
   component: SetupAdvisorPage,
@@ -107,6 +108,7 @@ function SetupAdvisorPage() {
         <SessionTimer />
         <OrbSetupBuilder />
         <VwapReclaimBuilder />
+        <PriceAlertsPanel />
         <SetupOutcomeStats />
         <SetupWatchlistSection />
       </main>
