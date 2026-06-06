@@ -755,6 +755,7 @@ function QuickLogFab({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
 }
 
 function WeekendDebriefCard() {
@@ -778,7 +779,5 @@ function WeekendDebriefCard() {
       </div>
       <span className="text-[10px] font-data uppercase tracking-wider text-primary">Open →</span>
     </Link>
-  );
-}
   );
 }
