@@ -70,13 +70,13 @@
   --radius: 0.625rem;
 
   /* EdgeTrader Dark Palette */
-  --background: oklch(0.1561 0.0061 304.96);
+  --background: #07070d;
   --foreground: oklch(0.9364 0.0288 7.81);
 
-  --card: oklch(0.1743 0.0201 298.73);
+  --card: #0d0d1a;
   --card-foreground: oklch(0.9364 0.0288 7.81);
 
-  --popover: oklch(0.1743 0.0201 298.73);
+  --popover: #111120;
   --popover-foreground: oklch(0.9364 0.0288 7.81);
 
   --primary: oklch(0.8846 0.1867 155.32);
@@ -99,8 +99,11 @@
   --ring: oklch(0.8846 0.1867 155.32);
 
   /* Semantic Trading Colors */
-  --surface: oklch(0.1743 0.0201 298.73);
+  --surface: #0d0d1a;
   --surface-foreground: oklch(0.9364 0.0288 7.81);
+
+  /* Elevated surface for modals/sheets/popovers */
+  --elevated: #111120;
 
   --trade-green: oklch(0.8846 0.1867 155.32);
   --trade-red: oklch(0.7133 0.1868 21.87);
