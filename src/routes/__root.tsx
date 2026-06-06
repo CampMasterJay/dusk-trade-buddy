@@ -24,6 +24,7 @@ import { LiveRegion } from "../hooks/useAnnouncer";
 import { SplashScreen } from "../components/SplashScreen";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
+import { startPriceAlertPolling } from "../lib/priceAlerts";
 
 function NotFoundComponent() {
   return (
@@ -163,6 +164,7 @@ function RootComponent() {
   useEffect(() => {
     initServiceWorker();
     startNotificationTriggers();
+    startPriceAlertPolling();
     // App load timing — time to interactive (after first commit).
     try {
       const nav = performance.getEntriesByType("navigation")[0] as
