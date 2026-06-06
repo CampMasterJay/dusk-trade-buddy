@@ -207,6 +207,7 @@ export function CoachChat() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open EdgeCoach chat"
+        data-tour="edgecoach-fab"
         className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-trade-green text-background shadow-[0_10px_30px_-10px_rgba(34,197,94,0.6)] ring-1 ring-trade-green/40 transition hover:scale-105 hover:bg-trade-green/90 md:bottom-6"
       >
         <MessageCircle className="h-6 w-6" />
