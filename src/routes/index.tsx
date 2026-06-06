@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, CalendarRange } from "lucide-react";
+import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -210,6 +210,8 @@ function Dashboard() {
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
             <ConsistencyStreak />
+
+            <WeekendDebriefCard />
 
             <SentimentGauge />
 
