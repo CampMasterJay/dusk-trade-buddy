@@ -21,6 +21,7 @@ import { HighImpactBanner } from "../components/HighImpactBanner";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { LiveRegion } from "../hooks/useAnnouncer";
+import { SplashScreen } from "../components/SplashScreen";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 
@@ -209,6 +210,7 @@ function RootComponent() {
           <CoachChat />
           <Toaster />
           <LiveRegion />
+          <SplashScreen />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
