@@ -415,6 +415,17 @@ export function NewTradeSheet({
         return;
       }
       toast.success(isEdit ? "Trade updated" : "Trade logged");
+      // Screen-reader announcement
+      try {
+        const { announce } = await import("@/hooks/useAnnouncer");
+        announce(
+          isEdit
+            ? "Trade updated. Balance refreshed."
+            : `Trade logged${result ? ` as ${result}` : ""}. Balance updated.`,
+        );
+      } catch {
+        // ignore
+      }
       if (!isEdit) {
         // Result pattern takes precedence (avoids two back-to-back vibrate
         // calls overwriting each other).
