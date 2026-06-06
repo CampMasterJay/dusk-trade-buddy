@@ -25,6 +25,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { AppHeader } from "@/components/AppHeader";
 import { WatchlistManager } from "@/components/WatchlistManager";
 import { BackupSection } from "@/components/BackupSection";
+import { DebugSection } from "@/components/DebugSection";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -90,6 +91,7 @@ function Settings() {
         <OfflineSection />
         <BackupSection />
         <AccountSection />
+        <DebugSection />
       </div>
     </ProtectedRoute>
   );
