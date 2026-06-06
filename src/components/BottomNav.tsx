@@ -37,6 +37,7 @@ export function BottomNav() {
             <Link
               key={item.to}
               to={item.to}
+              data-tour={`nav-${item.to}`}
               className="relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 h-full transition-colors duration-200"
             >
               <span

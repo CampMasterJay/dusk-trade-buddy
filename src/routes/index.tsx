@@ -356,6 +356,7 @@ function ChallengeCard({
 }) {
   return (
     <section
+      data-tour="dashboard-balance"
       className="rounded-2xl border border-trade-green/30 bg-card p-5"
       style={{
         boxShadow:
@@ -466,7 +467,7 @@ function StatsRow({
   ];
 
   return (
-    <section className="-mx-4">
+    <section data-tour="dashboard-stats" className="-mx-4">
       <div className="flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {items.map((it) => {
           const color =
@@ -676,6 +677,7 @@ function QuickLogFab({
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
+          data-tour="new-trade-fab"
           className="fixed bottom-6 right-6 z-40 h-14 rounded-full px-5 bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
           style={{ boxShadow: "0 0 24px rgba(0,255,170,0.45)" }}
         >

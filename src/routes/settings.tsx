@@ -29,6 +29,7 @@ import { BackupSection } from "@/components/BackupSection";
 import { DebugSection } from "@/components/DebugSection";
 import { AchievementsSection } from "@/components/AchievementsSection";
 import { ChallengeHistorySection } from "@/components/ChallengeHistorySection";
+import { WalkthroughsSection } from "@/components/walkthrough/WalkthroughsSection";
 import { archiveAndResetChallenge } from "@/lib/challengeArchive";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ function Settings() {
         <ChallengeHistorySection />
         <RiskSection />
         <InstrumentsSection />
+        <WalkthroughsSection />
         <NotificationsSection />
         <NewsApiSection />
         <OfflineSection />

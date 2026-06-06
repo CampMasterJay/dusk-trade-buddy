@@ -22,6 +22,8 @@ import { OfflineBanner } from "../components/OfflineBanner";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { LiveRegion } from "../hooks/useAnnouncer";
 import { SplashScreen } from "../components/SplashScreen";
+import { WalkthroughProvider } from "../components/walkthrough/WalkthroughProvider";
+import { WalkthroughOverlay } from "../components/walkthrough/WalkthroughOverlay";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 import { startPriceAlertPolling } from "../lib/priceAlerts";
@@ -249,20 +251,23 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <OfflineBanner />
-          <HighImpactBanner />
-          <div className="pb-16 md:pb-0">
-            <div key={pathname} className="animate-route-slide">
-              <ErrorBoundary screen={pathname}>
-                <Outlet />
-              </ErrorBoundary>
+          <WalkthroughProvider>
+            <OfflineBanner />
+            <HighImpactBanner />
+            <div className="pb-16 md:pb-0">
+              <div key={pathname} className="animate-route-slide">
+                <ErrorBoundary screen={pathname}>
+                  <Outlet />
+                </ErrorBoundary>
+              </div>
             </div>
-          </div>
-          <BottomNav />
-          <CoachChat />
-          <Toaster />
-          <LiveRegion />
-          <SplashScreen />
+            <BottomNav />
+            <CoachChat />
+            <Toaster />
+            <LiveRegion />
+            <SplashScreen />
+            <WalkthroughOverlay />
+          </WalkthroughProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
