@@ -2,6 +2,7 @@ import { type ReactNode, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "./AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -34,5 +35,5 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) return null;
-  return <>{children}</>;
+  return <ErrorBoundary screen={pathname}>{children}</ErrorBoundary>;
 }
