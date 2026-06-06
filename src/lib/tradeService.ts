@@ -80,6 +80,7 @@ export async function getTrades(
   limit = 50,
   offset = 0,
 ): Promise<ServiceResult<Trade[]>> {
+  const __perfStart = performance.now();
   try {
     const { data, error } = await supabase
       .from("trades")
@@ -94,6 +95,11 @@ export async function getTrades(
     const rows = data ?? [];
     // Only cache the first page — enough for offline browsing.
     if (offset === 0) await cacheTrades<Trade[]>(userId, rows);
+    void import("@/lib/perfLog").then((m) =>
+      m.logPerf("db_get_trades", performance.now() - __perfStart, {
+        meta: { offset, limit, rows: rows.length },
+      }),
+    );
     return { data: rows, error: null };
   } catch (err) {
     // Offline fallback: serve cached page + any queued (pending) trades.
