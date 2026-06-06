@@ -6,11 +6,10 @@ import { ARTICLES } from "@/lib/newsData";
 import { listChartAnalyses } from "@/lib/chartAnalysisService";
 import { useAuth } from "@/components/AuthProvider";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const REFRESH_MS = 15 * 60 * 1000;
 
@@ -39,18 +38,47 @@ function vixToScore(vix: number | null): number | null {
   return clamp(100 - (vix - 10) * 4);
 }
 
-function newsToScore(): number | null {
+type NewsBreakdown = {
+  score: number | null;
+  bull: number;
+  bear: number;
+  neutral: number;
+  total: number;
+};
+
+function newsBreakdown(): NewsBreakdown {
   const recent = [...ARTICLES]
     .sort((a, b) => b.publishedAt - a.publishedAt)
     .slice(0, 10);
-  if (recent.length === 0) return null;
-  const sum = recent.reduce((acc, a) => {
-    if (a.sentiment === "bullish") return acc + 1;
-    if (a.sentiment === "bearish") return acc - 1;
-    return acc;
-  }, 0);
-  const avg = sum / recent.length; // -1..1
-  return clamp(50 + avg * 50);
+  if (recent.length === 0)
+    return { score: null, bull: 0, bear: 0, neutral: 0, total: 0 };
+  let bull = 0;
+  let bear = 0;
+  let neutral = 0;
+  // Weight high-impact stories 2x.
+  let sum = 0;
+  let weight = 0;
+  for (const a of recent) {
+    const w = a.impact === "high" ? 2 : 1;
+    weight += w;
+    if (a.sentiment === "bullish") {
+      bull += 1;
+      sum += w;
+    } else if (a.sentiment === "bearish") {
+      bear += 1;
+      sum -= w;
+    } else {
+      neutral += 1;
+    }
+  }
+  const avg = weight === 0 ? 0 : sum / weight; // -1..1
+  return {
+    score: clamp(50 + avg * 50),
+    bull,
+    bear,
+    neutral,
+    total: recent.length,
+  };
 }
 
 function trendToScore(trend: string | null | undefined): number | null {
@@ -99,19 +127,24 @@ export function SentimentGauge() {
     };
   }, [fetchMacro, userId]);
 
-  const { score, parts } = useMemo(() => {
+  const { score, parts, news } = useMemo(() => {
     const v = vixToScore(vix);
-    const n = newsToScore();
+    const newsBd = newsBreakdown();
+    const n = newsBd.score;
     const t = trendToScore(trend);
     const weighted: Array<[number, number]> = [];
     if (v != null) weighted.push([v, 0.5]);
     if (n != null) weighted.push([n, 0.3]);
     if (t != null) weighted.push([t, 0.2]);
-    if (weighted.length === 0) return { score: 50, parts: { v, n, t } };
+    if (weighted.length === 0)
+      return { score: 50, parts: { v, n, t }, news: newsBd };
     const wSum = weighted.reduce((s, [, w]) => s + w, 0);
     const total = weighted.reduce((s, [val, w]) => s + val * w, 0);
-    return { score: Math.round(total / wSum), parts: { v, n, t } };
-    // tick triggers re-eval if needed
+    return {
+      score: Math.round(total / wSum),
+      parts: { v, n, t },
+      news: newsBd,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vix, trend, tick]);
 
@@ -127,29 +160,56 @@ export function SentimentGauge() {
             ? "text-trade-green"
             : "text-trade-green";
 
+  const guidance = guidanceFor(zone);
+
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-[2px] text-muted-foreground font-data">
           Market Sentiment
         </div>
-        <TooltipProvider delayDuration={150}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="About sentiment gauge"
-              >
-                <Info className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[240px] text-xs">
-              Sentiment affects setup reliability. Trade smaller in Extreme
-              Fear/Greed zones.
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="About sentiment gauge"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            side="left"
+            align="end"
+            className="w-[280px] text-xs space-y-2"
+          >
+            <div className="font-data text-[11px] uppercase tracking-wider text-muted-foreground">
+              How it's calculated
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              A blended 0–100 score where 0 is Extreme Fear and 100 is Extreme
+              Greed.
+            </p>
+            <ul className="space-y-1 text-muted-foreground">
+              <li>
+                <span className="text-foreground font-data">VIX · 50%</span> —
+                low VIX = greed, high VIX = fear (10 → 100, 35 → 0).
+              </li>
+              <li>
+                <span className="text-foreground font-data">News · 30%</span> —
+                last 10 headlines, high-impact stories weighted 2×.
+              </li>
+              <li>
+                <span className="text-foreground font-data">Trend · 20%</span>{" "}
+                — from your latest chart analysis.
+              </li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed pt-1 border-t border-border">
+              Trade smaller in Extreme Fear/Greed — those zones produce the most
+              whipsaws and failed breakouts.
+            </p>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="mt-2 flex flex-col items-center">
@@ -163,9 +223,37 @@ export function SentimentGauge() {
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <Contribution label="VIX" value={parts.v} suffix={vix != null ? ` · ${vix.toFixed(1)}` : ""} />
-        <Contribution label="News" value={parts.n} />
-        <Contribution label="Trend" value={parts.t} suffix={trend ? ` · ${trend}` : ""} />
+        <Contribution
+          label="VIX"
+          weight="50%"
+          value={parts.v}
+          detail={vix != null ? vix.toFixed(2) : "—"}
+        />
+        <Contribution
+          label="News"
+          weight="30%"
+          value={parts.n}
+          detail={
+            news.total > 0
+              ? `${news.bull}↑ ${news.bear}↓ ${news.neutral}·`
+              : "—"
+          }
+        />
+        <Contribution
+          label="Trend"
+          weight="20%"
+          value={parts.t}
+          detail={trend ?? "no chart"}
+        />
+      </div>
+
+      <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-data">
+          Trading posture
+        </div>
+        <p className="mt-1 text-xs text-foreground leading-relaxed">
+          {guidance}
+        </p>
       </div>
     </section>
   );
@@ -173,24 +261,44 @@ export function SentimentGauge() {
 
 function Contribution({
   label,
+  weight,
   value,
-  suffix = "",
+  detail,
 }: {
   label: string;
+  weight: string;
   value: number | null;
-  suffix?: string;
+  detail: string;
 }) {
   return (
     <div className="rounded-lg border border-border bg-background/40 p-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-data">
-        {label}
-        {suffix}
+      <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground font-data">
+        <span>{label}</span>
+        <span className="opacity-60">{weight}</span>
       </div>
       <div className="mt-0.5 font-data text-sm font-semibold text-foreground">
         {value == null ? "—" : Math.round(value)}
       </div>
+      <div className="mt-0.5 text-[10px] text-muted-foreground font-data truncate">
+        {detail}
+      </div>
     </div>
   );
+}
+
+function guidanceFor(zone: Zone): string {
+  switch (zone) {
+    case "Extreme Fear":
+      return "Capitulation zone — expect violent reversals. Cut size in half, wait for confirmation, and avoid chasing breakdowns.";
+    case "Fear":
+      return "Risk-off tape. Favor mean-reversion setups at key levels. Trade ~75% of normal size.";
+    case "Neutral":
+      return "Balanced conditions. Trade your edge at normal size — no sentiment tailwind in either direction.";
+    case "Greed":
+      return "Risk-on. Trend continuation setups work best. Tighten stops on shorts; normal size on longs.";
+    case "Extreme Greed":
+      return "Euphoric zone — breakouts often fail at highs. Take partials early and reduce size by ~25%.";
+  }
 }
 
 function GaugeSvg({ score }: { score: number }) {
