@@ -228,10 +228,14 @@ function ChartAnalyzer() {
       const res = await analyze({ data: { frames: payloadFrames } });
       if (!res.ok) {
         setError(res.error);
+        const { announce } = await import("@/hooks/useAnnouncer");
+        announce(`Analysis failed. ${res.error}`, { assertive: true });
       } else {
         const a = (res.analysis as Analysis) ?? null;
         setAnalysis(a);
         setRaw(res.raw ?? null);
+        const { announce } = await import("@/hooks/useAnnouncer");
+        announce("Chart analysis complete.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed.");

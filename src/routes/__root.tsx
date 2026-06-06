@@ -20,6 +20,7 @@ import { CoachChat } from "../components/CoachChat";
 import { HighImpactBanner } from "../components/HighImpactBanner";
 import { OfflineBanner } from "../components/OfflineBanner";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { LiveRegion } from "../hooks/useAnnouncer";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 
@@ -207,6 +208,7 @@ function RootComponent() {
           <BottomNav />
           <CoachChat />
           <Toaster />
+          <LiveRegion />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
