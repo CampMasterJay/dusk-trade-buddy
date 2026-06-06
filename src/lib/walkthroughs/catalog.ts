@@ -49,35 +49,36 @@ export const WALKTHROUGHS: Walkthrough[] = [
   {
     id: "log-a-trade",
     title: "Log a trade",
-    description: "Walk through the New Trade form field-by-field.",
+    description: "How to record a trade quickly from the dashboard.",
     icon: ClipboardList,
     steps: [
       {
         route: "/",
         selector: '[data-tour="new-trade-fab"]',
         title: "Open the trade sheet",
-        body: "Tap the + button to open the New Trade form. Then click Next.",
+        body: "Tap the green Quick Log button to open the trade form.",
         placement: "top",
       },
       {
-        selector: '[data-tour="trade-instrument"]',
         title: "Pick your instrument",
         body: "Choose the symbol you're trading (MES, MNQ, etc.). It defaults to your primary instrument.",
       },
       {
-        selector: '[data-tour="trade-direction"]',
         title: "Long or short",
         body: "Tap Long if you're buying, Short if you're selling.",
       },
       {
-        selector: '[data-tour="trade-entry"]',
         title: "Entry / Stop / Target",
         body: "Enter your fill, stop loss, and target. Position size is calculated automatically from your risk %.",
       },
       {
-        selector: '[data-tour="trade-result"]',
         title: "Mark the outcome",
         body: "Win, Loss, or Breakeven. P&L updates your balance immediately on save.",
+      },
+      {
+        route: "/trade-log",
+        title: "Review in Trade Log",
+        body: "All your saved trades live here, with filters and inline editing.",
       },
     ],
   },
@@ -89,19 +90,16 @@ export const WALKTHROUGHS: Walkthrough[] = [
     steps: [
       {
         route: "/chart-analyzer",
-        selector: '[data-tour="chart-upload"]',
         title: "Upload a chart",
         body: "Snap or paste a chart screenshot. Include the price axis and at least 50 candles for the best results.",
       },
       {
         route: "/chart-analyzer",
-        selector: '[data-tour="chart-result"]',
         title: "Read the analysis",
         body: "The AI returns the trend, setup, suggested entry/stop/target, and a quality score.",
       },
       {
         route: "/chart-analyzer",
-        selector: '[data-tour="chart-execute"]',
         title: "Execute from analysis",
         body: "One tap pre-fills the trade form with the suggested levels so you can log it instantly.",
       },
