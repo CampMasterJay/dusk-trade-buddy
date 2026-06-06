@@ -33,6 +33,13 @@ export const WALKTHROUGHS: Walkthrough[] = [
         placement: "top",
       },
       {
+        route: "/",
+        selector: '[data-tour="edgecoach-fab"]',
+        title: "EdgeCoach AI",
+        body: "Tap the green chat button to ask EdgeCoach about your stats — it sees your trades and gives data-driven, personalized feedback.",
+        placement: "top",
+      },
+      {
         selector: '[data-tour="nav-/"]',
         title: "Bottom navigation",
         body: "Use the bottom bar to switch between Dashboard, Analyzer, Setups, Trade Log, News, and Settings.",
