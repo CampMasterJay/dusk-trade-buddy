@@ -212,7 +212,7 @@ function News() {
 
   return (
     <ProtectedRoute>
-      <AppHeader balance={12450.0} />
+      <AppHeader balance={Number(settings?.current_balance ?? settings?.starting_balance ?? 100)} />
       <div className="pb-24">
         <div className="p-4 lg:p-6">
           <h1 className="text-2xl font-bold font-heading mb-4">Market News</h1>

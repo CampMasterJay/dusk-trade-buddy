@@ -78,10 +78,12 @@ const REFRESH_OPTIONS = [1, 5, 15, 30, 60];
 
 function Settings() {
   const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const balance = Number(settings?.current_balance ?? settings?.starting_balance ?? 100);
 
   return (
     <ProtectedRoute>
-      <AppHeader balance={12450.0} />
+      <AppHeader balance={balance} />
       <div className="p-4 lg:p-6 pb-24 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold font-heading mb-1">Settings</h1>
         <p className="text-sm text-muted-foreground mb-6">

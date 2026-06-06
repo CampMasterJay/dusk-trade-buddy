@@ -266,7 +266,7 @@ function ChartAnalyzer() {
 
   return (
     <ProtectedRoute>
-      <AppHeader balance={12450.0} />
+      <AppHeader balance={Number(settings?.current_balance ?? settings?.starting_balance ?? 100)} />
       <div className="scanline-overlay mx-auto max-w-3xl p-4 lg:p-6 space-y-5 pb-24">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold font-data uppercase tracking-[4px]">

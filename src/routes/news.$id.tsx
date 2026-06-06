@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -59,6 +60,8 @@ function NewsDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const article = getArticleById(id);
+  const { settings } = useUserSettings();
+  const balance = Number(settings?.current_balance ?? settings?.starting_balance ?? 100);
 
   const [score, setScore] = useState<ImpactScore | undefined>(() =>
     article ? getCachedImpact(article.id) : undefined,
@@ -87,7 +90,7 @@ function NewsDetail() {
   if (!article) {
     return (
       <ProtectedRoute>
-        <AppHeader balance={12450.0} />
+        <AppHeader balance={balance} />
         <div className="p-6 text-center text-muted-foreground">
           <p>Article not found.</p>
           <Link to="/news" className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline">
@@ -126,7 +129,7 @@ function NewsDetail() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background text-foreground pb-32">
-        <AppHeader balance={12450.0} />
+        <AppHeader balance={balance} />
         <div className="mx-auto max-w-3xl p-4 lg:p-6">
           <button
             type="button"
