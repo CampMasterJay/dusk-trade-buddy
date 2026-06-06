@@ -24,7 +24,7 @@ import { LiveRegion } from "../hooks/useAnnouncer";
 import { SplashScreen } from "../components/SplashScreen";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
-import { startPriceAlertPolling, stopPriceAlertPolling } from "../lib/priceAlerts";
+import { startPriceAlertPolling } from "../lib/priceAlerts";
 
 function NotFoundComponent() {
   return (
