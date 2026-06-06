@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { fetchWithTimeout, retryWithBackoff, TimeoutError } from "@/lib/retry";
 
 const FrameSchema = z.object({
   slot: z.enum(["HTF", "MTF", "LTF"]),
@@ -105,21 +106,33 @@ export const analyzeChart = createServerFn({ method: "POST" })
     }
 
     try {
-      const res = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": apiKey,
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: isMulti ? systemMulti : systemSingle },
-              { role: "user", content: userContent },
-            ],
+      const res = await retryWithBackoff(
+        () =>
+          fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Lovable-API-Key": apiKey,
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: isMulti ? systemMulti : systemSingle },
+                { role: "user", content: userContent },
+              ],
+            }),
+            timeoutMs: 15_000,
+            label: "Chart analysis",
           }),
+        {
+          retries: 3,
+          baseMs: 1000,
+          // Retry on network/timeout/5xx; don't retry on 4xx (other than 429)
+          shouldRetry: (err) => {
+            if (err instanceof TimeoutError) return true;
+            if (err instanceof Error && /fetch|network/i.test(err.message)) return true;
+            return false;
+          },
         },
       );
 
@@ -156,13 +169,18 @@ export const analyzeChart = createServerFn({ method: "POST" })
 
       if (!parsed || typeof parsed !== "object") {
         return {
-          ok: true as const,
-          analysis: null,
-          raw: cleaned || "No content returned.",
+          ok: false as const,
+          error: "Analysis unavailable — try a clearer screenshot.",
         };
       }
       return { ok: true as const, analysis: parsed, raw: cleaned };
     } catch (err) {
+      if (err instanceof TimeoutError) {
+        return {
+          ok: false as const,
+          error: "Analysis took too long (>15s). Check your connection and try again.",
+        };
+      }
       return {
         ok: false as const,
         error: `Analysis error: ${err instanceof Error ? err.message : "unknown"}`,

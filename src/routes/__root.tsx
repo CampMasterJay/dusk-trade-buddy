@@ -19,6 +19,7 @@ import { Toaster } from "../components/ui/sonner";
 import { CoachChat } from "../components/CoachChat";
 import { HighImpactBanner } from "../components/HighImpactBanner";
 import { OfflineBanner } from "../components/OfflineBanner";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 
@@ -198,7 +199,9 @@ function RootComponent() {
           <HighImpactBanner />
           <div className="pb-16 md:pb-0">
             <div key={pathname} className="animate-route-slide">
-              <Outlet />
+              <ErrorBoundary screen={pathname}>
+                <Outlet />
+              </ErrorBoundary>
             </div>
           </div>
           <BottomNav />
