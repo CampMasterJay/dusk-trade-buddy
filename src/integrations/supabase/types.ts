@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenges: {
+        Row: {
+          created_at: string
+          ended_at: string
+          final_balance: number
+          id: string
+          outcome: string
+          started_at: string
+          starting_balance: number
+          target_balance: number
+          total_trades: number
+          user_id: string
+          win_rate: number
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string
+          final_balance: number
+          id?: string
+          outcome: string
+          started_at: string
+          starting_balance: number
+          target_balance: number
+          total_trades?: number
+          user_id: string
+          win_rate?: number
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string
+          final_balance?: number
+          id?: string
+          outcome?: string
+          started_at?: string
+          starting_balance?: number
+          target_balance?: number
+          total_trades?: number
+          user_id?: string
+          win_rate?: number
+        }
+        Relationships: []
+      }
       chart_analyses: {
         Row: {
           bias_direction: string | null

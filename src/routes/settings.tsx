@@ -17,6 +17,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  PlayCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,6 +28,8 @@ import { WatchlistManager } from "@/components/WatchlistManager";
 import { BackupSection } from "@/components/BackupSection";
 import { DebugSection } from "@/components/DebugSection";
 import { AchievementsSection } from "@/components/AchievementsSection";
+import { ChallengeHistorySection } from "@/components/ChallengeHistorySection";
+import { archiveAndResetChallenge } from "@/lib/challengeArchive";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -85,6 +88,7 @@ function Settings() {
         </p>
 
         <ChallengeSection />
+        <ChallengeHistorySection />
         <RiskSection />
         <InstrumentsSection />
         <NotificationsSection />
@@ -188,6 +192,8 @@ function ChallengeSection() {
   const [prefs, setPrefs] = useLocalPrefs();
   const [saving, setSaving] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmStart, setConfirmStart] = useState(false);
+  const [working, setWorking] = useState(false);
 
   if (!settings) return null;
 
@@ -203,17 +209,38 @@ function ChallengeSection() {
   };
 
   const handleReset = async () => {
+    setWorking(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      await supabase.from("trades").delete().eq("user_id", uid);
-      await updateSettings({ current_balance: settings.starting_balance });
+      const { archived, error } = await archiveAndResetChallenge({ explicitReset: true });
+      if (error) throw error;
       await recalcBalance();
-      toast.success("Challenge reset. All trades cleared.");
+      window.dispatchEvent(new CustomEvent("edge:challenges-changed"));
+      toast.success(archived ? "Challenge reset and archived." : "Challenge reset.");
       setConfirmReset(false);
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleStartNew = async () => {
+    setWorking(true);
+    try {
+      const { archived, error } = await archiveAndResetChallenge({ explicitReset: false });
+      if (error) throw error;
+      await recalcBalance();
+      window.dispatchEvent(new CustomEvent("edge:challenges-changed"));
+      toast.success(
+        archived
+          ? `New challenge started. Previous archived as ${archived.outcome}.`
+          : "New challenge started.",
+      );
+      setConfirmStart(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setWorking(false);
     }
   };
 
@@ -253,7 +280,7 @@ function ChallengeSection() {
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-trade-red">Reset challenge</div>
             <p className="text-xs text-muted-foreground">
-              Deletes ALL your trades and restores balance to starting. This cannot be undone.
+              Archives the current challenge as <b>Reset</b>, clears all trades, and restores balance to starting.
             </p>
           </div>
           {confirmReset ? (
@@ -261,14 +288,16 @@ function ChallengeSection() {
               <button
                 onClick={() => setConfirmReset(false)}
                 className="rounded-md border border-border px-2 py-1 text-xs font-medium"
+                disabled={working}
               >
                 Cancel
               </button>
               <button
                 onClick={handleReset}
                 className="rounded-md bg-trade-red px-2 py-1 text-xs font-semibold text-white"
+                disabled={working}
               >
-                Confirm reset
+                {working ? "Working…" : "Confirm reset"}
               </button>
             </div>
           ) : (
@@ -282,6 +311,45 @@ function ChallengeSection() {
           )}
         </div>
       </div>
+
+      <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+        <div className="flex items-start gap-2">
+          <PlayCircle className="size-4 text-primary shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-primary">Start new challenge</div>
+            <p className="text-xs text-muted-foreground">
+              Archives the current challenge (Won / Lost / Reset is decided from your final balance) and starts fresh. History is preserved.
+            </p>
+          </div>
+          {confirmStart ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmStart(false)}
+                className="rounded-md border border-border px-2 py-1 text-xs font-medium"
+                disabled={working}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStartNew}
+                className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"
+                disabled={working}
+              >
+                {working ? "Working…" : "Start new"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmStart(true)}
+              className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-xs font-medium text-primary"
+            >
+              <PlayCircle className="size-3" />
+              Start new
+            </button>
+          )}
+        </div>
+      </div>
+
       {saving && (
         <div className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
