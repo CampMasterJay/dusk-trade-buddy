@@ -88,11 +88,11 @@ function Settings() {
           {user?.email}
         </p>
 
+        <WalkthroughsSection />
         <ChallengeSection />
         <ChallengeHistorySection />
         <RiskSection />
         <InstrumentsSection />
-        <WalkthroughsSection />
         <NotificationsSection />
         <NewsApiSection />
         <OfflineSection />
@@ -100,6 +100,7 @@ function Settings() {
         <BackupSection />
         <AccountSection />
         <DebugSection />
+
       </div>
     </ProtectedRoute>
   );
