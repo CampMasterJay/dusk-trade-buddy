@@ -122,6 +122,7 @@ function resolveDateRange(
 
 function News() {
   const [tab, setTab] = useState<"news" | "watchlist" | "calendar" | "macro">("news");
+  const { settings } = useUserSettings();
   const [asset, setAsset] = useState<AssetKey>("all");
   const [impact, setImpact] = useState<Impact>("all");
   const [sentiment, setSentiment] = useState<Sentiment>("all");
@@ -212,7 +213,7 @@ function News() {
 
   return (
     <ProtectedRoute>
-      <AppHeader balance={12450.0} />
+      <AppHeader balance={Number(settings?.current_balance ?? settings?.starting_balance ?? 100)} />
       <div className="pb-24">
         <div className="p-4 lg:p-6">
           <h1 className="text-2xl font-bold font-heading mb-4">Market News</h1>

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 export const Route = createFileRoute("/setup-library")({
   head: () => ({
@@ -376,10 +377,12 @@ const SETUPS: Setup[] = [
 
 function SetupLibraryPage() {
   const [selected, setSelected] = useState<Setup | null>(null);
+  const { settings } = useUserSettings();
+  const balance = Number(settings?.current_balance ?? settings?.starting_balance ?? 100);
 
   return (
     <ProtectedRoute>
-      <AppHeader balance={12450.0} />
+      <AppHeader balance={balance} />
       <div className="mx-auto max-w-3xl p-4 lg:p-6 space-y-5 pb-24">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
