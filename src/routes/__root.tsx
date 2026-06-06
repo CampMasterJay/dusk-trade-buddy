@@ -213,6 +213,36 @@ function RootComponent() {
     };
   }, []);
 
+  // Achievement checks: re-evaluate on auth ready, tab focus, and explicit
+  // edge:achievements-check events dispatched from save sites.
+  useEffect(() => {
+    let cancelled = false;
+    const run = () => {
+      import("@/lib/achievements")
+        .then(({ refreshAchievements }) => {
+          if (!cancelled) void refreshAchievements().catch(() => {});
+        })
+        .catch(() => {});
+    };
+    const onFocus = () => run();
+    const onVis = () => {
+      if (document.visibilityState === "visible") run();
+    };
+    const onCheck = () => run();
+    // Initial run, slightly delayed so auth has a chance to settle.
+    const t = window.setTimeout(run, 1500);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("edge:achievements-check", onCheck);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("edge:achievements-check", onCheck);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
