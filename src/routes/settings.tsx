@@ -366,12 +366,13 @@ function RiskSection() {
   const { settings, updateSettings } = useUserSettings();
   const [prefs, setPrefs] = useLocalPrefs();
 
-  if (!settings) return null;
-
   const autoLossLimit = useMemo(() => {
+    if (!settings) return 0;
     const bal = Number(settings.current_balance) || Number(settings.starting_balance) || 0;
     return Math.round((bal * (Number(settings.risk_pct) / 100)) * 100) / 100;
-  }, [settings.current_balance, settings.starting_balance, settings.risk_pct]);
+  }, [settings?.current_balance, settings?.starting_balance, settings?.risk_pct]);
+
+  if (!settings) return null;
 
   const effectiveLossLimit = prefs.dailyLossLimitOverride
     ? prefs.dailyLossLimit ?? autoLossLimit
