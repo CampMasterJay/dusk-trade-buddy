@@ -13,7 +13,7 @@ export function AppHeader({ balance }: AppHeaderProps) {
   }).format(animated);
 
   return (
-    <header className="sticky top-16 md:top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="flex h-14 items-center justify-between px-4">
         {/* App Name */}
         <span
