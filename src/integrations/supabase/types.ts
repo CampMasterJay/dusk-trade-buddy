@@ -512,6 +512,57 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_debriefs: {
+        Row: {
+          created_at: string
+          id: string
+          next_week_focus: string
+          pattern_analysis: string
+          performance_summary: string
+          position_sizing_recommendation: string
+          rule_violations: string
+          source_stats: Json | null
+          top_strength: string
+          top_weakness: string
+          updated_at: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          next_week_focus: string
+          pattern_analysis: string
+          performance_summary: string
+          position_sizing_recommendation: string
+          rule_violations: string
+          source_stats?: Json | null
+          top_strength: string
+          top_weakness: string
+          updated_at?: string
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          next_week_focus?: string
+          pattern_analysis?: string
+          performance_summary?: string
+          position_sizing_recommendation?: string
+          rule_violations?: string
+          source_stats?: Json | null
+          top_strength?: string
+          top_weakness?: string
+          updated_at?: string
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       trades_with_stats: {
