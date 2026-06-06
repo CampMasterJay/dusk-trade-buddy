@@ -252,6 +252,7 @@ export async function deleteTrade(
 export async function getTradeStats(
   userId: string,
 ): Promise<ServiceResult<TradeStats>> {
+  const __perfStart = performance.now();
   try {
     const { data, error } = await supabase
       .from("trades")
@@ -264,6 +265,11 @@ export async function getTradeStats(
     const trades = data ?? [];
     const stats = computeTradeStats(trades);
     await cacheStats<TradeStats>(userId, stats);
+    void import("@/lib/perfLog").then((m) =>
+      m.logPerf("db_get_trade_stats", performance.now() - __perfStart, {
+        meta: { rows: trades.length },
+      }),
+    );
     return { data: stats, error: null };
   } catch (err) {
     const cached = await readCachedStats<TradeStats>(userId);
