@@ -22,6 +22,7 @@ import { Route as RiskOfRuinRouteImport } from './routes/risk-of-ruin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PropFirmsRouteImport } from './routes/prop-firms'
 import { Route as PlaybookRouteImport } from './routes/playbook'
+import { Route as OptionsRiskRouteImport } from './routes/options-risk'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as LoginRouteImport } from './routes/login'
@@ -98,6 +99,11 @@ const PlaybookRoute = PlaybookRouteImport.update({
   path: '/playbook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OptionsRiskRoute = OptionsRiskRouteImport.update({
+  id: '/options-risk',
+  path: '/options-risk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/options-risk': typeof OptionsRiskRoute
   '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/options-risk': typeof OptionsRiskRoute
   '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/options-risk': typeof OptionsRiskRoute
   '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/options-risk'
     | '/playbook'
     | '/prop-firms'
     | '/reset-password'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/options-risk'
     | '/playbook'
     | '/prop-firms'
     | '/reset-password'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/options-risk'
     | '/playbook'
     | '/prop-firms'
     | '/reset-password'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  OptionsRiskRoute: typeof OptionsRiskRoute
   PlaybookRoute: typeof PlaybookRoute
   PropFirmsRoute: typeof PropFirmsRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -420,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaybookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/options-risk': {
+      id: '/options-risk'
+      path: '/options-risk'
+      fullPath: '/options-risk'
+      preLoaderRoute: typeof OptionsRiskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -524,6 +544,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  OptionsRiskRoute: OptionsRiskRoute,
   PlaybookRoute: PlaybookRoute,
   PropFirmsRoute: PropFirmsRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
