@@ -155,45 +155,69 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   // P&L simulator
   const [simPrice, setSimPrice] = useState("");
 
-  // Prefill from Chart Analyzer's "Build This Trade"
+  // Prefill from Chart Analyzer's "Build This Trade" or Open Positions "Roll".
+  // Reads sessionStorage on mount and also when an "options-prefill" event fires
+  // (so the already-mounted sheet on /trade-log responds to in-page actions).
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const raw = sessionStorage.getItem("pendingOptionsPrefill");
-    if (!raw) return;
-    sessionStorage.removeItem("pendingOptionsPrefill");
-    try {
-      const p = JSON.parse(raw) as {
-        strategy?: string;
-        underlying?: string;
-        idealDTE?: string;
-        idealDelta?: string;
-        ivRankNote?: string;
-        reasoning?: string;
-        keyRisk?: string;
-      };
-      if (p.underlying) setUnderlying(p.underlying.toUpperCase());
-      const match = STRATEGIES.find(
-        (s) => s.type.toLowerCase() === (p.strategy ?? "").toLowerCase(),
-      );
-      if (match) selectStrategy(match);
-      // Try to parse the lower bound of "7–21 days" or "0 DTE"
-      if (p.idealDTE) {
-        const m = p.idealDTE.match(/\d+/);
-        if (m) setPlannedExitDte(m[0]);
+    const applyFromStorage = () => {
+      const raw = sessionStorage.getItem("pendingOptionsPrefill");
+      if (!raw) return;
+      sessionStorage.removeItem("pendingOptionsPrefill");
+      try {
+        const p = JSON.parse(raw) as {
+          strategy?: string;
+          underlying?: string;
+          idealDTE?: string;
+          idealDelta?: string;
+          ivRankNote?: string;
+          reasoning?: string;
+          keyRisk?: string;
+          rollFrom?: { strategy?: string; underlying?: string; leg1Strike?: number; leg2Strike?: number };
+        };
+        if (p.underlying) setUnderlying(p.underlying.toUpperCase());
+        const match = STRATEGIES.find(
+          (s) => s.type.toLowerCase() === (p.strategy ?? "").toLowerCase(),
+        );
+        if (match) selectStrategy(match);
+        if (p.idealDTE) {
+          const m = p.idealDTE.match(/\d+/);
+          if (m) setPlannedExitDte(m[0]);
+        }
+        // Pre-fill leg strikes from the rolled position when available
+        if (p.rollFrom) {
+          setLegs((prev) =>
+            prev.map((l, i) => ({
+              ...l,
+              strike:
+                i === 0 && p.rollFrom?.leg1Strike != null
+                  ? String(p.rollFrom.leg1Strike)
+                  : i === 1 && p.rollFrom?.leg2Strike != null
+                    ? String(p.rollFrom.leg2Strike)
+                    : l.strike,
+            })),
+          );
+        }
+        const notes = [
+          p.reasoning && `Chart Analyzer: ${p.reasoning}`,
+          p.idealDelta && `Delta target: ${p.idealDelta}`,
+          p.ivRankNote && `IV note: ${p.ivRankNote}`,
+          p.keyRisk && `Key risk: ${p.keyRisk}`,
+          p.rollFrom &&
+            `Rolling ${p.rollFrom.strategy ?? "position"} on ${p.rollFrom.underlying ?? ""}. Pick the new expiration & premium.`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        if (notes) setReason(notes);
+        setOpen(true);
+      } catch {
+        /* ignore */
       }
-      const notes = [
-        p.reasoning && `Chart Analyzer: ${p.reasoning}`,
-        p.idealDelta && `Delta target: ${p.idealDelta}`,
-        p.ivRankNote && `IV note: ${p.ivRankNote}`,
-        p.keyRisk && `Key risk: ${p.keyRisk}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-      if (notes) setReason(notes);
-      setOpen(true);
-    } catch {
-      /* ignore */
-    }
+    };
+    applyFromStorage();
+    const handler = () => applyFromStorage();
+    window.addEventListener("options-prefill", handler);
+    return () => window.removeEventListener("options-prefill", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
