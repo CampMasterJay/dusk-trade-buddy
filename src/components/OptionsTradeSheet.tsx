@@ -145,6 +145,12 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   const [catalyst, setCatalyst] = useState("");
   const [checklistScore, setChecklistScore] = useState("");
 
+  // Greeks (optional, per-contract from broker option chain)
+  const [entryDelta, setEntryDelta] = useState("");
+  const [entryGamma, setEntryGamma] = useState("");
+  const [entryTheta, setEntryTheta] = useState("");
+  const [entryVega, setEntryVega] = useState("");
+
   // P&L simulator
   const [simPrice, setSimPrice] = useState("");
 
