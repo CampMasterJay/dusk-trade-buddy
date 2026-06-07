@@ -19,6 +19,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RiskOfRuinRouteImport } from './routes/risk-of-ruin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PropFirmsRouteImport } from './routes/prop-firms'
+import { Route as PlaybookRouteImport } from './routes/playbook'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as LoginRouteImport } from './routes/login'
@@ -78,6 +79,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const PropFirmsRoute = PropFirmsRouteImport.update({
   id: '/prop-firms',
   path: '/prop-firms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaybookRoute = PlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/playbook': typeof PlaybookRoute
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/playbook'
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/playbook'
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/playbook'
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  PlaybookRoute: typeof PlaybookRoute
   PropFirmsRoute: typeof PropFirmsRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskOfRuinRoute: typeof RiskOfRuinRoute
@@ -358,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/prop-firms'
       fullPath: '/prop-firms'
       preLoaderRoute: typeof PropFirmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playbook': {
+      id: '/playbook'
+      path: '/playbook'
+      fullPath: '/playbook'
+      preLoaderRoute: typeof PlaybookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -464,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  PlaybookRoute: PlaybookRoute,
   PropFirmsRoute: PropFirmsRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   RiskOfRuinRoute: RiskOfRuinRoute,
@@ -478,3 +499,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
