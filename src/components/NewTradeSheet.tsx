@@ -851,10 +851,14 @@ export function NewTradeSheet({
           </Button>
           <Button
             onClick={submit}
-            disabled={submitting || !requiredOk}
+            disabled={submitting || !requiredOk || propFirmBlocksSubmit}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider disabled:opacity-40"
           >
-            {submitting ? "Saving..." : "Save Trade"}
+            {propFirmBlocksSubmit
+              ? "Locked by Firm Rules"
+              : submitting
+                ? "Saving..."
+                : "Save Trade"}
           </Button>
         </SheetFooter>
       </SheetContent>
