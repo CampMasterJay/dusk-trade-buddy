@@ -1,6 +1,8 @@
 import { useCountUp } from "@/hooks/useCountUp";
 import { useTradingMode, toggleTradingMode } from "@/lib/tradingMode";
 import { useOtherModeSignals } from "@/lib/otherModeSignals";
+import { useDemoMode, exitDemoMode } from "@/lib/demoMode";
+import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 export interface AppHeaderProps {
@@ -16,6 +18,8 @@ export function AppHeader({ balance }: AppHeaderProps) {
   }).format(animated);
   const [mode] = useTradingMode();
   const other = useOtherModeSignals();
+  const demo = useDemoMode();
+  const navigate = useNavigate();
   const isOptions = mode === "options";
   const accent = isOptions ? "text-trade-amber" : "text-trade-green";
   const badgeBorder = isOptions
@@ -34,6 +38,21 @@ export function AppHeader({ balance }: AppHeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+      {demo && (
+        <div className="flex items-center justify-between gap-2 bg-trade-amber/15 px-4 py-1.5 text-[11px] font-data text-trade-amber border-b border-trade-amber/30">
+          <span className="uppercase tracking-[2px]">Demo Mode — nothing is saved</span>
+          <button
+            type="button"
+            onClick={() => {
+              exitDemoMode();
+              navigate({ to: "/login", replace: true });
+            }}
+            className="rounded border border-trade-amber/40 px-2 py-0.5 hover:bg-trade-amber/20"
+          >
+            Exit
+          </button>
+        </div>
+      )}
       <div className="flex h-14 items-center justify-between px-4">
         {/* App Name — click to toggle Futures / Options mode */}
         <button
