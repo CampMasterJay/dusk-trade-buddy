@@ -83,6 +83,59 @@ export async function archiveAndResetChallenge(opts: {
       (settings?.created_at as string | null) ??
       new Date().toISOString();
 
+    // Enriched archive fields
+    const tradeList = (trades ?? []) as Array<{
+      result: string | null;
+      setup_tag: string | null;
+      market_regime: string | null;
+      pnl: number | null;
+      r_multiple: number | null;
+      was_revenge_trade: boolean | null;
+      created_at: string;
+    }>;
+
+    const regimeCounts = new Map<string, number>();
+    const setupPnl = new Map<string, number>();
+    let revengeCount = 0;
+    for (const t of tradeList) {
+      if (t.market_regime) regimeCounts.set(t.market_regime, (regimeCounts.get(t.market_regime) ?? 0) + 1);
+      if (t.setup_tag) setupPnl.set(t.setup_tag, (setupPnl.get(t.setup_tag) ?? 0) + Number(t.pnl ?? 0));
+      if (t.was_revenge_trade) revengeCount += 1;
+    }
+    const mostUsedRegime = [...regimeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const mostProfitableSetup = [...setupPnl.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    const decidedTrades = tradeList
+      .filter((t) => t.result === "Win" || t.result === "Loss")
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    let edgeTrend: string | null = null;
+    if (decidedTrades.length >= 6) {
+      const mid = Math.floor(decidedTrades.length / 2);
+      const wr = (arr: typeof decidedTrades) =>
+        arr.length ? arr.filter((t) => t.result === "Win").length / arr.length : 0;
+      const first = wr(decidedTrades.slice(0, mid));
+      const second = wr(decidedTrades.slice(mid));
+      const delta = second - first;
+      edgeTrend = delta > 0.05 ? "Improving" : delta < -0.05 ? "Degrading" : "Stable";
+    }
+
+    let biggestIssue: string | null = null;
+    if (totalTrades >= 5) {
+      const revengePct = revengeCount / totalTrades;
+      if (revengePct >= 0.2) biggestIssue = "Revenge trading after losses";
+      else if (edgeTrend === "Degrading") biggestIssue = "Edge softening across challenge";
+      else if (currentBalance < startingBalance) biggestIssue = "Negative expectancy / risk control";
+    }
+
+    const { data: pbEntries } = await supabase
+      .from("playbook_entries")
+      .select("name,status,created_at,updated_at")
+      .eq("status", "Active")
+      .order("updated_at", { ascending: false });
+    const startingPlaybook =
+      (pbEntries ?? []).filter((p) => p.created_at <= startedAt).slice(-1)[0]?.name ?? null;
+    const endingPlaybook = pbEntries?.[0]?.name ?? null;
+
     let archived: ChallengeRow | null = null;
     // Only archive if there's anything worth recording.
     if (totalTrades > 0 || currentBalance !== startingBalance) {
@@ -98,6 +151,12 @@ export async function archiveAndResetChallenge(opts: {
           total_trades: totalTrades,
           win_rate: Math.round(winRate * 10) / 10,
           outcome,
+          starting_playbook: startingPlaybook,
+          ending_playbook: endingPlaybook,
+          edge_health_trend: edgeTrend,
+          most_used_regime: mostUsedRegime,
+          most_profitable_setup: mostProfitableSetup,
+          biggest_behavioral_issue: biggestIssue,
         })
         .select("*")
         .single();
