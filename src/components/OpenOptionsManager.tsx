@@ -90,6 +90,8 @@ export function OpenOptionsManager() {
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [closing, setClosing] = useState<OpenPosition | null>(null);
   const [closeMark, setCloseMark] = useState("");
+  const [closeIvBefore, setCloseIvBefore] = useState("");
+  const [closeIvAfter, setCloseIvAfter] = useState("");
   const [adjusting, setAdjusting] = useState<OpenPosition | null>(null);
   const [adjNotes, setAdjNotes] = useState("");
   const [adjTarget, setAdjTarget] = useState("");
@@ -216,12 +218,16 @@ export function OpenOptionsManager() {
           gross_pnl: gross,
           net_pnl: net,
           actual_exit_reason: "Manual",
+          iv_before_earnings: closeIvBefore ? Number(closeIvBefore) : null,
+          iv_after_earnings: closeIvAfter ? Number(closeIvAfter) : null,
         })
         .eq("id", closing.id);
       if (error) throw error;
       toast.success(`Closed ${closing.strategy_type} on ${closing.underlying} (${fmt$(net)})`);
       setClosing(null);
       setCloseMark("");
+      setCloseIvBefore("");
+      setCloseIvAfter("");
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to close.");
