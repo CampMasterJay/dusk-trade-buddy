@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Clock, CalendarDays, Hash } from "lucide-react";
 import type { Trade } from "@/lib/tradeService";
 import { cn } from "@/lib/utils";
+import { computeOverrideStats, type BehaviorAlertType } from "@/lib/behaviorAlerts";
 
 interface Props {
   trades: Trade[];
