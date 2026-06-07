@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Save, BookOpen, Trash2, Filter } from "lucide-react";
+import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -65,7 +65,78 @@ type PlaybookRow = {
   avg_r: number | null;
   net_pnl: number | null;
   created_at: string;
+  status: "Active" | "Testing" | "Retired";
+  baseline_win_rate: number | null;
+  baseline_avg_r: number | null;
+  baseline_trade_count: number | null;
 };
+
+const MAX_ENTRIES = 10;
+
+function confidenceLabel(n: number): "LOW" | "MEDIUM" | "HIGH" {
+  if (n >= 30) return "HIGH";
+  if (n >= 20) return "MEDIUM";
+  return "LOW";
+}
+
+function formatConditions(f: Filters): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  if (f.setups.length) rows.push({ label: "Setup", value: f.setups.join(", ") });
+  if (f.direction !== "Both") rows.push({ label: "Direction", value: `${f.direction} only` });
+  rows.push({
+    label: "Time",
+    value: `${String(f.hourRange[0]).padStart(2, "0")}:00 – ${String(f.hourRange[1]).padStart(2, "0")}:00 CT`,
+  });
+  if (f.regimes.length) rows.push({ label: "Regime", value: f.regimes.join(", ") });
+  rows.push({ label: "VIX", value: `${f.vixRange[0]} – ${f.vixRange[1]}` });
+  if (f.sessionNums.length) {
+    const label = f.sessionNums
+      .map((n) => (n === 1 ? "1st" : n === 2 ? "2nd" : "3rd+"))
+      .join(", ");
+    rows.push({ label: "Trade #", value: `${label} of day` });
+  }
+  if (f.checklistRange[0] > 0 || f.checklistRange[1] < 10) {
+    rows.push({ label: "Checklist", value: `${f.checklistRange[0]}–${f.checklistRange[1]}/10` });
+  }
+  if (f.instruments.length) rows.push({ label: "Instrument", value: f.instruments.join(", ") });
+  if (f.dows.length) {
+    rows.push({ label: "Day", value: f.dows.map((d) => DOW_LABELS[d - 1]).join(", ") });
+  }
+  if (f.consecWinsMin > 0) rows.push({ label: "After wins", value: `≥${f.consecWinsMin}` });
+  if (f.consecLossesMin > 0) rows.push({ label: "After losses", value: `≥${f.consecLossesMin}` });
+  return rows;
+}
+
+type EntryHealth = {
+  status: "healthy" | "softening" | "degrading" | "insufficient";
+  currentWinRate: number;
+  currentCount: number;
+  delta: number; // current - baseline
+};
+
+function computeEntryHealth(entry: PlaybookRow, currentTrades: Trade[]): EntryHealth {
+  const baseline = entry.baseline_win_rate ?? entry.win_rate ?? 0;
+  const wins = currentTrades.filter((t) => t.result === "Win").length;
+  const losses = currentTrades.filter((t) => t.result === "Loss").length;
+  const decided = wins + losses;
+  const cur = decided > 0 ? wins / decided : 0;
+  if (currentTrades.length < 10) {
+    return { status: "insufficient", currentWinRate: cur, currentCount: currentTrades.length, delta: cur - baseline };
+  }
+  const delta = cur - baseline;
+  if (cur < baseline * 0.8) return { status: "degrading", currentWinRate: cur, currentCount: currentTrades.length, delta };
+  if (cur < baseline * 0.9) return { status: "softening", currentWinRate: cur, currentCount: currentTrades.length, delta };
+  return { status: "healthy", currentWinRate: cur, currentCount: currentTrades.length, delta };
+}
+
+const HEALTH_META: Record<EntryHealth["status"], { dot: string; label: string; tone: string }> = {
+  healthy:      { dot: "bg-trade-green",       label: "HEALTHY",      tone: "text-trade-green" },
+  softening:    { dot: "bg-yellow-500",        label: "SOFTENING",    tone: "text-yellow-500" },
+  degrading:    { dot: "bg-trade-red",         label: "DEGRADING",    tone: "text-trade-red" },
+  insufficient: { dot: "bg-muted-foreground",  label: "INSUFFICIENT", tone: "text-muted-foreground" },
+};
+
+const STATUS_OPTIONS: Array<PlaybookRow["status"]> = ["Active", "Testing", "Retired"];
 
 function PlaybookPage() {
   const { user } = useAuth();
