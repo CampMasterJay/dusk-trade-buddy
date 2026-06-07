@@ -8,23 +8,16 @@ import {
   type UserSettings,
   type UserSettingsUpdate,
 } from "@/lib/userSettingsService";
-import { isDemoMode, getDemoSettings, useDemoMode } from "@/lib/demoMode";
 
 export function useUserSettings() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const demo = useDemoMode();
 
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
   const load = useCallback(async () => {
-    if (isDemoMode()) {
-      setSettings(getDemoSettings());
-      setLoading(false);
-      return;
-    }
     if (!userId) {
       setSettings(null);
       setLoading(false);
@@ -40,10 +33,9 @@ export function useUserSettings() {
     } finally {
       setLoading(false);
     }
-  }, [userId, demo]);
+  }, [userId]);
 
   const recalcBalance = useCallback(async () => {
-    if (isDemoMode()) return;
     if (!userId) return;
     try {
       const balance = await calculateCurrentBalance(userId);
@@ -57,10 +49,6 @@ export function useUserSettings() {
 
   const updateSettings = useCallback(
     async (updates: UserSettingsUpdate) => {
-      if (isDemoMode()) {
-        setSettings((prev) => (prev ? { ...prev, ...updates } as UserSettings : prev));
-        return (settings ?? getDemoSettings());
-      }
       if (!userId) throw new Error("Not authenticated");
       try {
         const updated = await updateUserSettings(userId, updates);
@@ -71,7 +59,7 @@ export function useUserSettings() {
         throw err;
       }
     },
-    [userId, settings],
+    [userId],
   );
 
   useEffect(() => {
@@ -80,7 +68,6 @@ export function useUserSettings() {
 
   // Recalculate balance whenever trades change for this user.
   useEffect(() => {
-    if (isDemoMode()) return;
     if (!userId) return;
     const channelName = `trades-balance-${userId}-${Math.random().toString(36).slice(2, 10)}`;
     const channel = supabase

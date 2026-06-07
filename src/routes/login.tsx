@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AuthShell, fieldClass, labelClass, primaryBtnClass } from "@/components/AuthShell";
 import { useAuth } from "@/components/AuthProvider";
-import { enableDemoMode } from "@/lib/demoMode";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — EdgeTrader" }] }),
@@ -70,28 +69,6 @@ function LoginPage() {
         <button type="submit" disabled={submitting} className={primaryBtnClass}>
           {submitting ? "Signing in..." : "Sign in"}
         </button>
-
-        <div className="relative my-2 flex items-center">
-          <div className="flex-grow border-t border-border" />
-          <span className="mx-3 text-[10px] uppercase tracking-[2px] text-muted-foreground font-data">
-            or
-          </span>
-          <div className="flex-grow border-t border-border" />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            enableDemoMode();
-            navigate({ to: "/", replace: true });
-          }}
-          className="h-10 w-full rounded-md border border-trade-green/40 bg-trade-green/10 px-4 text-sm font-semibold text-trade-green transition-colors hover:bg-trade-green/20"
-        >
-          Try Demo — no signup
-        </button>
-        <p className="text-center text-[11px] text-muted-foreground font-data">
-          Explore the app without saving any trades or data.
-        </p>
       </form>
     </AuthShell>
   );

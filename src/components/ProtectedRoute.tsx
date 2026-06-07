@@ -3,33 +3,25 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "./AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { useDemoMode } from "@/lib/demoMode";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { settings, loading: settingsLoading } = useUserSettings();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const demo = useDemoMode();
 
   useEffect(() => {
-    if (demo) return;
     if (!loading && !user) {
       navigate({ to: "/login", replace: true });
     }
-  }, [loading, user, navigate, demo]);
+  }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (demo) return;
     if (loading || settingsLoading || !user || !settings) return;
     if (!settings.onboarding_completed && pathname !== "/onboarding") {
       navigate({ to: "/onboarding", replace: true });
     }
-  }, [loading, settingsLoading, user, settings, pathname, navigate, demo]);
-
-  if (demo) {
-    return <ErrorBoundary screen={pathname}>{children}</ErrorBoundary>;
-  }
+  }, [loading, settingsLoading, user, settings, pathname, navigate]);
 
   if (loading) {
     return (
