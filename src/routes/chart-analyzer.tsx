@@ -509,6 +509,26 @@ function ChartAnalyzer() {
               }}
               saved={!!savedId}
               saving={saving}
+              onBuildOptionsTrade={
+                analysis.optionsRecommendation?.primaryStrategy
+                  ? () => {
+                      const r = analysis.optionsRecommendation!;
+                      sessionStorage.setItem(
+                        "pendingOptionsPrefill",
+                        JSON.stringify({
+                          strategy: r.primaryStrategy,
+                          underlying: analysis.instrument ?? undefined,
+                          idealDTE: r.idealDTE,
+                          idealDelta: r.idealDelta,
+                          ivRankNote: r.ivRankNote,
+                          reasoning: r.reasoning,
+                          keyRisk: r.keyRisk,
+                        }),
+                      );
+                      void navigate({ to: "/trade-log" });
+                    }
+                  : undefined
+              }
             />
           )}
 
