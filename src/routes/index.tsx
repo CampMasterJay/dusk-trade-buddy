@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
