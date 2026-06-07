@@ -963,50 +963,68 @@ export type Database = {
       }
       weekly_debriefs: {
         Row: {
+          behavioral_patterns: string | null
           created_at: string
           id: string
           next_week_focus: string
           pattern_analysis: string
           performance_summary: string
           position_sizing_recommendation: string
+          prop_firm_progress: string | null
+          regime_performance: string | null
           rule_violations: string
+          setup_health_update: string | null
           source_stats: Json | null
+          tier_progress: string | null
           top_strength: string
           top_weakness: string
           updated_at: string
           user_id: string
+          vix_impact: string | null
           week_end: string
           week_start: string
         }
         Insert: {
+          behavioral_patterns?: string | null
           created_at?: string
           id?: string
           next_week_focus: string
           pattern_analysis: string
           performance_summary: string
           position_sizing_recommendation: string
+          prop_firm_progress?: string | null
+          regime_performance?: string | null
           rule_violations: string
+          setup_health_update?: string | null
           source_stats?: Json | null
+          tier_progress?: string | null
           top_strength: string
           top_weakness: string
           updated_at?: string
           user_id: string
+          vix_impact?: string | null
           week_end: string
           week_start: string
         }
         Update: {
+          behavioral_patterns?: string | null
           created_at?: string
           id?: string
           next_week_focus?: string
           pattern_analysis?: string
           performance_summary?: string
           position_sizing_recommendation?: string
+          prop_firm_progress?: string | null
+          regime_performance?: string | null
           rule_violations?: string
+          setup_health_update?: string | null
           source_stats?: Json | null
+          tier_progress?: string | null
           top_strength?: string
           top_weakness?: string
           updated_at?: string
           user_id?: string
+          vix_impact?: string | null
           week_end?: string
           week_start?: string
         }

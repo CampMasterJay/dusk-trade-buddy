@@ -13,6 +13,12 @@ import {
   ChevronLeft,
   Archive,
   RefreshCw,
+  Flame,
+  Map as MapIcon,
+  Heart,
+  Wind,
+  Building2,
+  Layers,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -47,6 +53,12 @@ type Debrief = {
   rule_violations: string;
   next_week_focus: string;
   position_sizing_recommendation: string;
+  behavioral_patterns: string | null;
+  regime_performance: string | null;
+  setup_health_update: string | null;
+  vix_impact: string | null;
+  prop_firm_progress: string | null;
+  tier_progress: string | null;
   source_stats: Record<string, unknown> | null;
   created_at: string;
 };
@@ -253,6 +265,30 @@ function DebriefView({
         body={debrief.position_sizing_recommendation}
       />
 
+      {debrief.behavioral_patterns && (
+        <Section icon={Flame} label="Behavioral Patterns This Week" body={debrief.behavioral_patterns} />
+      )}
+      {debrief.regime_performance && (
+        <Section icon={MapIcon} label="Regime Performance" body={debrief.regime_performance} />
+      )}
+      {debrief.setup_health_update && (
+        <Section icon={Heart} label="Setup Health Update" body={debrief.setup_health_update} />
+      )}
+      {debrief.vix_impact && (
+        <Section icon={Wind} label="VIX Impact Summary" body={debrief.vix_impact} />
+      )}
+      {debrief.prop_firm_progress && (
+        <Section
+          icon={Building2}
+          label="Prop Firm Progress"
+          body={debrief.prop_firm_progress}
+          accent="border-trade-green/30 bg-trade-green/5"
+        />
+      )}
+      {debrief.tier_progress && (
+        <Section icon={Layers} label="Tier Progress" body={debrief.tier_progress} />
+      )}
+
       <Button onClick={onRegenerate} disabled={generating} variant="outline" className="w-full" size="sm">
         <RefreshCw className={cn("h-4 w-4", generating && "animate-spin")} />
         {generating ? "Regenerating…" : "Regenerate debrief"}
@@ -329,6 +365,24 @@ function HistoryCard({ debrief }: { debrief: Debrief }) {
           <Section icon={AlertTriangle} label="Rule Violations" body={debrief.rule_violations} accent="border-amber-500/40 bg-amber-500/5" />
           <Section icon={Target} label="Next Week Focus" body={debrief.next_week_focus} accent="border-primary/40 bg-primary/5" />
           <Section icon={Scale} label="Position Sizing" body={debrief.position_sizing_recommendation} />
+          {debrief.behavioral_patterns && (
+            <Section icon={Flame} label="Behavioral Patterns" body={debrief.behavioral_patterns} />
+          )}
+          {debrief.regime_performance && (
+            <Section icon={MapIcon} label="Regime Performance" body={debrief.regime_performance} />
+          )}
+          {debrief.setup_health_update && (
+            <Section icon={Heart} label="Setup Health" body={debrief.setup_health_update} />
+          )}
+          {debrief.vix_impact && (
+            <Section icon={Wind} label="VIX Impact" body={debrief.vix_impact} />
+          )}
+          {debrief.prop_firm_progress && (
+            <Section icon={Building2} label="Prop Firm Progress" body={debrief.prop_firm_progress} />
+          )}
+          {debrief.tier_progress && (
+            <Section icon={Layers} label="Tier Progress" body={debrief.tier_progress} />
+          )}
         </div>
       )}
     </div>
