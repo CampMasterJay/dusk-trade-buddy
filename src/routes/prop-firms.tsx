@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,7 +181,12 @@ function PropFirmsPage() {
               limit in real time.
             </p>
           </div>
-          <AddAccountDialog firms={firms} onSaved={reload} />
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/prop-firms/compare">Compare Firms</Link>
+              </Button>
+              <AddAccountDialog firms={firms} onSaved={reload} />
+            </div>
         </div>
 
         {loading ? (
