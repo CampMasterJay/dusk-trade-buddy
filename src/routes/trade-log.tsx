@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
+import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
 import { StreakBehavior } from "@/components/StreakBehavior";
 import { RegimePerformance } from "@/components/RegimePerformance";
@@ -314,7 +315,11 @@ function TradeLogScreen() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="stats" className="mt-0">
-              <TradeStats stats={stats} trades={trades} />
+              <div className="space-y-3">
+                <EdgeHealthScore trades={trades} />
+                <RollingPerformance trades={trades} />
+                <TradeStats stats={stats} trades={trades} />
+              </div>
             </TabsContent>
             <TabsContent value="behavior" className="mt-0">
               <div className="space-y-4">
