@@ -274,14 +274,14 @@ function SkillRadarCard({
 }) {
   const fill = hasPrevious
     ? improving
-      ? "hsl(var(--trade-green) / 0.35)"
-      : "hsl(var(--trade-red) / 0.35)"
-    : "hsl(var(--primary) / 0.3)";
+      ? "color-mix(in oklab, var(--trade-green) 35%, transparent)"
+      : "color-mix(in oklab, var(--trade-red) 35%, transparent)"
+    : "color-mix(in oklab, var(--primary) 30%, transparent)";
   const stroke = hasPrevious
     ? improving
-      ? "hsl(var(--trade-green))"
-      : "hsl(var(--trade-red))"
-    : "hsl(var(--primary))";
+      ? "var(--trade-green)"
+      : "var(--trade-red)"
+    : "var(--primary)";
 
   return (
     <section className="rounded-xl border border-border bg-card p-6 mb-4">
@@ -311,22 +311,22 @@ function SkillRadarCard({
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={data} outerRadius="75%">
-            <PolarGrid stroke="hsl(var(--border))" />
+            <PolarGrid stroke="var(--border)" />
             <PolarAngleAxis
               dataKey="axis"
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
             />
             <PolarRadiusAxis
               angle={90}
               domain={[0, 100]}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 9 }}
             />
             {hasPrevious && (
               <Radar
                 name="30 days ago"
                 dataKey="previous"
-                stroke="hsl(var(--muted-foreground))"
-                fill="hsl(var(--muted-foreground) / 0.15)"
+                stroke="var(--muted-foreground)"
+                fill="color-mix(in oklab, var(--muted-foreground) 15%, transparent)"
                 strokeDasharray="4 4"
               />
             )}
