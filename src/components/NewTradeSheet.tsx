@@ -48,6 +48,8 @@ import {
   maxContractsForStop,
 } from "@/hooks/usePropFirmConstraints";
 import { Building2, Lock } from "lucide-react";
+import { useTodayVix } from "@/hooks/useTodayVix";
+import { adjustRiskPct } from "@/lib/vixRisk";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -210,8 +212,16 @@ export function NewTradeSheet({
 
   // Defaults from settings
   const balance = Number(settings?.current_balance ?? 100);
-  const riskPct = Number(settings?.risk_pct ?? 15);
+  const baseRiskPct = Number(settings?.risk_pct ?? 15);
   const rrSetting = Number(settings?.rr_ratio ?? 1.5);
+  const { vix: todayVix } = useTodayVix();
+  const vixAdj = adjustRiskPct({
+    baseRiskPct,
+    currentVix: todayVix,
+    baselineVix: Number(settings?.baseline_vix ?? 18),
+    enabled: settings?.vix_adjustment_enabled !== false,
+  });
+  const riskPct = vixAdj.active ? vixAdj.adjustedPct : baseRiskPct;
 
   // Re-hydrate form whenever the sheet opens or the edit target changes
   useEffect(() => {
