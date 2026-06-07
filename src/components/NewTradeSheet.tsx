@@ -6,6 +6,14 @@ import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { createTrade, updateTrade, type Trade } from "@/lib/tradeService";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ARTICLES, type Article } from "@/lib/newsData";
 import { cn } from "@/lib/utils";
@@ -147,6 +155,25 @@ export function NewTradeSheet({
   const [setupTag, setSetupTag] = useState<string>(
     (editTrade as { setup_tag?: string | null } | null | undefined)?.setup_tag ?? "",
   );
+
+  // Stop analytics — MAE / MFE (optional)
+  const [mae, setMae] = useState<string>(
+    (editTrade as { max_adverse_excursion_points?: number | null } | null | undefined)
+      ?.max_adverse_excursion_points != null
+      ? String((editTrade as { max_adverse_excursion_points?: number }).max_adverse_excursion_points)
+      : "",
+  );
+  const [mfe, setMfe] = useState<string>(
+    (editTrade as { max_favorable_excursion_points?: number | null } | null | undefined)
+      ?.max_favorable_excursion_points != null
+      ? String((editTrade as { max_favorable_excursion_points?: number }).max_favorable_excursion_points)
+      : "",
+  );
+
+  // Stop-and-reverse post-loss prompt
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [reverseTradeId, setReverseTradeId] = useState<string | null>(null);
+  const [reversePoints, setReversePoints] = useState<string>("");
   // Track whether user manually edited the R multiple — so we don't auto-overwrite in edit mode.
   const [rTouched, setRTouched] = useState(isEdit);
   const [chartFile, setChartFile] = useState<File | null>(null);
@@ -327,6 +354,8 @@ export function NewTradeSheet({
     setNotes("");
     setRangeSize("");
     setSetupTag("");
+    setMae("");
+    setMfe("");
     setChartFile(null);
     setExistingChart(null);
     setErrors({});
@@ -404,11 +433,20 @@ export function NewTradeSheet({
         checklist_verdict: checklist?.verdict ?? null,
         news_id: newsId,
         setup_tag: setupTag === "" ? null : setupTag,
-      };
+        max_adverse_excursion_points:
+          mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
+        max_favorable_excursion_points:
+          mfe === "" || Number.isNaN(parseFloat(mfe)) ? null : Math.abs(parseFloat(mfe)),
+      } as Parameters<typeof createTrade>[0] extends infer P ? Omit<P, "user_id"> : never;
 
-      const { error } = isEdit && editTrade
+      const res = isEdit && editTrade
         ? await updateTrade(editTrade.id, payload)
         : await createTrade({ user_id: user.id, ...payload });
+      const { error } = res;
+      const insertedId =
+        !isEdit && (res as { data?: { id?: string } | null }).data?.id
+          ? (res as { data?: { id?: string } }).data!.id!
+          : null;
 
       if (error) {
         toast.error(error.message);
@@ -439,6 +477,13 @@ export function NewTradeSheet({
       onLogged?.();
       // Re-evaluate achievements after a successful save.
       void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
+
+      // Post-loss prompt: ask whether the stop-and-reverse happened.
+      if (!isEdit && result === "Loss" && insertedId) {
+        setReverseTradeId(insertedId);
+        setReversePoints("");
+        setReverseOpen(true);
+      }
     } finally {
       setSubmitting(false);
     }
