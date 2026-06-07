@@ -47,6 +47,14 @@ import {
   type StrategyType,
   type LegInput,
 } from "@/lib/optionsPnLEngine";
+import {
+  FUTURES_OPTIONS,
+  getFuturesOption,
+  isFuturesUnderlying,
+  multiplierFor,
+  EQUITY_OPTION_MULTIPLIER,
+} from "@/lib/futuresOptions";
+import { Switch } from "@/components/ui/switch";
 
 const COMMON_UNDERLYINGS = [
   "SPY",
@@ -128,6 +136,16 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   const [underlying, setUnderlying] = useState("SPY");
   const [underlyingPrice, setUnderlyingPrice] = useState("");
   const [strategy, setStrategy] = useState<StrategyDef | null>(null);
+
+  // Futures options toggle — auto-on when the underlying starts with "/".
+  const [futuresMode, setFuturesMode] = useState(false);
+  useEffect(() => {
+    setFuturesMode(isFuturesUnderlying(underlying));
+  }, [underlying]);
+  const futuresSpec = futuresMode ? getFuturesOption(underlying) : null;
+  const multiplier = futuresMode
+    ? (futuresSpec?.multiplier ?? multiplierFor(underlying))
+    : EQUITY_OPTION_MULTIPLIER;
 
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
@@ -285,8 +303,9 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
       extraLegs: parsedLegs.slice(2),
       profitTargetPct,
       stopLossPct,
+      multiplier,
     };
-  }, [strategy, legs, profitTargetPct, stopLossPct]);
+  }, [strategy, legs, profitTargetPct, stopLossPct, multiplier]);
 
   // Position sizer computes contracts; we display max-risk / break-even
   const oneContractCalc = useMemo(() => {
@@ -322,8 +341,8 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     );
     const perSharePnl = intrinsicNet - entryNet;
     const contracts = Math.max(1, sizingContracts);
-    return perSharePnl * 100 * contracts;
-  }, [simPrice, legs, strategy, calcShape, sizingContracts]);
+    return perSharePnl * multiplier * contracts;
+  }, [simPrice, legs, strategy, calcShape, sizingContracts, multiplier]);
 
   const handleSave = async () => {
     if (!user) {
@@ -386,7 +405,7 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         leg2_premium: legs[1] ? Number(legs[1].premium) : null,
         leg2_contracts: legs[1] ? contracts : null,
 
-        premium_paid_or_received: premiumNet * 100 * contracts,
+        premium_paid_or_received: premiumNet * multiplier * contracts,
         max_risk: oneContract ? oneContract.maxRisk * contracts : null,
         max_profit: oneContract && isFinite(oneContract.maxProfit)
           ? oneContract.maxProfit * contracts
@@ -458,6 +477,83 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         <div className="space-y-6 mt-4 pb-8">
           {/* STEP 1 */}
           <Section title="1. Setup">
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 p-2.5">
+              <div>
+                <div className="text-sm font-medium">Futures Option</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Options on futures contracts (/ES, /NQ, /GC, /CL, /ZB).
+                </div>
+              </div>
+              <Switch
+                checked={futuresMode}
+                onCheckedChange={(v) => {
+                  setFuturesMode(v);
+                  if (v && !isFuturesUnderlying(underlying)) {
+                    setUnderlying("/ES");
+                  }
+                  if (!v && isFuturesUnderlying(underlying)) {
+                    setUnderlying("SPY");
+                  }
+                }}
+              />
+            </div>
+
+            {futuresMode && (
+              <div className="space-y-2">
+                <Label>Futures underlying</Label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {FUTURES_OPTIONS.map((f) => (
+                    <button
+                      key={f.symbol}
+                      type="button"
+                      onClick={() => setUnderlying(f.symbol)}
+                      className={cn(
+                        "px-2 py-1.5 rounded-md text-xs font-mono border text-center",
+                        underlying === f.symbol
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                      title={f.name}
+                    >
+                      {f.symbol}
+                    </button>
+                  ))}
+                </div>
+                {futuresSpec && (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-1">
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">{futuresSpec.name}</span>
+                      <span className="mx-1.5">·</span>
+                      <span className="font-mono">
+                        ${futuresSpec.multiplier}/pt
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <span className="font-mono">
+                        tick {futuresSpec.tickSize} = ${futuresSpec.tickValue}
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <span>{futuresSpec.style}</span>
+                      <span className="mx-1.5">·</span>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          futuresSpec.settlement === "Cash"
+                            ? "text-emerald-400"
+                            : "text-amber-400",
+                        )}
+                      >
+                        {futuresSpec.settlement}-settled
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {futuresSpec.notes} Review your broker's settlement
+                      rules.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Underlying</Label>
               <Input

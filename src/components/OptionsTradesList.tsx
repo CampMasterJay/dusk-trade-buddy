@@ -5,6 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ivrBucket } from "@/lib/ivrGuidance";
+import { getFuturesOption } from "@/lib/futuresOptions";
 
 type OptRow = {
   id: string;
@@ -110,6 +111,20 @@ export function OptionsTradesList() {
                   >
                     {r.is_debit ? "Debit" : "Credit"}
                   </span>
+                  {getFuturesOption(r.underlying) && (
+                    <span
+                      className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-300"
+                      title={
+                        getFuturesOption(r.underlying)!.settlement === "Cash"
+                          ? "Cash settled — no assignment risk."
+                          : "Physically settled — close before expiration."
+                      }
+                    >
+                      {getFuturesOption(r.underlying)!.settlement === "Cash"
+                        ? "Cash settled"
+                        : "Phys. settled"}
+                    </span>
+                  )}
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-1">
                   {r.trade_date} · {r.leg1_contracts}c · {r.status}
