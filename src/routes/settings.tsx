@@ -33,6 +33,7 @@ import { DebugSection } from "@/components/DebugSection";
 import { AchievementsSection } from "@/components/AchievementsSection";
 import { ChallengeHistorySection } from "@/components/ChallengeHistorySection";
 import { WalkthroughsSection } from "@/components/walkthrough/WalkthroughsSection";
+import { OptionsSettingsSection } from "@/components/OptionsSettingsSection";
 import { archiveAndResetChallenge } from "@/lib/challengeArchive";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -107,6 +108,7 @@ function Settings() {
         <RiskSection />
         <InstrumentsSection />
         <ScalingPlanSection />
+        <OptionsSettingsSection />
         <NotificationsSection />
         <BehaviorAlertsSection />
         <NewsApiSection />
