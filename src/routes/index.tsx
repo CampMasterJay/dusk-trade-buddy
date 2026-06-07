@@ -183,6 +183,18 @@ function Dashboard() {
   const riskDollar = (currentBalance * riskPct) / 100;
   const targetDollar = riskDollar * rrRatio;
 
+  const { vix: todayVix } = useTodayVix();
+  const baselineVix = Number(settings?.baseline_vix ?? 18);
+  const vixEnabled = settings?.vix_adjustment_enabled !== false;
+  const vixAdj = adjustRiskPct({
+    baseRiskPct: riskPct,
+    currentVix: todayVix,
+    baselineVix,
+    enabled: vixEnabled,
+  });
+  const adjustedRiskDollar = (currentBalance * vixAdj.adjustedPct) / 100;
+  const adjustedTargetDollar = adjustedRiskDollar * rrRatio;
+
   const onTradeLogged = () => {
     setReloadKey((k) => k + 1);
     refreshSettings();
@@ -236,6 +248,12 @@ function Dashboard() {
               rrRatio={rrRatio}
               riskDollar={riskDollar}
               targetDollar={targetDollar}
+              vix={todayVix}
+              vixAdjustedRiskPct={vixAdj.adjustedPct}
+              vixAdjustedRiskDollar={adjustedRiskDollar}
+              vixAdjustedTargetDollar={adjustedTargetDollar}
+              vixActive={vixAdj.active}
+              vixCapped={vixAdj.capped}
             />
 
             <ProjectionSection
