@@ -632,6 +632,7 @@ export type Database = {
           max_favorable_excursion_points: number | null
           news_id: string | null
           notes: string | null
+          playbook_score: string | null
           pnl: number | null
           price_came_within_ticks_of_stop: number | null
           r_multiple: number | null
@@ -674,6 +675,7 @@ export type Database = {
           max_favorable_excursion_points?: number | null
           news_id?: string | null
           notes?: string | null
+          playbook_score?: string | null
           pnl?: number | null
           price_came_within_ticks_of_stop?: number | null
           r_multiple?: number | null
@@ -716,6 +718,7 @@ export type Database = {
           max_favorable_excursion_points?: number | null
           news_id?: string | null
           notes?: string | null
+          playbook_score?: string | null
           pnl?: number | null
           price_came_within_ticks_of_stop?: number | null
           r_multiple?: number | null
