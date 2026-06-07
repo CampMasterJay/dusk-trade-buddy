@@ -278,6 +278,7 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
+          {!isOptions && (
           <TradeLockGate
             locked={drawdown.lockTrading}
             defaultInstrument={settings?.instrument ?? "MES"}
@@ -289,11 +290,14 @@ function TradeLogScreen() {
               if (!v) setPrefill(null);
             }}
           />
+          )}
         </div>
 
-        <div className="flex justify-end -mt-2 mb-3">
-          <OptionsTradeSheet onLogged={refresh} />
-        </div>
+        {isOptions && (
+          <div className="flex justify-end -mt-2 mb-3">
+            <OptionsTradeSheet onLogged={refresh} />
+          </div>
+        )}
 
         <TradeLockBanner
           level={drawdown.level}
@@ -325,26 +329,37 @@ function TradeLogScreen() {
 
         {/* Stats */}
         <div className="mb-4">
-          <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-3">
+          <Tabs defaultValue={isOptions ? "options" : "stats"} className="w-full">
+            <TabsList
+              className={cn(
+                "grid w-full mb-3",
+                isOptions ? "grid-cols-2" : "grid-cols-5",
+              )}
+            >
               <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
                 Stats
               </TabsTrigger>
-              <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
-                Behavior
-              </TabsTrigger>
-              <TabsTrigger value="regime" className="text-xs uppercase tracking-wider font-data">
-                By Regime
-              </TabsTrigger>
-              <TabsTrigger value="stops" className="text-xs uppercase tracking-wider font-data">
-                Stops
-              </TabsTrigger>
-              <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
-                Exits
-              </TabsTrigger>
-              <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
-                Options
-              </TabsTrigger>
+              {!isOptions && (
+                <>
+                  <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
+                    Behavior
+                  </TabsTrigger>
+                  <TabsTrigger value="regime" className="text-xs uppercase tracking-wider font-data">
+                    By Regime
+                  </TabsTrigger>
+                  <TabsTrigger value="stops" className="text-xs uppercase tracking-wider font-data">
+                    Stops
+                  </TabsTrigger>
+                  <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
+                    Exits
+                  </TabsTrigger>
+                </>
+              )}
+              {isOptions && (
+                <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
+                  Options
+                </TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="stats" className="mt-0">
               <div className="space-y-3">
@@ -354,6 +369,8 @@ function TradeLogScreen() {
                 <TradeStats stats={stats} trades={trades} />
               </div>
             </TabsContent>
+            {!isOptions && (
+            <>
             <TabsContent value="behavior" className="mt-0">
               <div className="space-y-4">
                 <Tabs defaultValue="general" className="w-full">
@@ -393,6 +410,9 @@ function TradeLogScreen() {
                 tickValue={Number(settings?.tick_value ?? 5)}
               />
             </TabsContent>
+            </>
+            )}
+            {isOptions && (
             <TabsContent value="options" className="mt-0">
               <div className="space-y-3">
                 <ZeroDteModule />
@@ -413,16 +433,20 @@ function TradeLogScreen() {
                 </div>
               </div>
             </TabsContent>
+            )}
           </Tabs>
         </div>
 
-        <div className="mb-4">
-          <SetupPerformanceBreakdown trades={trades} />
-        </div>
-
-        <div className="mb-4">
-          <BenchmarksPanel trades={trades} />
-        </div>
+        {!isOptions && (
+          <>
+            <div className="mb-4">
+              <SetupPerformanceBreakdown trades={trades} />
+            </div>
+            <div className="mb-4">
+              <BenchmarksPanel trades={trades} />
+            </div>
+          </>
+        )}
 
         {/* Filter bar */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4 scrollbar-none">
