@@ -265,7 +265,7 @@ function TierCard({
         <NumField
           label="Min balance ($)"
           value={Number(draft.min_balance)}
-          onChange={(n) => onChange({ min_balance: n })}
+          onChange={(n) => onChange({ min_balance: typeof n === "number" ? n : 0 })}
         />
         <NumField
           label="Max balance ($) — blank = ∞"
