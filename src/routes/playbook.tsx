@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity } from "lucide-react";
+import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity, Sparkles, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { discoverSetup, type DiscoveredSetup } from "@/lib/api/discoverSetup.functions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
