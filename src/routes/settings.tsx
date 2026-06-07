@@ -20,6 +20,7 @@ import {
   PlayCircle,
   Layers,
   ChevronRight,
+  LineChart,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -102,6 +103,7 @@ function Settings() {
         <WalkthroughsSection />
         <ChallengeSection />
         <ChallengeHistorySection />
+        <TradingHistorySection />
         <RiskSection />
         <InstrumentsSection />
         <ScalingPlanSection />
