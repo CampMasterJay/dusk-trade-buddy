@@ -27,6 +27,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ChartAnalyzerRouteImport } from './routes/chart-analyzer'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PropFirmsCompareRouteImport } from './routes/prop-firms.compare'
 import { Route as NewsIdRouteImport } from './routes/news.$id'
 
 const WeeklyReportRoute = WeeklyReportRouteImport.update({
@@ -119,6 +120,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PropFirmsCompareRoute = PropFirmsCompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => PropFirmsRoute,
+} as any)
 const NewsIdRoute = NewsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -134,7 +140,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/prop-firms': typeof PropFirmsRoute
+  '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
+  '/prop-firms/compare': typeof PropFirmsCompareRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,7 +162,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/prop-firms': typeof PropFirmsRoute
+  '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
+  '/prop-firms/compare': typeof PropFirmsCompareRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -177,7 +185,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
-  '/prop-firms': typeof PropFirmsRoute
+  '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
+  '/prop-firms/compare': typeof PropFirmsCompareRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
+    | '/prop-firms/compare'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
+    | '/prop-firms/compare'
   id:
     | '__root__'
     | '/'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
+    | '/prop-firms/compare'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -264,7 +276,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
-  PropFirmsRoute: typeof PropFirmsRoute
+  PropFirmsRoute: typeof PropFirmsRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskOfRuinRoute: typeof RiskOfRuinRoute
   SettingsRoute: typeof SettingsRoute
@@ -404,6 +416,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prop-firms/compare': {
+      id: '/prop-firms/compare'
+      path: '/compare'
+      fullPath: '/prop-firms/compare'
+      preLoaderRoute: typeof PropFirmsCompareRouteImport
+      parentRoute: typeof PropFirmsRoute
+    }
     '/news/$id': {
       id: '/news/$id'
       path: '/$id'
@@ -424,6 +443,18 @@ const NewsRouteChildren: NewsRouteChildren = {
 
 const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
 
+interface PropFirmsRouteChildren {
+  PropFirmsCompareRoute: typeof PropFirmsCompareRoute
+}
+
+const PropFirmsRouteChildren: PropFirmsRouteChildren = {
+  PropFirmsCompareRoute: PropFirmsCompareRoute,
+}
+
+const PropFirmsRouteWithChildren = PropFirmsRoute._addFileChildren(
+  PropFirmsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalendarRoute: CalendarRoute,
@@ -433,7 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
-  PropFirmsRoute: PropFirmsRoute,
+  PropFirmsRoute: PropFirmsRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   RiskOfRuinRoute: RiskOfRuinRoute,
   SettingsRoute: SettingsRoute,
