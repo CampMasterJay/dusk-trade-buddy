@@ -334,6 +334,40 @@ export function OptionsPlaybookBuilder() {
     }
   }
 
+  async function saveDiscoveredAsEntry() {
+    if (!user || !discovery) return;
+    if (entries.length >= MAX_ENTRIES) {
+      return toast.error(`Maximum ${MAX_ENTRIES} options entries. Retire one first.`);
+    }
+    const top = discovery.topSetup;
+    const f: OptionsFilters = {
+      ...DEFAULT_OPT_FILTERS,
+      ...filtersFromOptionConditions(top.conditions),
+      market: "options",
+    };
+    const { data, error } = await supabase
+      .from("playbook_entries")
+      .insert({
+        user_id: user.id,
+        name: top.name,
+        notes: top.insight,
+        filters: f as never,
+        trade_count: top.tradeCount,
+        win_rate: top.winRate,
+        avg_r: top.avgPctOfMaxProfit,
+        net_pnl: top.avgPnl * top.tradeCount,
+        baseline_win_rate: top.winRate,
+        baseline_avg_r: top.avgPctOfMaxProfit,
+        baseline_trade_count: top.tradeCount,
+        status: "Testing",
+      })
+      .select()
+      .single();
+    if (error) return toast.error(error.message);
+    setEntries((e) => [data as unknown as OptEntry, ...e]);
+    toast.success("A+ options setup saved to playbook");
+  }
+
   if (loading) {
     return (
       <Card className="p-4 flex items-center gap-2 text-sm text-muted-foreground">
