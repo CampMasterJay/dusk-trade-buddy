@@ -540,6 +540,38 @@ export function OpenOptionsManager() {
                 Net premium of the package per share. Commission is auto-estimated at $0.65/leg/contract.
               </p>
             </div>
+            {closing?.is_earnings_play && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 space-y-2">
+                <div className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">
+                  Earnings play — IV crush
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">IV before earnings</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={closeIvBefore}
+                      onChange={(e) => setCloseIvBefore(e.target.value)}
+                      placeholder="e.g. 75"
+                      className="font-mono h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">IV after earnings</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={closeIvAfter}
+                      onChange={(e) => setCloseIvAfter(e.target.value)}
+                      placeholder="e.g. 32"
+                      className="font-mono h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Optional. Used to track average IV crush across your earnings plays.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setClosing(null)}>
