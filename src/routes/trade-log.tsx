@@ -276,6 +276,10 @@ function TradeLogScreen() {
           />
         </div>
 
+        <div className="flex justify-end -mt-2 mb-3">
+          <OptionsTradeSheet onLogged={refresh} />
+        </div>
+
         <TradeLockBanner
           level={drawdown.level}
           title={drawdown.alertTitle}
