@@ -51,6 +51,7 @@ import { Building2, Lock } from "lucide-react";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { adjustRiskPct } from "@/lib/vixRisk";
 import { useSetupStatuses } from "@/hooks/useSetupStatuses";
+import type { Conditions } from "@/lib/playbookMatcher";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -464,6 +465,7 @@ export function NewTradeSheet({
         checklist_verdict: checklist?.verdict ?? null,
         news_id: newsId,
         setup_tag: setupTag === "" ? null : setupTag,
+        playbook_score: checklist?.playbookScore ?? null,
         max_adverse_excursion_points:
           mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
         max_favorable_excursion_points:
