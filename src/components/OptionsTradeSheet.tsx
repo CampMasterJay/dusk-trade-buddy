@@ -42,6 +42,7 @@ import {
   type EarningsEvent,
 } from "@/lib/earnings";
 import { AlertTriangle } from "lucide-react";
+import { OptionsPreTradeChecklist } from "@/components/OptionsPreTradeChecklist";
 import {
   Tooltip,
   TooltipContent,
