@@ -113,6 +113,8 @@ export function NewTradeSheet({
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const propFirm = usePropFirmConstraints();
+  const tickValuePerPoint = Number(settings?.tick_value ?? 5);
   const [openUncontrolled, setOpenUncontrolled] = useState(false);
   const open = openProp ?? openUncontrolled;
   const setOpen = (v: boolean) => {
