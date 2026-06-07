@@ -363,6 +363,33 @@ export function NewTradeSheet({
   const resolvedInstrument =
     instrument === "Other" ? customInstrument.trim() : instrument;
 
+  // Conditions used by the Pre-Trade Checklist to match against saved Playbook entries.
+  const checklistConditions: Conditions = useMemo(() => {
+    const now = new Date();
+    const ctParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago",
+      hour: "numeric",
+      hour12: false,
+      weekday: "short",
+    }).formatToParts(now);
+    const hour = Number(ctParts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+    const wd = ctParts.find((p) => p.type === "weekday")?.value ?? "Sun";
+    const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd) + 1;
+    return {
+      setup: setupTag || null,
+      direction,
+      instrument: resolvedInstrument || null,
+      hour,
+      vix: todayVix ?? null,
+      sessionNum: null,
+      dow,
+      regime: null,
+      checklistScore: null,
+      consecWins: 0,
+      consecLosses: 0,
+    };
+  }, [setupTag, direction, resolvedInstrument, todayVix]);
+
   const requiredOk =
     !!date &&
     !!resolvedInstrument &&
