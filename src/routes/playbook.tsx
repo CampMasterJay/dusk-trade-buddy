@@ -578,7 +578,7 @@ function PlaybookPage() {
           <div className="flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
             <h2 className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
-              Saved Playbook Entries ({entries.length})
+              My Playbook ({entries.length}/{MAX_ENTRIES})
             </h2>
           </div>
           {entries.length === 0 ? (
@@ -586,46 +586,16 @@ function PlaybookPage() {
               No entries saved yet. Build a filter that has an edge and save it above.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {entries.map((e) => (
-                <div
+                <EntryCard
                   key={e.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5"
-                >
-                  <button
-                    onClick={() => loadEntry(e)}
-                    className="flex-1 text-left min-w-0"
-                  >
-                    <div className="text-xs font-semibold truncate">{e.name}</div>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {e.trade_count} trades
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {((e.win_rate ?? 0) * 100).toFixed(0)}% win
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {(e.avg_r ?? 0).toFixed(2)}R
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[9px] font-data",
-                          Number(e.net_pnl ?? 0) >= 0 ? "text-trade-green" : "text-trade-red",
-                        )}
-                      >
-                        ${Number(e.net_pnl ?? 0).toFixed(0)}
-                      </Badge>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e.id)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:text-trade-red hover:bg-trade-red/10"
-                    aria-label="Delete entry"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                  entry={e}
+                  allTrades={trades}
+                  onLoad={() => loadEntry(e)}
+                  onDelete={() => handleDelete(e.id)}
+                  onStatusChange={(s) => handleStatusChange(e.id, s)}
+                />
               ))}
             </div>
           )}
