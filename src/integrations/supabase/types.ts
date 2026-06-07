@@ -466,6 +466,57 @@ export type Database = {
         }
         Relationships: []
       }
+      setup_status: {
+        Row: {
+          created_at: string
+          id: string
+          paused_at: string | null
+          probation_started_at: string | null
+          probation_trades_at_start: number | null
+          reactivated_at: string | null
+          recovery_plan: string | null
+          root_causes: string[]
+          setup_type: string
+          snooze_until_trade_count: number | null
+          state: string
+          trade_count_at_change: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          paused_at?: string | null
+          probation_started_at?: string | null
+          probation_trades_at_start?: number | null
+          reactivated_at?: string | null
+          recovery_plan?: string | null
+          root_causes?: string[]
+          setup_type: string
+          snooze_until_trade_count?: number | null
+          state?: string
+          trade_count_at_change?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          paused_at?: string | null
+          probation_started_at?: string | null
+          probation_trades_at_start?: number | null
+          reactivated_at?: string | null
+          recovery_plan?: string | null
+          root_causes?: string[]
+          setup_type?: string
+          snooze_until_trade_count?: number | null
+          state?: string
+          trade_count_at_change?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
