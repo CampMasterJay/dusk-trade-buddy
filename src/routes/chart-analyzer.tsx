@@ -103,6 +103,19 @@ type Analysis = {
     mtfStructure?: string;
     ltfSignal?: string;
   };
+  optionsRecommendation?: {
+    primaryStrategy?: string;
+    alternativeStrategy?: string;
+    reasoning?: string;
+    idealDTE?: string;
+    idealDelta?: string;
+    ivRankNote?: string;
+    strikeGuidance?: string;
+    expirationGuidance?: string;
+    maxRiskGuidance?: string;
+    earningsWarning?: boolean;
+    keyRisk?: string;
+  };
 };
 
 type Slot = "HTF" | "MTF" | "LTF";
@@ -135,6 +148,7 @@ function ChartAnalyzer() {
   const [filterInstrument, setFilterInstrument] = useState<string>("all");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [linkSheetFor, setLinkSheetFor] = useState<SavedAnalysis | null>(null);
+  const [marketType, setMarketType] = useState<"standard" | "options">("standard");
 
   async function refreshHistory() {
     if (!user) return;
@@ -227,7 +241,7 @@ function ChartAnalyzer() {
         imageDataUrl: frames[slot]!.image.dataUrl,
       }));
       const __aiStart = performance.now();
-      const res = await analyze({ data: { frames: payloadFrames } });
+      const res = await analyze({ data: { frames: payloadFrames, marketType } });
       {
         const { logPerf } = await import("@/lib/perfLog");
         void logPerf(
@@ -361,6 +375,27 @@ function ChartAnalyzer() {
               {filledSlots.length}/3 frames
             </span>
           </div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+              Market
+            </span>
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+              {(["standard", "options"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMarketType(m)}
+                  className={`px-2.5 py-1 text-[10px] font-data uppercase tracking-wider rounded ${
+                    marketType === m
+                      ? "bg-trade-green/15 text-trade-green"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "standard" ? "Standard" : "Options"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {SLOT_META.map((m) => (
               <FrameSlot
@@ -474,6 +509,26 @@ function ChartAnalyzer() {
               }}
               saved={!!savedId}
               saving={saving}
+              onBuildOptionsTrade={
+                analysis.optionsRecommendation?.primaryStrategy
+                  ? () => {
+                      const r = analysis.optionsRecommendation!;
+                      sessionStorage.setItem(
+                        "pendingOptionsPrefill",
+                        JSON.stringify({
+                          strategy: r.primaryStrategy,
+                          underlying: analysis.instrument ?? undefined,
+                          idealDTE: r.idealDTE,
+                          idealDelta: r.idealDelta,
+                          ivRankNote: r.ivRankNote,
+                          reasoning: r.reasoning,
+                          keyRisk: r.keyRisk,
+                        }),
+                      );
+                      void navigate({ to: "/trade-log" });
+                    }
+                  : undefined
+              }
             />
           )}
 
@@ -607,6 +662,7 @@ function AnalysisView({
   onSave,
   saved,
   saving,
+  onBuildOptionsTrade,
 }: {
   a: Analysis;
   balance?: number;
@@ -618,6 +674,7 @@ function AnalysisView({
   onSave?: () => void | Promise<void>;
   saved?: boolean;
   saving?: boolean;
+  onBuildOptionsTrade?: () => void;
 }) {
   const _balance = balance ?? 0;
   const _riskPct = riskPct ?? 0;
@@ -853,6 +910,14 @@ function AnalysisView({
           </div>
           <p className="text-sm leading-relaxed text-foreground">{a.summary}</p>
         </div>
+      )}
+
+      {/* Section 6b — Options Play */}
+      {a.optionsRecommendation?.primaryStrategy && (
+        <OptionsPlayCard
+          rec={a.optionsRecommendation}
+          onBuild={onBuildOptionsTrade}
+        />
       )}
 
       {/* Section 7 — Action Buttons */}
@@ -1468,6 +1533,71 @@ function AnnotatedChartPreview({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function OptionsPlayCard({
+  rec,
+  onBuild,
+}: {
+  rec: NonNullable<Analysis["optionsRecommendation"]>;
+  onBuild?: () => void;
+}) {
+  const Row = ({ label, value }: { label: string; value?: string }) =>
+    value ? (
+      <div className="flex items-start justify-between gap-3 py-1">
+        <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground shrink-0">
+          {label}
+        </span>
+        <span className="text-xs font-data text-foreground text-right">{value}</span>
+      </div>
+    ) : null;
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/8 via-card to-card p-4">
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-data uppercase tracking-[3px] text-amber-500">
+        <Lightbulb className="h-3 w-3" />
+        Options Play
+      </div>
+      {rec.primaryStrategy && (
+        <div className="mb-2 text-lg font-bold font-data uppercase tracking-[2px] text-foreground">
+          {rec.primaryStrategy}
+        </div>
+      )}
+      <div className="divide-y divide-border/60">
+        <Row label="DTE" value={rec.idealDTE} />
+        <Row label="Delta Target" value={rec.idealDelta} />
+        <Row label="Strike" value={rec.strikeGuidance} />
+        <Row label="Expiration" value={rec.expirationGuidance} />
+        <Row label="IV Note" value={rec.ivRankNote} />
+        <Row label="Max Risk" value={rec.maxRiskGuidance} />
+        <Row label="Alt Strategy" value={rec.alternativeStrategy} />
+      </div>
+      {rec.reasoning && (
+        <p className="mt-3 text-sm leading-relaxed text-foreground">{rec.reasoning}</p>
+      )}
+      {rec.keyRisk && (
+        <div className="mt-2 flex items-start gap-2 rounded-md border border-trade-red/30 bg-trade-red/5 p-2 text-xs text-trade-red">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>{rec.keyRisk}</span>
+        </div>
+      )}
+      {rec.earningsWarning && (
+        <div className="mt-2 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-500">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span>Earnings within ~7 days — IV crush risk.</span>
+        </div>
+      )}
+      {onBuild && (
+        <button
+          type="button"
+          onClick={onBuild}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background hover:bg-amber-500/90 transition-colors"
+        >
+          Build This Trade
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      )}
     </div>
   );
 }

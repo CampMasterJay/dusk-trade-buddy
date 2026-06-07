@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   CalendarIcon,
@@ -154,6 +154,48 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
 
   // P&L simulator
   const [simPrice, setSimPrice] = useState("");
+
+  // Prefill from Chart Analyzer's "Build This Trade"
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem("pendingOptionsPrefill");
+    if (!raw) return;
+    sessionStorage.removeItem("pendingOptionsPrefill");
+    try {
+      const p = JSON.parse(raw) as {
+        strategy?: string;
+        underlying?: string;
+        idealDTE?: string;
+        idealDelta?: string;
+        ivRankNote?: string;
+        reasoning?: string;
+        keyRisk?: string;
+      };
+      if (p.underlying) setUnderlying(p.underlying.toUpperCase());
+      const match = STRATEGIES.find(
+        (s) => s.type.toLowerCase() === (p.strategy ?? "").toLowerCase(),
+      );
+      if (match) selectStrategy(match);
+      // Try to parse the lower bound of "7–21 days" or "0 DTE"
+      if (p.idealDTE) {
+        const m = p.idealDTE.match(/\d+/);
+        if (m) setPlannedExitDte(m[0]);
+      }
+      const notes = [
+        p.reasoning && `Chart Analyzer: ${p.reasoning}`,
+        p.idealDelta && `Delta target: ${p.idealDelta}`,
+        p.ivRankNote && `IV note: ${p.ivRankNote}`,
+        p.keyRisk && `Key risk: ${p.keyRisk}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      if (notes) setReason(notes);
+      setOpen(true);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reset legs when strategy changes
   const selectStrategy = (s: StrategyDef) => {
