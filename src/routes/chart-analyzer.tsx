@@ -57,6 +57,7 @@ import {
   computeAnalysisAccuracy,
 } from "@/components/AnalysisFeedbackPrompt";
 import { ScanMode } from "@/components/ScanMode";
+import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
