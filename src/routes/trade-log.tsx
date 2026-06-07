@@ -10,6 +10,7 @@ import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
 import { StreakBehavior } from "@/components/StreakBehavior";
+import { RegimePerformance } from "@/components/RegimePerformance";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
 import { BenchmarksPanel } from "@/components/BenchmarksPanel";
 import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
@@ -301,12 +302,15 @@ function TradeLogScreen() {
         {/* Stats */}
         <div className="mb-4">
           <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-3">
+            <TabsList className="grid w-full grid-cols-3 mb-3">
               <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
                 Stats
               </TabsTrigger>
               <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
                 Behavior
+              </TabsTrigger>
+              <TabsTrigger value="regime" className="text-xs uppercase tracking-wider font-data">
+                By Regime
               </TabsTrigger>
             </TabsList>
             <TabsContent value="stats" className="mt-0">
@@ -320,6 +324,9 @@ function TradeLogScreen() {
                   startingBalance={Number(settings?.starting_balance ?? 100)}
                 />
               </div>
+            </TabsContent>
+            <TabsContent value="regime" className="mt-0">
+              <RegimePerformance trades={trades} />
             </TabsContent>
           </Tabs>
         </div>
