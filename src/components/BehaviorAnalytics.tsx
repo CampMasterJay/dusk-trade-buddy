@@ -408,6 +408,61 @@ export function BehaviorAnalytics({ trades }: Props) {
           </div>
         )}
       </div>
+
+      <AlertOverrideSection trades={trades} />
     </section>
+  );
+}
+
+// ---------- Alert Override Rate ----------
+
+const ALERT_LABELS: Record<BehaviorAlertType, string> = {
+  tilt: "Tilt alerts",
+  overtrading: "Overtrading alerts",
+  streak: "Win-streak alerts",
+  time: "Weak-hour alerts",
+};
+
+function AlertOverrideSection({ trades }: { trades: Trade[] }) {
+  const stats = useMemo(() => computeOverrideStats(trades), [trades]);
+  const rows = (Object.keys(stats) as BehaviorAlertType[]).filter(
+    (k) => stats[k].overrides > 0,
+  );
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-500" />
+        <h3 className="text-sm font-semibold font-heading">
+          Alert Override Rate
+        </h3>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground font-data">
+          No alert overrides logged yet. When you choose "Trade Anyway" on a
+          behavioral alert, the outcome will be tracked here.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((k) => {
+            const { overrides, losses, lossRate } = stats[k];
+            const pct = lossRate != null ? Math.round(lossRate * 100) : 0;
+            return (
+              <li
+                key={k}
+                className="rounded-lg border border-border/60 bg-background/40 p-3 text-xs"
+              >
+                <div className="font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+                  {ALERT_LABELS[k]}
+                </div>
+                <div className="mt-1 text-foreground/90">
+                  You ignored {overrides} {overrides === 1 ? "time" : "times"} —
+                  and lost {pct}% of those trades ({losses}/{overrides}).
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
