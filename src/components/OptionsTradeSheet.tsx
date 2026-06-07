@@ -42,6 +42,7 @@ import {
   type EarningsEvent,
 } from "@/lib/earnings";
 import { AlertTriangle } from "lucide-react";
+import { OptionsPreTradeChecklist } from "@/components/OptionsPreTradeChecklist";
 import {
   Tooltip,
   TooltipContent,
@@ -169,6 +170,34 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     [earningsEvents, underlying, today],
   );
   const isEarningsPlay = !!upcomingEarnings;
+
+  // Pre-trade context for the checklist
+  const [todayRegime, setTodayRegime] = useState<string | null>(null);
+  const [hadLossToday, setHadLossToday] = useState<boolean>(false);
+  useEffect(() => {
+    if (!user || !open) return;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: plan } = await (supabase as any)
+        .from("daily_game_plans")
+        .select("market_regime")
+        .eq("user_id", user.id)
+        .eq("plan_date", today)
+        .maybeSingle();
+      setTodayRegime(plan?.market_regime ?? null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: losses } = await (supabase as any)
+        .from("trades")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .eq("result", "Loss")
+        .is("deleted_at", null)
+        .limit(1);
+      setHadLossToday((losses ?? []).length > 0);
+    })();
+  }, [user, open]);
 
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
@@ -798,30 +827,75 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
           {/* STEP 4 */}
           {strategy && (
             <Section title="4. Context (optional)">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>IV Rank (0–100)</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={ivRank}
-                    onChange={(e) => setIvRank(e.target.value)}
-                    placeholder="45"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Checklist score</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={checklistScore}
-                    onChange={(e) => setChecklistScore(e.target.value)}
-                    placeholder="0–10"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>IV Rank (0–100)</Label>
+                <Input
+                  inputMode="numeric"
+                  value={ivRank}
+                  onChange={(e) => setIvRank(e.target.value)}
+                  placeholder="45"
+                />
               </div>
               <IvrGuidanceCard
                 ivr={ivRank ? Number(ivRank) : null}
                 currentStrategy={strategy?.type ?? null}
               />
+              {strategy && (
+                <OptionsPreTradeChecklist
+                  isDebit={strategy.isDebit}
+                  is0DTE={
+                    strategy.type === "0DTE Play" ||
+                    dteFor(legs[0]?.expiration ?? sharedExp) === 0
+                  }
+                  inputs={{
+                    ivRank: ivRank ? Number(ivRank) : null,
+                    dte: dteFor(legs[0]?.expiration ?? sharedExp) || null,
+                    hasCatalyst: !!(reason.trim() || catalyst.trim()),
+                    hasEarningsInWindow: !!upcomingEarnings,
+                    isEarningsPlay,
+                    positionPctOfAccount:
+                      accountBalance > 0 && oneContractCalc
+                        ? ((oneContractCalc.maxRisk *
+                            Math.max(1, sizingContracts)) /
+                            accountBalance) *
+                          100
+                        : null,
+                    bprPctOfAccount:
+                      !strategy.isDebit &&
+                      accountBalance > 0 &&
+                      oneContractCalc &&
+                      isFinite(oneContractCalc.maxRisk)
+                        ? ((oneContractCalc.maxRisk *
+                            Math.max(1, sizingContracts)) /
+                            accountBalance) *
+                          100
+                        : null,
+                    profitTargetPct: profitTargetPct,
+                    stopLossPct: stopLossPct,
+                    marketRegime: todayRegime,
+                    isDefinedRisk: !(
+                      (strategy.legs as number) === 1 &&
+                      legs[0]?.action === "Sell" &&
+                      strategy.type !== "Cash Secured Put"
+                    ),
+                    hour24Et: (() => {
+                      // Convert local hour to America/New_York hour
+                      try {
+                        const h = new Date().toLocaleString("en-US", {
+                          hour: "numeric",
+                          hour12: false,
+                          timeZone: "America/New_York",
+                        });
+                        return parseInt(h, 10);
+                      } catch {
+                        return null;
+                      }
+                    })(),
+                    recentLoss: hadLossToday,
+                  }}
+                  onScoreChange={(s) => setChecklistScore(String(s))}
+                />
+              )}
               <div className="space-y-2">
                 <Label>Reason for trade</Label>
                 <Textarea
