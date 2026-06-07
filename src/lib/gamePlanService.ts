@@ -15,6 +15,7 @@ export interface GamePlan {
   max_loss: number | null;
   notes: string | null;
   market_regime: MarketRegime | null;
+  vix: number | null;
   discipline_score: number | null;
   stuck_to_max_trades: boolean | null;
   stayed_within_loss: boolean | null;
@@ -33,6 +34,7 @@ export interface GamePlanInput {
   max_loss: number | null;
   notes: string | null;
   market_regime: MarketRegime | null;
+  vix: number | null;
 }
 
 export function todayLocalDate(): string {
