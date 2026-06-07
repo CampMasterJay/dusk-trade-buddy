@@ -51,6 +51,7 @@ import { Building2, Lock } from "lucide-react";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { adjustRiskPct } from "@/lib/vixRisk";
 import { useSetupStatuses } from "@/hooks/useSetupStatuses";
+import type { Conditions } from "@/lib/playbookMatcher";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -362,6 +363,33 @@ export function NewTradeSheet({
   const resolvedInstrument =
     instrument === "Other" ? customInstrument.trim() : instrument;
 
+  // Conditions used by the Pre-Trade Checklist to match against saved Playbook entries.
+  const checklistConditions: Conditions = useMemo(() => {
+    const now = new Date();
+    const ctParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago",
+      hour: "numeric",
+      hour12: false,
+      weekday: "short",
+    }).formatToParts(now);
+    const hour = Number(ctParts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+    const wd = ctParts.find((p) => p.type === "weekday")?.value ?? "Sun";
+    const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wd) + 1;
+    return {
+      setup: setupTag || null,
+      direction,
+      instrument: resolvedInstrument || null,
+      hour,
+      vix: todayVix ?? null,
+      sessionNum: null,
+      dow,
+      regime: null,
+      checklistScore: null,
+      consecWins: 0,
+      consecLosses: 0,
+    };
+  }, [setupTag, direction, resolvedInstrument, todayVix]);
+
   const requiredOk =
     !!date &&
     !!resolvedInstrument &&
@@ -464,6 +492,7 @@ export function NewTradeSheet({
         checklist_verdict: checklist?.verdict ?? null,
         news_id: newsId,
         setup_tag: setupTag === "" ? null : setupTag,
+        playbook_score: checklist?.playbookScore ?? null,
         max_adverse_excursion_points:
           mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
         max_favorable_excursion_points:
@@ -897,6 +926,7 @@ export function NewTradeSheet({
       onOpenChange={setChecklistOpen}
       rrSetting={rrSetting}
       tradeDate={date}
+      conditions={checklistConditions}
       prefill={{
         rrMet:
           rrRatio != null && Number.isFinite(rrRatio)
