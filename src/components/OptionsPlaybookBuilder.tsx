@@ -277,6 +277,16 @@ export function OptionsPlaybookBuilder() {
     toast.success(`Loaded "${e.name}"`);
   }
 
+  async function handleStatusChange(id: string, status: OptEntry["status"]) {
+    const prev = entries;
+    setEntries((e) => e.map((x) => (x.id === id ? { ...x, status } : x)));
+    const { error } = await supabase.from("playbook_entries").update({ status }).eq("id", id);
+    if (error) {
+      setEntries(prev);
+      toast.error(error.message);
+    }
+  }
+
   /* -------------------- AI Discovery -------------------- */
 
   const runDiscover = useServerFn(discoverOptionsSetup);
