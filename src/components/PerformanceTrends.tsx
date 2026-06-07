@@ -243,7 +243,7 @@ export function PerformanceTrends({ trades }: Props) {
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                formatter={(v: number | null) =>
+                formatter={(v) =>
                   v == null ? ["—", "Win Rate"] : [`${v}%`, "Win Rate"]
                 }
                 labelFormatter={(l) => `Trade #${l}`}
@@ -318,7 +318,7 @@ export function PerformanceTrends({ trades }: Props) {
                   borderRadius: 8,
                   fontSize: 12,
                 }}
-                formatter={(v: number | null) =>
+                formatter={(v) =>
                   v == null ? ["—", "EV/Trade"] : [fmtUSD(Number(v)), "EV/Trade"]
                 }
                 labelFormatter={(l) => `Trade #${l}`}
