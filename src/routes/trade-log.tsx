@@ -9,6 +9,7 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
+import { StreakBehavior } from "@/components/StreakBehavior";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
 import { BenchmarksPanel } from "@/components/BenchmarksPanel";
 import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
