@@ -435,6 +435,38 @@ function RiskSection() {
         </div>
       </Row>
 
+      <Row
+        label="Baseline VIX"
+        sub="The 'normal' VIX level used to volatility-adjust your risk %."
+      >
+        <NumInput
+          value={Number(settings.baseline_vix ?? 18).toFixed(1)}
+          step={0.5}
+          min={5}
+          onChange={(n) => updateSettings({ baseline_vix: n })}
+        />
+      </Row>
+      <Row
+        label="Auto VIX adjustment"
+        sub="Scale per-trade risk by Baseline VIX ÷ Today's VIX (capped 0.4×–1.25×)."
+      >
+        <button
+          onClick={() =>
+            updateSettings({
+              vix_adjustment_enabled: !(settings.vix_adjustment_enabled ?? true),
+            })
+          }
+          className={cn(
+            "rounded-md border px-2 py-1 text-[11px] font-medium",
+            settings.vix_adjustment_enabled !== false
+              ? "border-primary text-primary"
+              : "border-border text-muted-foreground",
+          )}
+        >
+          {settings.vix_adjustment_enabled !== false ? "On" : "Off"}
+        </button>
+      </Row>
+
       <Row label="Max trades per day" sub="Enforced by the trading lock.">
         <div className="inline-flex items-center gap-1">
           <button

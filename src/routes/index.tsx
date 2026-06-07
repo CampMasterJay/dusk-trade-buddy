@@ -19,6 +19,8 @@ import {
 } from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useTodayVix } from "@/hooks/useTodayVix";
+import { adjustRiskPct } from "@/lib/vixRisk";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,6 +183,18 @@ function Dashboard() {
   const riskDollar = (currentBalance * riskPct) / 100;
   const targetDollar = riskDollar * rrRatio;
 
+  const { vix: todayVix } = useTodayVix();
+  const baselineVix = Number(settings?.baseline_vix ?? 18);
+  const vixEnabled = settings?.vix_adjustment_enabled !== false;
+  const vixAdj = adjustRiskPct({
+    baseRiskPct: riskPct,
+    currentVix: todayVix,
+    baselineVix,
+    enabled: vixEnabled,
+  });
+  const adjustedRiskDollar = (currentBalance * vixAdj.adjustedPct) / 100;
+  const adjustedTargetDollar = adjustedRiskDollar * rrRatio;
+
   const onTradeLogged = () => {
     setReloadKey((k) => k + 1);
     refreshSettings();
@@ -234,6 +248,12 @@ function Dashboard() {
               rrRatio={rrRatio}
               riskDollar={riskDollar}
               targetDollar={targetDollar}
+              vix={todayVix}
+              vixAdjustedRiskPct={vixAdj.adjustedPct}
+              vixAdjustedRiskDollar={adjustedRiskDollar}
+              vixAdjustedTargetDollar={adjustedTargetDollar}
+              vixActive={vixAdj.active}
+              vixCapped={vixAdj.capped}
             />
 
             <ProjectionSection
@@ -554,29 +574,69 @@ function NextTradeCard({
   rrRatio,
   riskDollar,
   targetDollar,
+  vix,
+  vixAdjustedRiskPct,
+  vixAdjustedRiskDollar,
+  vixAdjustedTargetDollar,
+  vixActive,
+  vixCapped,
 }: {
   currentBalance: number;
   riskPct: number;
   rrRatio: number;
   riskDollar: number;
   targetDollar: number;
+  vix: number | null;
+  vixAdjustedRiskPct: number;
+  vixAdjustedRiskDollar: number;
+  vixAdjustedTargetDollar: number;
+  vixActive: boolean;
+  vixCapped: boolean;
 }) {
-  const balanceIfWin = currentBalance + targetDollar;
-  const balanceIfLoss = currentBalance - riskDollar;
+  const effectiveRisk = vixActive ? vixAdjustedRiskDollar : riskDollar;
+  const effectiveTarget = vixActive ? vixAdjustedTargetDollar : targetDollar;
+  const balanceIfWin = currentBalance + effectiveTarget;
+  const balanceIfLoss = currentBalance - effectiveRisk;
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-baseline justify-between">
         <h2 className="font-heading text-base font-semibold">Next Trade</h2>
         <span className="text-xs text-muted-foreground font-data">
-          {riskPct}% · {rrRatio}R
+          {vixActive
+            ? `${vixAdjustedRiskPct.toFixed(2)}% · ${rrRatio}R`
+            : `${riskPct}% · ${rrRatio}R`}
         </span>
       </div>
+      {vixActive && (
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-trade-amber/30 bg-trade-amber/5 px-3 py-1.5 text-[11px]">
+          <span className="font-data uppercase tracking-wider text-trade-amber">
+            ⚡ VIX-Adjusted
+          </span>
+          <span className="text-muted-foreground">
+            VIX {vix?.toFixed(1)} · base {riskPct}% → {vixAdjustedRiskPct.toFixed(2)}%
+            {vixCapped ? " (capped)" : ""}
+          </span>
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <Tile label="Risk" value={fmtUSD(riskDollar)} accent="red" />
-        <Tile label="Target" value={fmtUSD(targetDollar)} accent="green" />
+        <Tile
+          label={vixActive ? "Risk (VIX-adj)" : "Risk"}
+          value={fmtUSD(effectiveRisk)}
+          accent="red"
+        />
+        <Tile
+          label={vixActive ? "Target (VIX-adj)" : "Target"}
+          value={fmtUSD(effectiveTarget)}
+          accent="green"
+        />
         <Tile label="If Win" value={fmtUSD(balanceIfWin)} accent="green" />
         <Tile label="If Loss" value={fmtUSD(balanceIfLoss)} accent="red" />
       </div>
+      {vixActive && (
+        <div className="mt-3 text-[10px] text-muted-foreground font-data">
+          Normal risk would be {fmtUSD(riskDollar)}.
+        </div>
+      )}
     </section>
   );
 }

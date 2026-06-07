@@ -12,8 +12,14 @@ import {
   ChevronLeft,
   Save,
   ClipboardCheck,
+  Activity,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { fetchCurrentVix } from "@/lib/api/fetchVix.functions";
+import { adjustRiskPct } from "@/lib/vixRisk";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -107,6 +113,10 @@ function GamePlanScreen() {
   const [maxLoss, setMaxLoss] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [regime, setRegime] = useState<MarketRegime | null>(null);
+  const [vix, setVix] = useState<string>("");
+  const [vixFetching, setVixFetching] = useState(false);
+  const [vixNote, setVixNote] = useState<string | null>(null);
+  const fetchVix = useServerFn(fetchCurrentVix);
 
   // Derive default max loss from settings (risk_pct of current balance)
   const defaultMaxLoss = useMemo(() => {
@@ -137,6 +147,7 @@ function GamePlanScreen() {
           setMaxLoss(p.max_loss != null ? String(p.max_loss) : "");
           setNotes(p.notes ?? "");
           setRegime((p.market_regime as MarketRegime | null) ?? null);
+          setVix(p.vix != null ? String(p.vix) : "");
         } else {
           setBias("Neutral");
           setKeyLevels(["", "", "", "", ""]);
@@ -145,6 +156,7 @@ function GamePlanScreen() {
           setMaxLoss(defaultMaxLoss != null ? String(defaultMaxLoss) : "");
           setNotes("");
           setRegime(null);
+          setVix("");
         }
         setTrades(tradesRes.data ?? []);
       })
@@ -194,6 +206,7 @@ function GamePlanScreen() {
       .map((v) => Number(v))
       .filter((n) => Number.isFinite(n));
     const maxLossNum = maxLoss.trim() === "" ? null : Number(maxLoss);
+    const vixNum = vix.trim() === "" ? null : Number(vix);
     const { data, error } = await upsertPlan(userId, {
       plan_date: date,
       bias,
@@ -203,6 +216,7 @@ function GamePlanScreen() {
       max_loss: maxLossNum != null && Number.isFinite(maxLossNum) ? maxLossNum : null,
       notes: notes.trim() || null,
       market_regime: regime,
+      vix: vixNum != null && Number.isFinite(vixNum) && vixNum > 0 ? vixNum : null,
     });
     setSaving(false);
     if (error) {
@@ -230,6 +244,25 @@ function GamePlanScreen() {
     }
     setPlan(data);
     toast.success(`Discipline score saved: ${r.discipline_score}/3`);
+  }
+
+  async function handleFetchVix() {
+    setVixFetching(true);
+    setVixNote(null);
+    try {
+      const res = await fetchVix();
+      if (!res.ok) {
+        toast.error("Couldn't fetch VIX", { description: res.error });
+        return;
+      }
+      setVix(String(res.vix));
+      setVixNote(
+        [res.as_of, res.note].filter(Boolean).join(" — ") || `VIX ${res.vix}`,
+      );
+      toast.success(`VIX ≈ ${res.vix}`);
+    } finally {
+      setVixFetching(false);
+    }
   }
 
   return (
@@ -268,6 +301,19 @@ function GamePlanScreen() {
               regime={regime}
               onChange={setRegime}
               trades={trades}
+            />
+            {/* VIX */}
+            <VixSection
+              vix={vix}
+              onChange={setVix}
+              onFetch={handleFetchVix}
+              fetching={vixFetching}
+              note={vixNote}
+              baseRiskPct={Number(settings?.risk_pct ?? 0)}
+              baselineVix={Number(settings?.baseline_vix ?? 18)}
+              vixAdjustmentEnabled={
+                settings?.vix_adjustment_enabled !== false
+              }
             />
             {/* Bias */}
             <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -629,6 +675,117 @@ function RegimeSection({
           </div>
         </div>
       )}
+    </section>
+  );
+}
+function VixSection({
+  vix,
+  onChange,
+  onFetch,
+  fetching,
+  note,
+  baseRiskPct,
+  baselineVix,
+  vixAdjustmentEnabled,
+}: {
+  vix: string;
+  onChange: (v: string) => void;
+  onFetch: () => void;
+  fetching: boolean;
+  note: string | null;
+  baseRiskPct: number;
+  baselineVix: number;
+  vixAdjustmentEnabled: boolean;
+}) {
+  const vixNum = vix.trim() === "" ? null : Number(vix);
+  const adj = adjustRiskPct({
+    baseRiskPct,
+    currentVix: vixNum,
+    baselineVix,
+    enabled: vixAdjustmentEnabled,
+  });
+  const toneClass = !adj.active
+    ? "border-border bg-muted/20 text-muted-foreground"
+    : adj.factor < 1
+      ? "border-trade-red/40 bg-trade-red/5 text-trade-red"
+      : adj.factor > 1
+        ? "border-trade-green/40 bg-trade-green/5 text-trade-green"
+        : "border-border bg-muted/20 text-foreground";
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+          <Activity className="h-3.5 w-3.5" />
+          VIX (volatility) for risk sizing
+        </Label>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onFetch}
+          disabled={fetching}
+          className="h-7 text-[11px]"
+        >
+          {fetching ? (
+            <>
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Fetching…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3 w-3 mr-1" /> Auto-fetch
+            </>
+          )}
+        </Button>
+      </div>
+      <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+        <Input
+          type="number"
+          inputMode="decimal"
+          step={0.1}
+          min={0}
+          value={vix}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Baseline ${baselineVix} — e.g. 18.5`}
+          className="font-mono"
+        />
+        <span className="text-[10px] text-muted-foreground">
+          Baseline {baselineVix}
+        </span>
+      </div>
+      {note && (
+        <p className="text-[10px] text-muted-foreground italic">{note}</p>
+      )}
+      <div className={cn("rounded-xl border p-3 text-xs space-y-1", toneClass)}>
+        {!vixAdjustmentEnabled ? (
+          <span>VIX adjustment is disabled in Settings.</span>
+        ) : vixNum == null ? (
+          <span>Enter today's VIX to volatility-adjust your risk %.</span>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <span>Base risk</span>
+              <span className="font-data">{baseRiskPct.toFixed(2)}%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>
+                × ({baselineVix} ÷ {vixNum})
+              </span>
+              <span className="font-data">{adj.factor.toFixed(2)}×</span>
+            </div>
+            <div className="flex items-center justify-between font-semibold border-t border-current/20 pt-1">
+              <span>Today's risk</span>
+              <span className="font-data text-base">
+                {adj.adjustedPct.toFixed(2)}%
+                {adj.capped && (
+                  <span className="ml-1 text-[10px] opacity-80">
+                    ({adj.reason === "ceiling-cap" ? "capped" : "floored"})
+                  </span>
+                )}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
     </section>
   );
 }
