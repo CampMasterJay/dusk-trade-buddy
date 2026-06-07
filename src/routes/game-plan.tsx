@@ -530,3 +530,105 @@ function ReviewRow({
     </div>
   );
 }
+
+function RegimeSection({
+  regime,
+  onChange,
+  trades,
+}: {
+  regime: MarketRegime | null;
+  onChange: (r: MarketRegime) => void;
+  trades: Trade[];
+}) {
+  const guidance = regime ? REGIME_GUIDANCE[regime] : null;
+  const wrInfo = regime ? winRateForRegime(trades, regime) : null;
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+          Market regime <span className="text-trade-red">*</span>
+        </Label>
+        {!regime && (
+          <span className="text-[10px] uppercase tracking-wider text-trade-red">
+            Required
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {MARKET_REGIMES.map((r) => {
+          const active = regime === r;
+          const g = REGIME_GUIDANCE[r];
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => onChange(r)}
+              className={cn(
+                "rounded-xl border px-3 py-2 text-left transition",
+                active
+                  ? g.color
+                  : "border-border bg-muted/20 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <div className="text-xs font-semibold">{r}</div>
+              <div className="mt-0.5 text-[10px] opacity-80 leading-snug">
+                {g.short}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {guidance && (
+        <div className={cn("mt-2 rounded-xl border p-3 space-y-2", guidance.color)}>
+          <p className="text-xs leading-snug">{guidance.description}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider opacity-80">
+                ✅ Recommended
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {guidance.recommended.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-full border border-current/40 bg-background/30 px-2 py-0.5 text-[10px]"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider opacity-80">
+                ❌ Avoid
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {guidance.avoid.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-full border border-current/40 bg-background/30 px-2 py-0.5 text-[10px] line-through opacity-80"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-current/20 pt-2 text-[11px]">
+            <span>📉 Size: <span className="font-mono font-semibold">{guidance.sizePct}%</span> of normal</span>
+            <span className="opacity-80">{guidance.sizeNote}</span>
+          </div>
+          <div className="text-[11px] opacity-90">
+            {wrInfo && wrInfo.wr != null
+              ? `Your historical win rate in ${guidance.label}: ${Math.round(
+                  wrInfo.wr * 100,
+                )}% (${wrInfo.sample} trades).`
+              : `Need ${3 - (wrInfo?.sample ?? 0)} more trade${
+                  3 - (wrInfo?.sample ?? 0) === 1 ? "" : "s"
+                } in this regime to compute your win rate.`}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
