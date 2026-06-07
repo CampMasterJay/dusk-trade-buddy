@@ -375,6 +375,27 @@ function ChartAnalyzer() {
               {filledSlots.length}/3 frames
             </span>
           </div>
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+              Market
+            </span>
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5">
+              {(["standard", "options"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMarketType(m)}
+                  className={`px-2.5 py-1 text-[10px] font-data uppercase tracking-wider rounded ${
+                    marketType === m
+                      ? "bg-trade-green/15 text-trade-green"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "standard" ? "Standard" : "Options"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {SLOT_META.map((m) => (
               <FrameSlot
