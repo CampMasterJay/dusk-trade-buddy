@@ -151,7 +151,7 @@ function PlaybookPage() {
       .insert({
         user_id: user.id,
         name: newName.trim(),
-        filters: filters as unknown as Record<string, unknown>,
+        filters: filters as never,
         trade_count: stats.count,
         win_rate: stats.winRate,
         avg_r: stats.avgR,
