@@ -877,6 +877,37 @@ export function NewTradeSheet({
       }}
       initial={checklist}
       onConfirm={(r) => setChecklist(r)}
+      propFirmItems={
+        propFirm.hasActiveChallenge
+          ? [
+              {
+                key: "firmDailyLossOk",
+                label:
+                  propFirm.maxDailyLoss != null
+                    ? `Firm daily loss limit not yet hit (${fmtMoney(propFirm.dailyLossUsed)} of ${fmtMoney(propFirm.maxDailyLoss)} used)`
+                    : "Firm daily loss limit not yet hit",
+                checked:
+                  propFirm.maxDailyLoss == null ||
+                  propFirm.dailyLossUsed < propFirm.maxDailyLoss,
+              },
+              {
+                key: "firmDrawdownSafe",
+                label: `This trade will not violate max drawdown if it loses (${fmtMoney(propFirm.drawdownRemaining)} room left)`,
+                checked: propFirm.drawdownRemaining >= 500,
+              },
+              {
+                key: "firmTargetNotHit",
+                label: "Profit target not yet hit — still in challenge",
+                checked: !propFirm.profitTargetReached,
+              },
+              {
+                key: "firmNotLocked",
+                label: "Account is NOT in an evaluation lockout period",
+                checked: !propFirm.locked,
+              },
+            ]
+          : undefined
+      }
     />
     <StopReverseDialog
       open={reverseOpen}
