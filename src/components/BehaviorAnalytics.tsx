@@ -467,3 +467,149 @@ function AlertOverrideSection({ trades }: { trades: Trade[] }) {
     </div>
   );
 }
+
+// ---------- Playbook Compliance ----------
+
+function PlaybookComplianceSection({ trades }: { trades: Trade[] }) {
+  const stats = useMemo(() => {
+    type Row = { wins: number; losses: number; total: number };
+    const empty = (): Row => ({ wins: 0, losses: 0, total: 0 });
+    const buckets: Record<"A+ Match" | "Partial Match" | "No Match" | "Avoid Pattern" | "Unscored", Row> = {
+      "A+ Match": empty(),
+      "Partial Match": empty(),
+      "No Match": empty(),
+      "Avoid Pattern": empty(),
+      Unscored: empty(),
+    };
+    let scoredTotal = 0;
+    for (const t of trades) {
+      const key =
+        (t.playbook_score as keyof typeof buckets | null | undefined) ?? "Unscored";
+      const b = buckets[key in buckets ? key : "Unscored"];
+      b.total += 1;
+      if (t.result === "Win") b.wins += 1;
+      else if (t.result === "Loss") b.losses += 1;
+      if (key !== "Unscored") scoredTotal += 1;
+    }
+    const wr = (r: Row) => {
+      const d = r.wins + r.losses;
+      return d > 0 ? r.wins / d : null;
+    };
+    const aPlus = buckets["A+ Match"];
+    const offRows = ["No Match", "Avoid Pattern"] as const;
+    const off: Row = offRows.reduce(
+      (acc, k) => ({
+        wins: acc.wins + buckets[k].wins,
+        losses: acc.losses + buckets[k].losses,
+        total: acc.total + buckets[k].total,
+      }),
+      empty(),
+    );
+    const aPlusPct = scoredTotal > 0 ? aPlus.total / scoredTotal : null;
+    return {
+      buckets,
+      scoredTotal,
+      aPlusShare: aPlusPct,
+      aPlusWr: wr(aPlus),
+      offWr: wr(off),
+      offTotal: off.total,
+    };
+  }, [trades]);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <BookOpen className="h-4 w-4 text-trade-blue" />
+        <h3 className="text-sm font-semibold font-heading">Playbook Compliance</h3>
+      </div>
+      {stats.scoredTotal === 0 ? (
+        <p className="text-xs text-muted-foreground font-data">
+          No trades have been scored against your playbook yet. Open the Pre-Trade
+          Checklist on your next trade to start tracking compliance.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs text-foreground/90">
+            You stick to A+ setups{" "}
+            <span className="font-semibold text-trade-green">
+              {stats.aPlusShare != null ? Math.round(stats.aPlusShare * 100) : 0}%
+            </span>{" "}
+            of the time ({stats.buckets["A+ Match"].total}/{stats.scoredTotal} scored trades).
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <ComplianceStat
+              label="Win rate on A+ matches"
+              wr={stats.aPlusWr}
+              n={stats.buckets["A+ Match"].total}
+              tone="good"
+            />
+            <ComplianceStat
+              label="Win rate off-playbook"
+              wr={stats.offWr}
+              n={stats.offTotal}
+              tone="bad"
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-4 gap-2">
+            {(["A+ Match", "Partial Match", "No Match", "Avoid Pattern"] as const).map((k) => (
+              <MiniBucket key={k} label={k} row={stats.buckets[k]} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ComplianceStat({
+  label,
+  wr,
+  n,
+  tone,
+}: {
+  label: string;
+  wr: number | null;
+  n: number;
+  tone: "good" | "bad";
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="font-data uppercase tracking-wider text-[10px] text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "mt-1 font-data text-xl font-bold",
+          tone === "good" ? "text-trade-green" : "text-trade-red",
+        )}
+      >
+        {wr != null ? `${Math.round(wr * 100)}%` : "—"}
+      </div>
+      <div className="font-data text-[10px] text-muted-foreground">n = {n}</div>
+    </div>
+  );
+}
+
+function MiniBucket({
+  label,
+  row,
+}: {
+  label: string;
+  row: { wins: number; losses: number; total: number };
+}) {
+  const decided = row.wins + row.losses;
+  const wr = decided > 0 ? row.wins / decided : null;
+  return (
+    <div className="rounded-md border border-border/60 bg-background/40 p-2 text-center">
+      <div className="font-data text-[9px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-0.5 font-data text-sm font-bold text-foreground">
+        {row.total}
+      </div>
+      <div className="font-data text-[10px] text-muted-foreground">
+        {wr != null ? `${Math.round(wr * 100)}%` : "—"}
+      </div>
+    </div>
+  );
+}
