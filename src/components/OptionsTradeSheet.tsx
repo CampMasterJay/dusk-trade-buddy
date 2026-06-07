@@ -36,6 +36,13 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { OptionsPositionSizer } from "@/components/OptionsPositionSizer";
 import { IvrGuidanceCard } from "@/components/IvrGuidanceCard";
 import {
+  fetchEarningsEvents,
+  findUpcomingEarnings,
+  daysUntil,
+  type EarningsEvent,
+} from "@/lib/earnings";
+import { AlertTriangle } from "lucide-react";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -146,6 +153,22 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   const multiplier = futuresMode
     ? (futuresSpec?.multiplier ?? multiplierFor(underlying))
     : EQUITY_OPTION_MULTIPLIER;
+
+  // Earnings detection: load user's earnings events and detect upcoming ones
+  // within 5 days of today for the current underlying.
+  const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
+  useEffect(() => {
+    if (!user || !open) return;
+    fetchEarningsEvents(user.id)
+      .then(setEarningsEvents)
+      .catch(() => setEarningsEvents([]));
+  }, [user, open]);
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingEarnings = useMemo(
+    () => findUpcomingEarnings(earningsEvents, underlying, today, 5),
+    [earningsEvents, underlying, today],
+  );
+  const isEarningsPlay = !!upcomingEarnings;
 
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
@@ -428,6 +451,7 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
           .filter(Boolean)
           .join("\n") || null,
         checklist_score: checklistScore ? Number(checklistScore) : null,
+        is_earnings_play: isEarningsPlay,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -594,6 +618,39 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
                 placeholder="450.00"
               />
             </div>
+            {upcomingEarnings && (
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold uppercase tracking-wider">
+                  <AlertTriangle className="h-4 w-4" />
+                  Earnings play detected
+                </div>
+                <p className="text-xs text-foreground">
+                  <span className="font-mono font-semibold">{upcomingEarnings.ticker}</span>{" "}
+                  reports in{" "}
+                  <span className="font-mono">
+                    {daysUntil(upcomingEarnings.earnings_date)} day
+                    {daysUntil(upcomingEarnings.earnings_date) === 1 ? "" : "s"}
+                  </span>{" "}
+                  ({upcomingEarnings.earnings_date}). IV will likely collapse after
+                  earnings (IV crush).
+                </p>
+                <ul className="text-[11px] text-muted-foreground space-y-1 pl-4 list-disc">
+                  <li>
+                    <span className="text-foreground">Buying premium?</span> IV crush
+                    will hurt you even if direction is correct. Consider a debit spread
+                    to reduce vega exposure.
+                  </li>
+                  <li>
+                    <span className="text-foreground">Selling premium?</span> IV crush
+                    is your friend. Straddle/strangle sells and iron condors are popular
+                    earnings plays.
+                  </li>
+                </ul>
+                <div className="text-[10px] font-mono text-amber-300">
+                  This trade will be auto-tagged as EARNINGS PLAY.
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <Label>Strategy</Label>
               {(["Directional", "Neutral/Income", "Volatility", "Special"] as const).map(

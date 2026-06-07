@@ -257,6 +257,36 @@ export type Database = {
         }
         Relationships: []
       }
+      earnings_events: {
+        Row: {
+          created_at: string
+          earnings_date: string
+          id: string
+          notes: string | null
+          ticker: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          earnings_date: string
+          id?: string
+          notes?: string | null
+          ticker: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          earnings_date?: string
+          id?: string
+          notes?: string | null
+          ticker?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       options_trades: {
         Row: {
           actual_exit_reason: string | null
@@ -277,6 +307,9 @@ export type Database = {
           id: string
           is_0dte: boolean
           is_debit: boolean
+          is_earnings_play: boolean
+          iv_after_earnings: number | null
+          iv_before_earnings: number | null
           iv_rank_at_entry: number | null
           leg1_action: string
           leg1_contracts: number
@@ -331,6 +364,9 @@ export type Database = {
           id?: string
           is_0dte?: boolean
           is_debit?: boolean
+          is_earnings_play?: boolean
+          iv_after_earnings?: number | null
+          iv_before_earnings?: number | null
           iv_rank_at_entry?: number | null
           leg1_action: string
           leg1_contracts?: number
@@ -385,6 +421,9 @@ export type Database = {
           id?: string
           is_0dte?: boolean
           is_debit?: boolean
+          is_earnings_play?: boolean
+          iv_after_earnings?: number | null
+          iv_before_earnings?: number | null
           iv_rank_at_entry?: number | null
           leg1_action?: string
           leg1_contracts?: number

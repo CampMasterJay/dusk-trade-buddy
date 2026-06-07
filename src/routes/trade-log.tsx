@@ -16,6 +16,8 @@ import { OptionsTradeStats } from "@/components/OptionsTradeStats";
 import { OptionsPnLAttribution } from "@/components/OptionsPnLAttribution";
 import { DailyThetaCard } from "@/components/DailyThetaCard";
 import { ZeroDteModule } from "@/components/ZeroDteModule";
+import { EarningsCalendarManager } from "@/components/EarningsCalendarManager";
+import { EarningsPlayStats } from "@/components/EarningsPlayStats";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
@@ -394,6 +396,8 @@ function TradeLogScreen() {
                 <OpenOptionsManager />
                 <CreditSpreadManager />
                 <DailyThetaCard />
+                <EarningsCalendarManager />
+                <EarningsPlayStats />
                 <OptionsTradeStats />
                 <OptionsPnLAttribution />
                 <IvrHistoryChart />

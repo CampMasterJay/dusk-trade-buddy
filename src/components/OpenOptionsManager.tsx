@@ -17,6 +17,12 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { summarizeGreeks, type OpenOptionsRow } from "@/lib/portfolioGreeks";
+import {
+  fetchEarningsEvents,
+  findUpcomingEarnings,
+  daysUntil,
+  type EarningsEvent,
+} from "@/lib/earnings";
 
 type OpenPosition = OpenOptionsRow & {
   trade_date: string;
@@ -38,6 +44,7 @@ type OpenPosition = OpenOptionsRow & {
   planned_stop_loss_pct: number | null;
   notes: string | null;
   iv_rank_at_entry: number | null;
+  is_earnings_play: boolean | null;
 };
 
 function dteFrom(dateStr: string): number {
@@ -83,11 +90,21 @@ export function OpenOptionsManager() {
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [closing, setClosing] = useState<OpenPosition | null>(null);
   const [closeMark, setCloseMark] = useState("");
+  const [closeIvBefore, setCloseIvBefore] = useState("");
+  const [closeIvAfter, setCloseIvAfter] = useState("");
   const [adjusting, setAdjusting] = useState<OpenPosition | null>(null);
   const [adjNotes, setAdjNotes] = useState("");
   const [adjTarget, setAdjTarget] = useState("");
   const [adjStop, setAdjStop] = useState("");
   const [busy, setBusy] = useState(false);
+  const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchEarningsEvents(user.id)
+      .then(setEarningsEvents)
+      .catch(() => setEarningsEvents([]));
+  }, [user?.id]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -96,7 +113,7 @@ export function OpenOptionsManager() {
     const { data } = await (supabase as any)
       .from("options_trades")
       .select(
-        "id, trade_date, underlying, strategy_type, direction_bias, status, is_debit, is_0dte, leg1_type, leg1_action, leg1_strike, leg1_expiration, leg1_premium, leg1_contracts, leg2_type, leg2_action, leg2_strike, leg2_premium, premium_paid_or_received, max_risk, max_profit, planned_profit_target_pct, planned_stop_loss_pct, entry_delta, entry_gamma, entry_theta, entry_vega, notes, iv_rank_at_entry",
+        "id, trade_date, underlying, strategy_type, direction_bias, status, is_debit, is_0dte, leg1_type, leg1_action, leg1_strike, leg1_expiration, leg1_premium, leg1_contracts, leg2_type, leg2_action, leg2_strike, leg2_premium, premium_paid_or_received, max_risk, max_profit, planned_profit_target_pct, planned_stop_loss_pct, entry_delta, entry_gamma, entry_theta, entry_vega, notes, iv_rank_at_entry, is_earnings_play",
       )
       .eq("user_id", user.id)
       .eq("status", "Open")
@@ -201,12 +218,16 @@ export function OpenOptionsManager() {
           gross_pnl: gross,
           net_pnl: net,
           actual_exit_reason: "Manual",
+          iv_before_earnings: closeIvBefore ? Number(closeIvBefore) : null,
+          iv_after_earnings: closeIvAfter ? Number(closeIvAfter) : null,
         })
         .eq("id", closing.id);
       if (error) throw error;
       toast.success(`Closed ${closing.strategy_type} on ${closing.underlying} (${fmt$(net)})`);
       setClosing(null);
       setCloseMark("");
+      setCloseIvBefore("");
+      setCloseIvAfter("");
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to close.");
@@ -369,6 +390,34 @@ export function OpenOptionsManager() {
                     >
                       {status}
                     </span>
+                    {(() => {
+                      const ev = findUpcomingEarnings(
+                        earningsEvents,
+                        row.underlying,
+                        new Date().toISOString().slice(0, 10),
+                        30,
+                      );
+                      if (!ev) return null;
+                      const d = daysUntil(ev.earnings_date);
+                      const red = d <= 7;
+                      return (
+                        <span
+                          title={
+                            red
+                              ? `EARNINGS RISK: ${row.underlying} reports in ${d} day${d === 1 ? "" : "s"} while you hold this position.`
+                              : `${row.underlying} reports in ${d} days (${ev.earnings_date})`
+                          }
+                          className={cn(
+                            "text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border",
+                            red
+                              ? "border-rose-500/60 text-rose-300 bg-rose-500/10"
+                              : "border-amber-500/40 text-amber-300 bg-amber-500/10",
+                          )}
+                        >
+                          ER {d}d
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1 font-data">
                     {contracts}c · exp {row.leg1_expiration} · θ {fmt$(thetaPerDay)}/day
@@ -491,6 +540,38 @@ export function OpenOptionsManager() {
                 Net premium of the package per share. Commission is auto-estimated at $0.65/leg/contract.
               </p>
             </div>
+            {closing?.is_earnings_play && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 space-y-2">
+                <div className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">
+                  Earnings play — IV crush
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">IV before earnings</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={closeIvBefore}
+                      onChange={(e) => setCloseIvBefore(e.target.value)}
+                      placeholder="e.g. 75"
+                      className="font-mono h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">IV after earnings</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={closeIvAfter}
+                      onChange={(e) => setCloseIvAfter(e.target.value)}
+                      placeholder="e.g. 32"
+                      className="font-mono h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Optional. Used to track average IV crush across your earnings plays.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setClosing(null)}>
