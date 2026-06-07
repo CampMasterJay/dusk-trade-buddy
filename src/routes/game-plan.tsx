@@ -246,6 +246,25 @@ function GamePlanScreen() {
     toast.success(`Discipline score saved: ${r.discipline_score}/3`);
   }
 
+  async function handleFetchVix() {
+    setVixFetching(true);
+    setVixNote(null);
+    try {
+      const res = await fetchVix();
+      if (!res.ok) {
+        toast.error("Couldn't fetch VIX", { description: res.error });
+        return;
+      }
+      setVix(String(res.vix));
+      setVixNote(
+        [res.as_of, res.note].filter(Boolean).join(" — ") || `VIX ${res.vix}`,
+      );
+      toast.success(`VIX ≈ ${res.vix}`);
+    } finally {
+      setVixFetching(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       <AppHeader balance={Number(settings?.current_balance ?? 0)} />
@@ -282,6 +301,19 @@ function GamePlanScreen() {
               regime={regime}
               onChange={setRegime}
               trades={trades}
+            />
+            {/* VIX */}
+            <VixSection
+              vix={vix}
+              onChange={setVix}
+              onFetch={handleFetchVix}
+              fetching={vixFetching}
+              note={vixNote}
+              baseRiskPct={Number(settings?.risk_pct ?? 0)}
+              baselineVix={Number(settings?.baseline_vix ?? 18)}
+              vixAdjustmentEnabled={
+                settings?.vix_adjustment_enabled !== false
+              }
             />
             {/* Bias */}
             <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
