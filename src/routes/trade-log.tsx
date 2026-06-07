@@ -11,6 +11,7 @@ import { IvrPerformanceTracker } from "@/components/IvrPerformanceTracker";
 import { IvrHistoryChart } from "@/components/IvrHistoryChart";
 import { OptionsTradesList } from "@/components/OptionsTradesList";
 import { OpenOptionsManager } from "@/components/OpenOptionsManager";
+import { CreditSpreadManager } from "@/components/CreditSpreadManager";
 import { OptionsTradeStats } from "@/components/OptionsTradeStats";
 import { OptionsPnLAttribution } from "@/components/OptionsPnLAttribution";
 import { DailyThetaCard } from "@/components/DailyThetaCard";
@@ -373,6 +374,7 @@ function TradeLogScreen() {
             <TabsContent value="options" className="mt-0">
               <div className="space-y-3">
                 <OpenOptionsManager />
+                <CreditSpreadManager />
                 <DailyThetaCard />
                 <OptionsTradeStats />
                 <OptionsPnLAttribution />
