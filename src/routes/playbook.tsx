@@ -169,7 +169,11 @@ function PlaybookPage() {
       ]);
       if (cancelled) return;
       if (t.data) setTrades(t.data);
-      if (p.data) setEntries(p.data as unknown as PlaybookRow[]);
+      if (p.data) {
+        const all = p.data as unknown as Array<PlaybookRow & { filters: { market?: string } }>;
+        // Futures playbook excludes entries explicitly marked as options
+        setEntries(all.filter((e) => e.filters?.market !== "options") as PlaybookRow[]);
+      }
       setLoading(false);
     })();
     return () => {
