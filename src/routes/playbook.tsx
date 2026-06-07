@@ -216,6 +216,10 @@ function PlaybookPage() {
       toast.error(`Need at least ${MIN_TRADES_FOR_RESULTS} matching trades`);
       return;
     }
+    if (entries.length >= MAX_ENTRIES) {
+      toast.error(`Maximum ${MAX_ENTRIES} playbook entries. Retire one first.`);
+      return;
+    }
     setSaving(true);
     const { data, error } = await supabase
       .from("playbook_entries")
@@ -227,6 +231,10 @@ function PlaybookPage() {
         win_rate: stats.winRate,
         avg_r: stats.avgR,
         net_pnl: stats.netPnl,
+        baseline_win_rate: stats.winRate,
+        baseline_avg_r: stats.avgR,
+        baseline_trade_count: stats.count,
+        status: "Testing",
       })
       .select()
       .single();
@@ -237,7 +245,20 @@ function PlaybookPage() {
     }
     setEntries((e) => [data as unknown as PlaybookRow, ...e]);
     setNewName("");
-    toast.success("Saved to playbook");
+    toast.success("Saved to playbook (status: Testing)");
+  }
+
+  async function handleStatusChange(id: string, status: PlaybookRow["status"]) {
+    const prev = entries;
+    setEntries((e) => e.map((x) => (x.id === id ? { ...x, status } : x)));
+    const { error } = await supabase
+      .from("playbook_entries")
+      .update({ status })
+      .eq("id", id);
+    if (error) {
+      setEntries(prev);
+      toast.error(error.message);
+    }
   }
 
   async function handleDelete(id: string) {
