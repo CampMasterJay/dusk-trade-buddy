@@ -621,6 +621,12 @@ function SetupLibraryPage() {
           <span className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
             {SETUPS.length} setups
           </span>
+          <Link
+            to="/playbook"
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 text-[10px] font-data uppercase tracking-wider text-primary hover:bg-primary/20"
+          >
+            Playbook Builder
+          </Link>
         </div>
 
         <p className="text-xs text-muted-foreground">
