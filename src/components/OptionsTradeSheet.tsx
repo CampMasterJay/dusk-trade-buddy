@@ -361,6 +361,10 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
       setChecklistScore("");
       setSimPrice("");
       setPlannedExitDte("");
+      setEntryDelta("");
+      setEntryGamma("");
+      setEntryTheta("");
+      setEntryVega("");
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Failed to log options trade");
