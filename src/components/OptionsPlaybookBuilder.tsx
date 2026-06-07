@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   BookOpen,
   Filter,
   Loader2,
@@ -40,6 +41,7 @@ type OptionsFilters = {
   vixRange: [number, number];
   daysToAvoid: number[]; // 1=Mon..7=Sun
   checklistMin: number;
+  direction: "Debit" | "Credit" | "Both";
 };
 
 const DEFAULT_OPT_FILTERS: OptionsFilters = {
@@ -52,6 +54,7 @@ const DEFAULT_OPT_FILTERS: OptionsFilters = {
   vixRange: [10, 40],
   daysToAvoid: [],
   checklistMin: 0,
+  direction: "Both",
 };
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -70,7 +73,41 @@ type OptEntry = {
   net_pnl: number | null;
   created_at: string;
   status: "Active" | "Testing" | "Retired";
+  baseline_win_rate: number | null;
+  baseline_avg_r: number | null;
+  baseline_trade_count: number | null;
 };
+
+const STATUS_OPTIONS: Array<OptEntry["status"]> = ["Active", "Testing", "Retired"];
+
+type EntryHealth = {
+  status: "healthy" | "softening" | "degrading" | "insufficient";
+  currentWinRate: number;
+  currentCount: number;
+  delta: number;
+};
+
+const HEALTH_META: Record<EntryHealth["status"], { dot: string; label: string; tone: string }> = {
+  healthy:      { dot: "bg-trade-green",      label: "HEALTHY",      tone: "text-trade-green" },
+  softening:    { dot: "bg-yellow-500",       label: "SOFTENING",    tone: "text-yellow-500" },
+  degrading:    { dot: "bg-trade-red",        label: "DEGRADING",    tone: "text-trade-red" },
+  insufficient: { dot: "bg-muted-foreground", label: "INSUFFICIENT", tone: "text-muted-foreground" },
+};
+
+function computeOptionsHealth(entry: OptEntry, current: OptionsStatRow[]): EntryHealth {
+  const baseline = entry.baseline_win_rate ?? entry.win_rate ?? 0;
+  const wins = current.filter((r) => (r.net_pnl ?? 0) > 0).length;
+  const losses = current.filter((r) => (r.net_pnl ?? 0) < 0).length;
+  const decided = wins + losses;
+  const cur = decided > 0 ? wins / decided : 0;
+  if (current.length < 8) {
+    return { status: "insufficient", currentWinRate: cur, currentCount: current.length, delta: cur - baseline };
+  }
+  const delta = cur - baseline;
+  if (cur < baseline * 0.8) return { status: "degrading", currentWinRate: cur, currentCount: current.length, delta };
+  if (cur < baseline * 0.9) return { status: "softening", currentWinRate: cur, currentCount: current.length, delta };
+  return { status: "healthy", currentWinRate: cur, currentCount: current.length, delta };
+}
 
 // ---------- Helpers ----------
 
