@@ -16,6 +16,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupLibraryRouteImport } from './routes/setup-library'
 import { Route as SetupAdvisorRouteImport } from './routes/setup-advisor'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ScalingPlanRouteImport } from './routes/scaling-plan'
 import { Route as RiskOfRuinRouteImport } from './routes/risk-of-ruin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PropFirmsRouteImport } from './routes/prop-firms'
@@ -64,6 +65,11 @@ const SetupAdvisorRoute = SetupAdvisorRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScalingPlanRoute = ScalingPlanRouteImport.update({
+  id: '/scaling-plan',
+  path: '/scaling-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RiskOfRuinRoute = RiskOfRuinRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
+  '/scaling-plan': typeof ScalingPlanRoute
   '/settings': typeof SettingsRoute
   '/setup-advisor': typeof SetupAdvisorRoute
   '/setup-library': typeof SetupLibraryRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
+  '/scaling-plan': typeof ScalingPlanRoute
   '/settings': typeof SettingsRoute
   '/setup-advisor': typeof SetupAdvisorRoute
   '/setup-library': typeof SetupLibraryRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/prop-firms': typeof PropFirmsRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
+  '/scaling-plan': typeof ScalingPlanRoute
   '/settings': typeof SettingsRoute
   '/setup-advisor': typeof SetupAdvisorRoute
   '/setup-library': typeof SetupLibraryRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
+    | '/scaling-plan'
     | '/settings'
     | '/setup-advisor'
     | '/setup-library'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
+    | '/scaling-plan'
     | '/settings'
     | '/setup-advisor'
     | '/setup-library'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
+    | '/scaling-plan'
     | '/settings'
     | '/setup-advisor'
     | '/setup-library'
@@ -292,6 +304,7 @@ export interface RootRouteChildren {
   PropFirmsRoute: typeof PropFirmsRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskOfRuinRoute: typeof RiskOfRuinRoute
+  ScalingPlanRoute: typeof ScalingPlanRoute
   SettingsRoute: typeof SettingsRoute
   SetupAdvisorRoute: typeof SetupAdvisorRoute
   SetupLibraryRoute: typeof SetupLibraryRoute
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scaling-plan': {
+      id: '/scaling-plan'
+      path: '/scaling-plan'
+      fullPath: '/scaling-plan'
+      preLoaderRoute: typeof ScalingPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/risk-of-ruin': {
@@ -488,6 +508,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropFirmsRoute: PropFirmsRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   RiskOfRuinRoute: RiskOfRuinRoute,
+  ScalingPlanRoute: ScalingPlanRoute,
   SettingsRoute: SettingsRoute,
   SetupAdvisorRoute: SetupAdvisorRoute,
   SetupLibraryRoute: SetupLibraryRoute,
@@ -499,3 +520,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
