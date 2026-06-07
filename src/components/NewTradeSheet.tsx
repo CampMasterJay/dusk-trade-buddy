@@ -537,6 +537,14 @@ export function NewTradeSheet({
 
         <div className="mt-4 space-y-5">
           {!isEdit && <BehaviorAlertOverlay active={open} />}
+          {!isEdit && propFirm.hasActiveChallenge && (
+            <PropFirmOverlayBanner
+              constraints={propFirm}
+              contractCap={contractCap}
+              tickValuePerPoint={tickValuePerPoint}
+              stopDistance={stopDistance}
+            />
+          )}
           {/* Setup */}
           <Section title="Setup">
             <div className="grid gap-3 sm:grid-cols-2">
