@@ -1,17 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { Home, BarChart3, List, Newspaper, Settings, Target, Building2, ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { subscribeUnreadHighImpact } from "@/lib/unreadHighImpact";
-
-const navItems = [
-  { to: "/", label: "Dashboard", icon: Home },
-  { to: "/chart-analyzer", label: "Analyzer", icon: BarChart3 },
-  { to: "/setup-advisor", label: "Setups", icon: Target },
-  { to: "/trade-log", label: "Trade Log", icon: List },
-  { to: "/prop-firms", label: "Prop Firms", icon: Building2 },
-  { to: "/news", label: "News", icon: Newspaper },
-  { to: "/settings", label: "Settings", icon: Settings },
-];
+import { useTradingMode } from "@/lib/tradingMode";
+import { getNav } from "@/lib/navConfig";
 
 const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const STORAGE_KEY = "edgetrader.sidenav.open";
@@ -24,6 +16,14 @@ export function BottomNav() {
   const [unreadHigh, setUnreadHigh] = useState(0);
   const [open, setOpen] = useState(true);
   const startRef = useRef<{ x: number; y: number } | null>(null);
+  const [mode] = useTradingMode();
+  const navItems = useMemo(() => getNav(mode), [mode]);
+  const isOptions = mode === "options";
+  const activeText = isOptions ? "text-trade-amber" : "text-trade-green";
+  const activeBar = isOptions ? "bg-trade-amber" : "bg-trade-green";
+  const edgeHandle = isOptions
+    ? "bg-trade-amber/70 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+    : "bg-trade-green/70 shadow-[0_0_12px_rgba(34,197,94,0.5)]";
 
   useEffect(() => subscribeUnreadHighImpact(setUnreadHigh), []);
 
@@ -122,14 +122,14 @@ export function BottomNav() {
               className="relative flex flex-col items-center justify-center gap-0.5 w-full py-2 transition-colors duration-200"
             >
               <span
-                className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full bg-trade-green transition-all duration-300 ease-out ${
+                className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full ${activeBar} transition-all duration-300 ease-out ${
                   isActive ? "h-8 opacity-100" : "h-0 opacity-0"
                 }`}
               />
               <div className="relative">
                 <Icon
                   className={`h-5 w-5 transition-all duration-200 ${
-                    isActive ? "text-trade-green" : "text-muted-foreground"
+                    isActive ? activeText : "text-muted-foreground"
                   }`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
@@ -141,7 +141,7 @@ export function BottomNav() {
               </div>
               <span
                 className={`text-[10px] font-medium transition-colors ${
-                  isActive ? "text-trade-green" : "text-muted-foreground"
+                  isActive ? activeText : "text-muted-foreground"
                 }`}
               >
                 {item.label}
@@ -166,7 +166,7 @@ export function BottomNav() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open navigation"
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 h-16 w-1.5 rounded-r-full bg-trade-green/70 shadow-[0_0_12px_rgba(34,197,94,0.5)] md:hidden"
+          className={`fixed left-0 top-1/2 -translate-y-1/2 z-50 h-16 w-1.5 rounded-r-full md:hidden ${edgeHandle}`}
         />
       )}
     </>
