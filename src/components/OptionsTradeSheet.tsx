@@ -333,6 +333,11 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         planned_profit_target_pct: profitTargetPct,
         planned_stop_loss_pct: stopLossPct,
 
+        entry_delta: entryDelta ? Number(entryDelta) : null,
+        entry_gamma: entryGamma ? Number(entryGamma) : null,
+        entry_theta: entryTheta ? Number(entryTheta) : null,
+        entry_vega: entryVega ? Number(entryVega) : null,
+
         notes: [reason && `Reason: ${reason}`, catalyst && `Catalyst: ${catalyst}`]
           .filter(Boolean)
           .join("\n") || null,
