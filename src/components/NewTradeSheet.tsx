@@ -780,6 +780,40 @@ export function NewTradeSheet({
             />
           </Section>
 
+          {/* Stop Analytics (optional) */}
+          <Section title="Stop Analytics (optional)">
+            <div
+              className="mb-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300"
+              title="Tracking MAE/MFE will unlock Stop Analytics — highly recommended for improving win rate"
+            >
+              Tracking MAE/MFE unlocks Stop Analytics — highly recommended for improving win rate.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="MAE (points price went against you)">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.25"
+                  min="0"
+                  value={mae}
+                  onChange={(e) => setMae(e.target.value)}
+                  placeholder="e.g. 2.5"
+                />
+              </Field>
+              <Field label="MFE (points price went in favor)">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.25"
+                  min="0"
+                  value={mfe}
+                  onChange={(e) => setMfe(e.target.value)}
+                  placeholder="e.g. 4.0"
+                />
+              </Field>
+            </div>
+          </Section>
+
           {/* News Event */}
           <Section title="News Event (optional)">
             <NewsPicker value={newsId} onChange={setNewsId} />
@@ -814,6 +848,13 @@ export function NewTradeSheet({
       }}
       initial={checklist}
       onConfirm={(r) => setChecklist(r)}
+    />
+    <StopReverseDialog
+      open={reverseOpen}
+      onOpenChange={setReverseOpen}
+      tradeId={reverseTradeId}
+      points={reversePoints}
+      setPoints={setReversePoints}
     />
     </>
   );
