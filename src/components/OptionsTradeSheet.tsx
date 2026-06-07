@@ -154,6 +154,22 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     ? (futuresSpec?.multiplier ?? multiplierFor(underlying))
     : EQUITY_OPTION_MULTIPLIER;
 
+  // Earnings detection: load user's earnings events and detect upcoming ones
+  // within 5 days of today for the current underlying.
+  const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
+  useEffect(() => {
+    if (!user || !open) return;
+    fetchEarningsEvents(user.id)
+      .then(setEarningsEvents)
+      .catch(() => setEarningsEvents([]));
+  }, [user, open]);
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingEarnings = useMemo(
+    () => findUpcomingEarnings(earningsEvents, underlying, today, 5),
+    [earningsEvents, underlying, today],
+  );
+  const isEarningsPlay = !!upcomingEarnings;
+
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
   const [sharedExp, setSharedExp] = useState<Date | undefined>(undefined);
