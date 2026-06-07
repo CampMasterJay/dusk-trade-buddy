@@ -36,6 +36,13 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { OptionsPositionSizer } from "@/components/OptionsPositionSizer";
 import { IvrGuidanceCard } from "@/components/IvrGuidanceCard";
 import {
+  fetchEarningsEvents,
+  findUpcomingEarnings,
+  daysUntil,
+  type EarningsEvent,
+} from "@/lib/earnings";
+import { AlertTriangle } from "lucide-react";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
