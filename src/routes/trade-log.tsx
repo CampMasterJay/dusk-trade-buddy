@@ -488,7 +488,8 @@ function TradeLogScreen() {
           )}
         </div>
 
-        {/* Sort */}
+        {/* Sort (only relevant for futures list view) */}
+        {(marketFilter === "All" || marketFilter === "Futures") && (
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-data uppercase tracking-wider text-muted-foreground">
             Sort
@@ -505,9 +506,24 @@ function TradeLogScreen() {
             </SelectContent>
           </Select>
         </div>
+        )}
 
         {/* Content */}
-        {loading ? (
+        {marketFilter === "Stocks" || marketFilter === "Crypto" ? (
+          <EmptyState
+            icon={Search}
+            title={`${marketFilter} support coming soon`}
+            subtitle={`The trade log doesn't track ${marketFilter.toLowerCase()} trades yet. Use the Futures or Options view in the meantime.`}
+          />
+        ) : marketFilter === "Options" ? (
+          <div className="space-y-3">
+            <p className="text-[11px] text-muted-foreground font-data">
+              Showing options trades. Tap the Options tab above for analytics, open
+              positions, and stats.
+            </p>
+            <OptionsTradesList />
+          </div>
+        ) : loading ? (
           <div className="py-12 flex justify-center">
             <LoadingSpinner label="Loading trades..." />
           </div>
