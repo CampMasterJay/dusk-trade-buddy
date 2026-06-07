@@ -15,6 +15,12 @@ export type ChallengeRow = {
   win_rate: number;
   outcome: ChallengeOutcome;
   created_at: string;
+  starting_playbook?: string | null;
+  ending_playbook?: string | null;
+  edge_health_trend?: string | null;
+  most_used_regime?: string | null;
+  most_profitable_setup?: string | null;
+  biggest_behavioral_issue?: string | null;
 };
 
 function determineOutcome(
