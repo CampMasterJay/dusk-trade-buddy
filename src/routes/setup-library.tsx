@@ -395,7 +395,108 @@ const SETUPS: Setup[] = [
 function SetupLibraryPage() {
   const [selected, setSelected] = useState<Setup | null>(null);
   const { settings } = useUserSettings();
+  const { user } = useAuth();
   const balance = Number(settings?.current_balance ?? settings?.starting_balance ?? 100);
+
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  // tag → last detected_at ISO string (most recent degradation log row)
+  const [lastLogged, setLastLogged] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: tradesData }, { data: logRows }] = await Promise.all([
+        getAllTrades(user.id),
+        supabase
+          .from("setup_health_log")
+          .select("setup_type, detected_at")
+          .eq("user_id", user.id)
+          .order("detected_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      setTrades(tradesData ?? []);
+      const map: Record<string, string> = {};
+      for (const row of logRows ?? []) {
+        if (!map[row.setup_type]) map[row.setup_type] = row.detected_at;
+      }
+      setLastLogged(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const healthByTag = useMemo(() => {
+    const map = new Map<string, SetupHealth>();
+    for (const s of SETUPS) map.set(s.tag, computeSetupHealth(trades, s.tag));
+    return map;
+  }, [trades]);
+
+  // Detect newly DEGRADING setups (no log within 7 days) and auto-log them.
+  useEffect(() => {
+    if (!user || trades.length === 0) return;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const toLog: SetupHealth[] = [];
+    healthByTag.forEach((h) => {
+      if (h.status !== "DEGRADING") return;
+      const last = lastLogged[h.setupTag];
+      if (last && new Date(last).getTime() > sevenDaysAgo) return;
+      toLog.push(h);
+    });
+    if (toLog.length === 0) return;
+    (async () => {
+      const rows = toLog.map((h) => ({
+        user_id: user.id,
+        setup_type: h.setupTag,
+        all_time_win_rate: Number(h.allTimeWinRate.toFixed(4)),
+        recent_win_rate: Number((h.last20WinRate ?? 0).toFixed(4)),
+        recent_sample_size: 20,
+        action_taken: "Reviewed" as const,
+      }));
+      const { data, error } = await supabase
+        .from("setup_health_log")
+        .insert(rows)
+        .select("setup_type, detected_at");
+      if (!error && data) {
+        setLastLogged((prev) => {
+          const next = { ...prev };
+          for (const r of data) next[r.setup_type] = r.detected_at;
+          return next;
+        });
+      }
+    })();
+  }, [healthByTag, lastLogged, trades.length, user?.id]);
+
+  async function recordAction(tag: string, action: "Paused" | "Continued" | "Reviewed") {
+    if (!user) return;
+    const h = healthByTag.get(tag);
+    if (!h) return;
+    const { error } = await supabase.from("setup_health_log").insert({
+      user_id: user.id,
+      setup_type: tag,
+      all_time_win_rate: Number(h.allTimeWinRate.toFixed(4)),
+      recent_win_rate: Number((h.last20WinRate ?? 0).toFixed(4)),
+      recent_sample_size: 20,
+      action_taken: action,
+    });
+    if (error) {
+      toast.error("Could not save action");
+      return;
+    }
+    toast.success(`Marked ${tag} as ${action}`);
+    setDismissed((prev) => new Set(prev).add(tag));
+  }
+
+  const degradingAlerts = useMemo(
+    () =>
+      SETUPS.filter((s) => {
+        const h = healthByTag.get(s.tag);
+        return h?.status === "DEGRADING" && !dismissed.has(s.tag);
+      }),
+    [healthByTag, dismissed],
+  );
 
   return (
     <ProtectedRoute>
@@ -423,9 +524,65 @@ function SetupLibraryPage() {
           Reference cards for the 6 core day-trading setups. Tap any card for the full breakdown.
         </p>
 
+        {degradingAlerts.map((s) => {
+          const h = healthByTag.get(s.tag)!;
+          return (
+            <div
+              key={s.tag}
+              className="rounded-xl border border-trade-red/40 bg-trade-red/10 p-3 text-xs"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-trade-red" />
+                <div className="flex-1 space-y-2">
+                  <div className="font-semibold text-trade-red">
+                    ⚠️ SETUP ALERT: {s.name}
+                  </div>
+                  <p className="leading-relaxed text-foreground/90">
+                    Your {s.short} setup win rate has dropped from{" "}
+                    <span className="font-data font-semibold">
+                      {(h.allTimeWinRate * 100).toFixed(0)}%
+                    </span>{" "}
+                    (all-time) to{" "}
+                    <span className="font-data font-semibold">
+                      {((h.last20WinRate ?? 0) * 100).toFixed(0)}%
+                    </span>{" "}
+                    (last 20 trades). Consider pausing this setup and reviewing
+                    recent market conditions.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => recordAction(s.tag, "Paused")}
+                      className="rounded-md border border-trade-red/40 bg-trade-red/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-red hover:bg-trade-red/25"
+                    >
+                      Pause
+                    </button>
+                    <button
+                      onClick={() => recordAction(s.tag, "Reviewed")}
+                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Reviewed
+                    </button>
+                    <button
+                      onClick={() => recordAction(s.tag, "Continued")}
+                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SETUPS.map((s) => (
-            <SetupCard key={s.id} setup={s} onOpen={() => setSelected(s)} />
+            <SetupCard
+              key={s.id}
+              setup={s}
+              health={healthByTag.get(s.tag)}
+              onOpen={() => setSelected(s)}
+            />
           ))}
         </div>
       </div>
