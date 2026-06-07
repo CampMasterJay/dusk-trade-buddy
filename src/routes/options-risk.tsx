@@ -3,6 +3,7 @@ import { ArrowLeft, Shield } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { OptionsRiskDashboard } from "@/components/OptionsRiskDashboard";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 export const Route = createFileRoute("/options-risk")({
   head: () => ({
@@ -21,10 +22,11 @@ export const Route = createFileRoute("/options-risk")({
 });
 
 function OptionsRiskRoute() {
+  const { settings } = useUserSettings();
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        <AppHeader balance={Number(settings?.current_balance ?? 0)} />
         <div className="mx-auto max-w-5xl px-4 py-6 space-y-4">
           <div className="flex items-center justify-between">
             <Link
