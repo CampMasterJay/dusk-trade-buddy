@@ -38,7 +38,7 @@ export function exitDemoMode(): void {
 }
 
 export function useDemoMode(): boolean {
-  const [demo, setDemo] = useState<boolean>(false);
+  const [demo, setDemo] = useState<boolean>(() => isDemoMode());
   useEffect(() => {
     setDemo(isDemoMode());
     const onCustom = (e: Event) => setDemo(Boolean((e as CustomEvent<boolean>).detail));
