@@ -34,6 +34,7 @@ import {
   type ChecklistResult,
   type ChecklistPrefill,
 } from "@/components/PreTradeChecklist";
+import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -473,6 +474,7 @@ export function NewTradeSheet({
         </SheetHeader>
 
         <div className="mt-4 space-y-5">
+          {!isEdit && <BehaviorAlertOverlay active={open} />}
           {/* Setup */}
           <Section title="Setup">
             <div className="grid gap-3 sm:grid-cols-2">
