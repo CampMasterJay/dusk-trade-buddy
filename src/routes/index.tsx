@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, CalendarRange, Brain, Shield } from "lucide-react";
+import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -12,10 +12,7 @@ import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
 import { DrawdownTracker } from "@/components/DrawdownTracker";
 import { ConsistencyStreak } from "@/components/ConsistencyStreak";
 import { EdgeHealthSection } from "@/components/EdgeHealthSection";
-import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
-import { DailyThetaCard } from "@/components/DailyThetaCard";
-import { OptionsDashboardSection } from "@/components/OptionsDashboardSection";
-import { OptionsRollingPerformance } from "@/components/OptionsRollingPerformance";
+import { OptionsDashboard } from "@/components/dashboards/OptionsDashboard";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -66,9 +63,15 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <ProtectedRoute>
-      <Dashboard />
+      <DashboardSwitcher />
     </ProtectedRoute>
   );
+}
+
+function DashboardSwitcher() {
+  const [mode] = useTradingMode();
+  if (mode === "options") return <OptionsDashboard />;
+  return <Dashboard />;
 }
 
 function Dashboard() {
