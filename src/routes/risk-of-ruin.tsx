@@ -146,7 +146,17 @@ function RiskOfRuinScreen() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { settings } = useUserSettings();
-  const currentBalance = Number(settings?.current_balance ?? 100);
+  const currentBalance = (() => {
+    try {
+      const m = typeof window !== "undefined"
+        ? localStorage.getItem("edgetrader.tradingMode.v1")
+        : null;
+      if (m === "options") return Number(settings?.options_current_balance ?? 100);
+    } catch {
+      /* ignore */
+    }
+    return Number(settings?.current_balance ?? 100);
+  })();
 
   const [winRate, setWinRate] = useState<number>(50);
   const [rWin, setRWin] = useState<number>(Number(settings?.rr_ratio ?? 1.5));

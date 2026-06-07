@@ -144,7 +144,17 @@ function WeeklyReport() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { settings } = useUserSettings();
-  const balance = Number(settings?.current_balance ?? 0);
+  const balance = (() => {
+    try {
+      const m = typeof window !== "undefined"
+        ? localStorage.getItem("edgetrader.tradingMode.v1")
+        : null;
+      if (m === "options") return Number(settings?.options_current_balance ?? 0);
+    } catch {
+      /* ignore */
+    }
+    return Number(settings?.current_balance ?? 0);
+  })();
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [journals, setJournals] = useState<JournalRow[]>([]);
