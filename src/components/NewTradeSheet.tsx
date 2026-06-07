@@ -759,6 +759,7 @@ export function NewTradeSheet({
       open={checklistOpen}
       onOpenChange={setChecklistOpen}
       rrSetting={rrSetting}
+      tradeDate={date}
       prefill={{
         rrMet:
           rrRatio != null && Number.isFinite(rrRatio)

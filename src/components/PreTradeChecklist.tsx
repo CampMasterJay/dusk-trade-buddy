@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, AlertTriangle, XCircle, ListChecks } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/AuthProvider";
+import type { MarketRegime } from "@/lib/marketRegime";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +18,8 @@ export type ChecklistResult = {
   score: number;
   verdict: "GO" | "CAUTION" | "NO TRADE";
   items: Record<string, boolean>;
+  regime?: MarketRegime | null;
+  total?: number;
 };
 
 export type ChecklistPrefill = {
@@ -31,7 +36,7 @@ type Item = {
   label: (rr: number) => string;
 };
 
-const ITEMS: Item[] = [
+const GENERIC_ITEMS: Item[] = [
   { key: "trendIdentified", label: () => "I have identified the trend on HTF" },
   { key: "withTrend", label: () => "I am trading WITH the trend" },
   { key: "nearKeyLevel", label: () => "Entry is near a key level (S/R/VWAP)" },
@@ -44,9 +49,53 @@ const ITEMS: Item[] = [
   { key: "lossLimitOk", label: () => "My daily loss limit has NOT been hit" },
 ];
 
-export function verdictFor(score: number): ChecklistResult["verdict"] {
-  if (score >= 8) return "GO";
-  if (score >= 5) return "CAUTION";
+const TRENDING_ITEMS: Item[] = [
+  { key: "trendDirection", label: () => "Trade is in the direction of the trend" },
+  { key: "pullbackEntry", label: () => "Entry is on a pullback to a key level" },
+  { key: "notChasing", label: () => "Not chasing — entry is at structure, not mid-air" },
+  { key: "stopBeyondSwing", label: () => "Stop is below/above the last swing" },
+  { key: "volumeConfirms", label: () => "Volume confirms the move" },
+  { key: "noNewsTrend", label: () => "Not within 30 min of major news" },
+];
+
+const RANGING_ITEMS: Item[] = [
+  { key: "edgeEntry", label: () => "Entry is at or near range boundary (not middle)" },
+  { key: "fadingNotBreaking", label: () => "I am fading, not breaking out" },
+  { key: "rangeHeldTwice", label: () => "Range has held at least 2 previous touches" },
+  { key: "stopOutsideRange", label: () => "Stop is placed outside the range" },
+  { key: "targetOppositeEdge", label: () => "Target is the opposite range boundary" },
+  { key: "rangeMature", label: () => "Range has been active for at least 1 hour" },
+];
+
+const HIGH_VOL_ITEMS: Item[] = [
+  { key: "sizeReduced", label: () => "Position size reduced to 50% or less" },
+  { key: "widerStop", label: () => "Stop is wider than normal to account for swings" },
+  { key: "skipFirst15", label: () => "I am NOT trading the first 15 minutes" },
+  { key: "rrTwoToOne", label: () => "R:R is at least 2:1 to justify wider stops" },
+  { key: "noNews60", label: () => "No news expected in next 60 minutes" },
+  { key: "confirmedSetup", label: () => "Setup is confirmed, not anticipated" },
+];
+
+export function getRegimeChecklist(regime?: MarketRegime | null): Item[] {
+  switch (regime) {
+    case "Trending Up":
+    case "Trending Down":
+      return TRENDING_ITEMS;
+    case "Ranging":
+    case "Low Volatility":
+      return RANGING_ITEMS;
+    case "High Volatility":
+    case "News-Driven":
+      return HIGH_VOL_ITEMS;
+    default:
+      return GENERIC_ITEMS;
+  }
+}
+
+export function verdictFor(score: number, total = 10): ChecklistResult["verdict"] {
+  const pct = total > 0 ? score / total : 0;
+  if (pct >= 0.8) return "GO";
+  if (pct >= 0.5) return "CAUTION";
   return "NO TRADE";
 }
 
@@ -74,6 +123,10 @@ interface Props {
   prefill?: ChecklistPrefill | null;
   initial?: ChecklistResult | null;
   onConfirm: (result: ChecklistResult) => void;
+  /** Trade date in YYYY-MM-DD; defaults to today (CT). */
+  tradeDate?: string;
+  /** Override regime detection. */
+  regime?: MarketRegime | null;
 }
 
 export function PreTradeChecklist({
@@ -83,10 +136,17 @@ export function PreTradeChecklist({
   prefill,
   initial,
   onConfirm,
+  tradeDate,
+  regime: regimeProp,
 }: Props) {
+  const { user } = useAuth();
+  const [loadedRegime, setLoadedRegime] = useState<MarketRegime | null>(null);
+  const regime = regimeProp ?? loadedRegime;
+  const items_def = useMemo(() => getRegimeChecklist(regime), [regime]);
+
   const buildInitial = (): Record<string, boolean> => {
     const base: Record<string, boolean> = Object.fromEntries(
-      ITEMS.map((i) => [i.key as string, false]),
+      items_def.map((i) => [i.key as string, false]),
     );
     if (prefill) {
       for (const [k, v] of Object.entries(prefill)) {
@@ -104,13 +164,37 @@ export function PreTradeChecklist({
   useEffect(() => {
     if (open) setItems(buildInitial());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, regime]);
+
+  // Auto-load today's regime from the daily game plan when not provided.
+  useEffect(() => {
+    if (!open || regimeProp || !user) return;
+    let cancelled = false;
+    const d =
+      tradeDate ??
+      new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+    (async () => {
+      const { data } = await supabase
+        .from("daily_game_plans")
+        .select("market_regime")
+        .eq("user_id", user.id)
+        .eq("plan_date", d)
+        .maybeSingle();
+      if (cancelled) return;
+      const r = (data?.market_regime ?? null) as MarketRegime | null;
+      setLoadedRegime(r);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, regimeProp, user, tradeDate]);
 
   const score = useMemo(
-    () => ITEMS.reduce((n, it) => n + (items[it.key as string] ? 1 : 0), 0),
-    [items],
+    () => items_def.reduce((n, it) => n + (items[it.key as string] ? 1 : 0), 0),
+    [items, items_def],
   );
-  const verdict = verdictFor(score);
+  const total = items_def.length;
+  const verdict = verdictFor(score, total);
   const c = verdictColor(verdict);
 
   const toggle = (k: string) => setItems((prev) => ({ ...prev, [k]: !prev[k] }));
@@ -124,12 +208,14 @@ export function PreTradeChecklist({
             Pre-Trade Checklist
           </DialogTitle>
           <DialogDescription>
-            Run through every item before entering the trade. Be honest.
+            {regime
+              ? `${regime} regime — tailored checks for today's market.`
+              : "No regime set in today's Game Plan — using generic checklist."}
           </DialogDescription>
         </DialogHeader>
 
         <ul className="mt-2 space-y-1.5">
-          {ITEMS.map((it) => {
+          {items_def.map((it) => {
             const k = it.key as string;
             const checked = !!items[k];
             return (
@@ -165,11 +251,11 @@ export function PreTradeChecklist({
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-[10px] font-data uppercase tracking-[2px] text-muted-foreground">
-                Score
+                {regime ? `${regime} Score` : "Score"}
               </div>
               <div className={cn("text-3xl font-bold font-data", c.fg)}>
                 {score}
-                <span className="text-sm text-muted-foreground">/10</span>
+                <span className="text-sm text-muted-foreground">/{total}</span>
               </div>
             </div>
             <div className={cn("flex items-center gap-2 text-right", c.fg)}>
@@ -187,7 +273,7 @@ export function PreTradeChecklist({
           </Button>
           <Button
             onClick={() => {
-              onConfirm({ score, verdict, items });
+              onConfirm({ score, verdict, items, regime: regime ?? null, total });
               onOpenChange(false);
             }}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
