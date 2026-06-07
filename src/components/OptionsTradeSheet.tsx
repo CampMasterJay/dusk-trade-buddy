@@ -477,6 +477,83 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         <div className="space-y-6 mt-4 pb-8">
           {/* STEP 1 */}
           <Section title="1. Setup">
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted/30 p-2.5">
+              <div>
+                <div className="text-sm font-medium">Futures Option</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Options on futures contracts (/ES, /NQ, /GC, /CL, /ZB).
+                </div>
+              </div>
+              <Switch
+                checked={futuresMode}
+                onCheckedChange={(v) => {
+                  setFuturesMode(v);
+                  if (v && !isFuturesUnderlying(underlying)) {
+                    setUnderlying("/ES");
+                  }
+                  if (!v && isFuturesUnderlying(underlying)) {
+                    setUnderlying("SPY");
+                  }
+                }}
+              />
+            </div>
+
+            {futuresMode && (
+              <div className="space-y-2">
+                <Label>Futures underlying</Label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {FUTURES_OPTIONS.map((f) => (
+                    <button
+                      key={f.symbol}
+                      type="button"
+                      onClick={() => setUnderlying(f.symbol)}
+                      className={cn(
+                        "px-2 py-1.5 rounded-md text-xs font-mono border text-center",
+                        underlying === f.symbol
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                      title={f.name}
+                    >
+                      {f.symbol}
+                    </button>
+                  ))}
+                </div>
+                {futuresSpec && (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-1">
+                    <div className="text-xs">
+                      <span className="text-muted-foreground">{futuresSpec.name}</span>
+                      <span className="mx-1.5">·</span>
+                      <span className="font-mono">
+                        ${futuresSpec.multiplier}/pt
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <span className="font-mono">
+                        tick {futuresSpec.tickSize} = ${futuresSpec.tickValue}
+                      </span>
+                      <span className="mx-1.5">·</span>
+                      <span>{futuresSpec.style}</span>
+                      <span className="mx-1.5">·</span>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          futuresSpec.settlement === "Cash"
+                            ? "text-emerald-400"
+                            : "text-amber-400",
+                        )}
+                      >
+                        {futuresSpec.settlement}-settled
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {futuresSpec.notes} Review your broker's settlement
+                      rules.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Underlying</Label>
               <Input
