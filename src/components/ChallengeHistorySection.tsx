@@ -6,15 +6,17 @@ import {
   type ChallengeRow,
 } from "@/lib/challengeArchive";
 import { cn } from "@/lib/utils";
+import { useTradingMode } from "@/lib/tradingMode";
 
 export function ChallengeHistorySection() {
   const [items, setItems] = useState<ChallengeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mode] = useTradingMode();
 
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      listChallenges()
+      listChallenges(mode)
         .then((rows) => {
           if (!cancelled) setItems(rows);
         })
@@ -29,7 +31,7 @@ export function ChallengeHistorySection() {
       cancelled = true;
       window.removeEventListener("edge:challenges-changed", onRefresh);
     };
-  }, []);
+  }, [mode]);
 
   const bestId =
     items.length > 0
