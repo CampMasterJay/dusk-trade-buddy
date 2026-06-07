@@ -279,6 +279,83 @@ function PlaybookPage() {
     toast.success(`Loaded "${row.name}"`);
   }
 
+  /* -------------------- AI Discovery -------------------- */
+  const MIN_TRADES_FOR_DISCOVERY = 50;
+  const runDiscover = useServerFn(discoverSetup);
+  const [discovering, setDiscovering] = useState(false);
+  const [discovery, setDiscovery] = useState<DiscoveredSetup | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const tradesNeeded = Math.max(0, MIN_TRADES_FOR_DISCOVERY - trades.length);
+
+  async function handleDiscover() {
+    if (trades.length < MIN_TRADES_FOR_DISCOVERY) return;
+    setDiscovering(true);
+    setDiscoveryError(null);
+    try {
+      const payload = trades.slice(0, 200).map((t) => ({
+        setup: t.setup_tag ?? null,
+        direction: t.direction ?? null,
+        result: t.result ?? null,
+        rMultiple: t.r_multiple != null ? Number(t.r_multiple) : null,
+        pnl: t.pnl != null ? Number(t.pnl) : null,
+        hour: t.hour_of_day ?? null,
+        dayOfWeek: t.day_of_week ?? null,
+        regime: t.market_regime ?? null,
+        vix: t.vix_at_entry != null ? Number(t.vix_at_entry) : null,
+        sessionNum: t.session_trade_number ?? null,
+        checklistScore: t.checklist_score ?? null,
+        instrument: t.instrument ?? null,
+      }));
+      const res = await runDiscover({ data: { trades: payload } });
+      if (res.ok) {
+        setDiscovery(res.data);
+      } else {
+        setDiscoveryError(res.error);
+        toast.error(res.error);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setDiscoveryError(msg);
+      toast.error(msg);
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
+  async function saveDiscoveredAsEntry() {
+    if (!user || !discovery) return;
+    if (entries.length >= MAX_ENTRIES) {
+      toast.error(`Maximum ${MAX_ENTRIES} playbook entries. Retire one first.`);
+      return;
+    }
+    const top = discovery.topSetup;
+    const f = filtersFromConditions(top.conditions);
+    const { data, error } = await supabase
+      .from("playbook_entries")
+      .insert({
+        user_id: user.id,
+        name: top.name,
+        notes: top.insight,
+        filters: f as never,
+        trade_count: top.tradeCount,
+        win_rate: top.winRate,
+        avg_r: top.avgR,
+        net_pnl: top.ev * top.tradeCount,
+        baseline_win_rate: top.winRate,
+        baseline_avg_r: top.avgR,
+        baseline_trade_count: top.tradeCount,
+        status: "Testing",
+      })
+      .select()
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEntries((e) => [data as unknown as PlaybookRow, ...e]);
+    toast.success("A+ setup saved to your playbook");
+  }
+
   return (
     <ProtectedRoute>
       <AppHeader balance={balance} />
