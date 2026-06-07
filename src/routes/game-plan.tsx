@@ -106,6 +106,7 @@ function GamePlanScreen() {
   const [maxTrades, setMaxTrades] = useState<number>(2);
   const [maxLoss, setMaxLoss] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [regime, setRegime] = useState<MarketRegime | null>(null);
 
   // Derive default max loss from settings (risk_pct of current balance)
   const defaultMaxLoss = useMemo(() => {
@@ -135,6 +136,7 @@ function GamePlanScreen() {
           setMaxTrades(p.max_trades ?? 2);
           setMaxLoss(p.max_loss != null ? String(p.max_loss) : "");
           setNotes(p.notes ?? "");
+          setRegime((p.market_regime as MarketRegime | null) ?? null);
         } else {
           setBias("Neutral");
           setKeyLevels(["", "", "", "", ""]);
@@ -142,6 +144,7 @@ function GamePlanScreen() {
           setMaxTrades(2);
           setMaxLoss(defaultMaxLoss != null ? String(defaultMaxLoss) : "");
           setNotes("");
+          setRegime(null);
         }
         setTrades(tradesRes.data ?? []);
       })
@@ -195,6 +198,7 @@ function GamePlanScreen() {
       max_trades: Number.isFinite(maxTrades) ? Math.max(1, Math.floor(maxTrades)) : 2,
       max_loss: maxLossNum != null && Number.isFinite(maxLossNum) ? maxLossNum : null,
       notes: notes.trim() || null,
+      market_regime: regime,
     });
     setSaving(false);
     if (error) {
