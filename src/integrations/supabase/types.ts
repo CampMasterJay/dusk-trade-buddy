@@ -195,6 +195,7 @@ export type Database = {
           traded_planned_setups: boolean | null
           updated_at: string
           user_id: string
+          vix: number | null
         }
         Insert: {
           bias?: string
@@ -214,6 +215,7 @@ export type Database = {
           traded_planned_setups?: boolean | null
           updated_at?: string
           user_id: string
+          vix?: number | null
         }
         Update: {
           bias?: string
@@ -233,6 +235,7 @@ export type Database = {
           traded_planned_setups?: boolean | null
           updated_at?: string
           user_id?: string
+          vix?: number | null
         }
         Relationships: []
       }
@@ -609,6 +612,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          baseline_vix: number
           challenge_target: number
           created_at: string
           current_balance: number
@@ -622,9 +626,11 @@ export type Database = {
           timeframe_days: number
           updated_at: string
           user_id: string
+          vix_adjustment_enabled: boolean
           watchlist: string[]
         }
         Insert: {
+          baseline_vix?: number
           challenge_target?: number
           created_at?: string
           current_balance?: number
@@ -638,9 +644,11 @@ export type Database = {
           timeframe_days?: number
           updated_at?: string
           user_id: string
+          vix_adjustment_enabled?: boolean
           watchlist?: string[]
         }
         Update: {
+          baseline_vix?: number
           challenge_target?: number
           created_at?: string
           current_balance?: number
@@ -654,6 +662,7 @@ export type Database = {
           timeframe_days?: number
           updated_at?: string
           user_id?: string
+          vix_adjustment_enabled?: boolean
           watchlist?: string[]
         }
         Relationships: []
