@@ -12,8 +12,14 @@ import {
   ChevronLeft,
   Save,
   ClipboardCheck,
+  Activity,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { fetchCurrentVix } from "@/lib/api/fetchVix.functions";
+import { adjustRiskPct } from "@/lib/vixRisk";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
