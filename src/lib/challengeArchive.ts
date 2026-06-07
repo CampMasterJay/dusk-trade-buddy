@@ -84,7 +84,7 @@ export async function archiveAndResetChallenge(opts: {
       new Date().toISOString();
 
     // Enriched archive fields
-    const tradeList = (trades ?? []) as Array<{
+    const tradeList = ((trades ?? []) as unknown) as Array<{
       result: string | null;
       setup_tag: string | null;
       market_regime: string | null;
