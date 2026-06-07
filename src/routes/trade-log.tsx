@@ -83,6 +83,7 @@ export const Route = createFileRoute("/trade-log")({
 const PAGE_SIZE = 25;
 type FilterKey = "All" | "Wins" | "Losses";
 type SortKey = "Newest" | "Oldest" | "LargestWin" | "LargestLoss";
+type MarketKey = "All" | "Futures" | "Options" | "Stocks" | "Crypto";
 
 function TradeLog() {
   return (
@@ -110,6 +111,7 @@ function TradeLogScreen() {
   const [instrumentFilter, setInstrumentFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("Newest");
+  const [marketFilter, setMarketFilter] = useState<MarketKey>("All");
   const [reloadKey, setReloadKey] = useState(0);
 
   // Auto-open New Trade sheet with prefill stashed by Chart Analyzer
@@ -422,6 +424,26 @@ function TradeLogScreen() {
         </div>
 
         {/* Filter bar */}
+        {/* Market filter */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-2 -mx-4 px-4 scrollbar-none">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-data self-center pr-1">
+            Market
+          </span>
+          {(["All", "Futures", "Options", "Stocks", "Crypto"] as MarketKey[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => setMarketFilter(k)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-data uppercase tracking-wider border whitespace-nowrap transition-colors",
+                marketFilter === k
+                  ? "bg-primary/15 border-primary/50 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4 scrollbar-none">
           {(["All", "Wins", "Losses"] as FilterKey[]).map((k) => (
             <button
@@ -466,7 +488,8 @@ function TradeLogScreen() {
           )}
         </div>
 
-        {/* Sort */}
+        {/* Sort (only relevant for futures list view) */}
+        {(marketFilter === "All" || marketFilter === "Futures") && (
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-data uppercase tracking-wider text-muted-foreground">
             Sort
@@ -483,9 +506,24 @@ function TradeLogScreen() {
             </SelectContent>
           </Select>
         </div>
+        )}
 
         {/* Content */}
-        {loading ? (
+        {marketFilter === "Stocks" || marketFilter === "Crypto" ? (
+          <EmptyState
+            icon={Search}
+            title={`${marketFilter} support coming soon`}
+            subtitle={`The trade log doesn't track ${marketFilter.toLowerCase()} trades yet. Use the Futures or Options view in the meantime.`}
+          />
+        ) : marketFilter === "Options" ? (
+          <div className="space-y-3">
+            <p className="text-[11px] text-muted-foreground font-data">
+              Showing options trades. Tap the Options tab above for analytics, open
+              positions, and stats.
+            </p>
+            <OptionsTradesList />
+          </div>
+        ) : loading ? (
           <div className="py-12 flex justify-center">
             <LoadingSpinner label="Loading trades..." />
           </div>
@@ -722,6 +760,9 @@ const TradeCard = memo(function TradeCard({
                 <span className="text-xs font-data text-muted-foreground">
                   {formatDate(trade.date)}
                 </span>
+                <Badge className="bg-sky-500/15 text-sky-300 border-sky-500/40">
+                  Futures
+                </Badge>
                 <span className="font-data font-semibold text-sm">
                   {trade.instrument}
                 </span>

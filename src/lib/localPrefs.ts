@@ -18,6 +18,15 @@ export type LocalPrefs = {
   newsRefreshMinutes: number;
   displayName: string;
   hapticsEnabled: boolean;
+  // Options-specific preferences
+  optionsCommissionPerContract: number; // $ per contract per side
+  optionsProfitTargetPct: number; // % of max profit (credit) or premium (debit)
+  optionsStopLossPct: number; // % of premium / credit
+  zeroDteHardExitEt: string; // "HH:mm" ET
+  ivrSource: "broker" | "tos" | "manual" | "thinkorswim";
+  earningsPlayMode: "warn" | "ask" | "ignore";
+  chartAnalyzerMode: "futures" | "options" | "both";
+  tradeLogMarketFilter: "all" | "futures" | "options" | "stocks" | "crypto";
 };
 
 const KEY = "edgetrader.localPrefs.v1";
@@ -35,6 +44,14 @@ export const DEFAULT_PREFS: LocalPrefs = {
   newsRefreshMinutes: 5,
   displayName: "",
   hapticsEnabled: true,
+  optionsCommissionPerContract: 0.65,
+  optionsProfitTargetPct: 50,
+  optionsStopLossPct: 200,
+  zeroDteHardExitEt: "15:30",
+  ivrSource: "broker",
+  earningsPlayMode: "warn",
+  chartAnalyzerMode: "futures",
+  tradeLogMarketFilter: "all",
 };
 
 const listeners = new Set<(p: LocalPrefs) => void>();

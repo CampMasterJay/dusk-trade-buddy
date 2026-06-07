@@ -14,6 +14,8 @@ import { ConsistencyStreak } from "@/components/ConsistencyStreak";
 import { EdgeHealthSection } from "@/components/EdgeHealthSection";
 import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
 import { DailyThetaCard } from "@/components/DailyThetaCard";
+import { OptionsDashboardSection } from "@/components/OptionsDashboardSection";
+import { OptionsRollingPerformance } from "@/components/OptionsRollingPerformance";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -235,6 +237,8 @@ function Dashboard() {
 
             <EdgeHealthSection trades={trades} />
 
+            <OptionsRollingPerformance trades={trades} />
+
             <div className="space-y-2">
               <div className="flex justify-end">
                 <Link
@@ -245,6 +249,7 @@ function Dashboard() {
                   Options Risk
                 </Link>
               </div>
+              <OptionsDashboardSection onLogged={onTradeLogged} />
               <OptionsSummaryCard />
             </div>
 
