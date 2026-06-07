@@ -299,7 +299,22 @@ function TradeLogScreen() {
 
         {/* Stats */}
         <div className="mb-4">
-          <TradeStats stats={stats} trades={trades} />
+          <Tabs defaultValue="stats" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-3">
+              <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
+                Stats
+              </TabsTrigger>
+              <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
+                Behavior
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="stats" className="mt-0">
+              <TradeStats stats={stats} trades={trades} />
+            </TabsContent>
+            <TabsContent value="behavior" className="mt-0">
+              <BehaviorAnalytics trades={trades} />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="mb-4">
