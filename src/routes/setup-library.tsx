@@ -740,10 +740,12 @@ function SetupCard({
   setup,
   onOpen,
   health,
+  status,
 }: {
   setup: Setup;
   onOpen: () => void;
   health?: SetupHealth;
+  status?: SetupStatusRow;
 }) {
   const Icon = setup.icon;
   const Diagram = setup.diagram;
@@ -767,6 +769,17 @@ function SetupCard({
             </div>
           </div>
         </div>
+        <div className="flex flex-col items-end gap-1">
+        {status && status.state !== "active" && (
+          <span className={cn(
+            "rounded-md border px-1.5 py-0.5 text-[9px] font-data uppercase tracking-wider",
+            status.state === "paused"
+              ? "border-trade-red/30 bg-trade-red/10 text-trade-red"
+              : "border-trade-amber/30 bg-trade-amber/10 text-trade-amber",
+          )}>
+            {status.state === "paused" ? "Paused" : "Probation"}
+          </span>
+        )}
         <span
           title={
             health
@@ -789,6 +802,7 @@ function SetupCard({
             ? `${((health!.last20WinRate ?? 0) * 100).toFixed(0)}%`
             : meta.label}
         </span>
+        </div>
       </div>
 
       <div className="aspect-[2/1] overflow-hidden rounded-md border border-border bg-background">
