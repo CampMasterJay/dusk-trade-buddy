@@ -762,6 +762,10 @@ function applyOptionsFilters(
   return rows.filter((r) => {
     if (f.underlyings.length && !f.underlyings.includes(r.underlying)) return false;
     if (f.strategies.length && !f.strategies.includes(r.strategy_type)) return false;
+    if (f.direction !== "Both") {
+      if (f.direction === "Debit" && r.is_debit !== true) return false;
+      if (f.direction === "Credit" && r.is_debit !== false) return false;
+    }
     if (f.regimes.length) {
       const reg = regimeMap.get(r.trade_date);
       if (!reg || !f.regimes.includes(reg)) return false;
@@ -795,6 +799,7 @@ function formatOptionConditions(f: OptionsFilters) {
     });
   if (f.checklistMin > 0)
     out.push({ label: "Checklist", value: `≥${f.checklistMin}/10` });
+  if (f.direction !== "Both") out.push({ label: "Type", value: `${f.direction} only` });
   return out;
 }
 
@@ -947,4 +952,56 @@ function DiscoveryConditions({
       ))}
     </div>
   );
+}
+
+/** Best-effort mapping from AI-returned condition keys → OptionsFilters. */
+function filtersFromOptionConditions(
+  c: Record<string, string | number | null | undefined>,
+): Partial<OptionsFilters> {
+  const out: Partial<OptionsFilters> = {};
+  const get = (k: string): string | undefined => {
+    const v = c[k];
+    return v == null || v === "" ? undefined : String(v);
+  };
+  const u = get("underlying");
+  if (u) out.underlyings = [u];
+  const s = get("strategy");
+  if (s) out.strategies = [s];
+  const r = get("regime");
+  if (r) out.regimes = [r];
+
+  const ivr = get("ivrRange") ?? get("ivr");
+  if (ivr) {
+    const m = ivr.match(/(\d+(?:\.\d+)?)\s*[-–to]+\s*(\d+(?:\.\d+)?)/i);
+    if (m) out.ivrRange = [Number(m[1]), Number(m[2])];
+  }
+  const dte = get("dteRange") ?? get("dte");
+  if (dte) {
+    const m = dte.match(/(\d+)\s*[-–to]+\s*(\d+)/i);
+    if (m) out.dteRange = [Number(m[1]), Number(m[2])];
+  }
+  const vix = get("vixRange") ?? get("vix");
+  if (vix) {
+    const m = vix.match(/(\d+(?:\.\d+)?)\s*[-–to]+\s*(\d+(?:\.\d+)?)/i);
+    if (m) out.vixRange = [Number(m[1]), Number(m[2])];
+  }
+
+  const avoid = get("daysToAvoid");
+  if (avoid) {
+    const dows: number[] = [];
+    const map: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 7 };
+    for (const part of avoid.toLowerCase().split(/[,/\s]+/)) {
+      const key = part.slice(0, 3);
+      if (map[key] != null && !dows.includes(map[key])) dows.push(map[key]);
+    }
+    if (dows.length) out.daysToAvoid = dows;
+  }
+
+  const dir = get("debitCredit") ?? get("type");
+  if (dir) {
+    if (/debit/i.test(dir)) out.direction = "Debit";
+    else if (/credit/i.test(dir)) out.direction = "Credit";
+  }
+
+  return out;
 }
