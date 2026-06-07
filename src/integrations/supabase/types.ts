@@ -305,6 +305,69 @@ export type Database = {
         }
         Relationships: []
       }
+      prop_firms: {
+        Row: {
+          account_size: number
+          created_at: string
+          drawdown_type: string
+          firm_name: string
+          id: string
+          is_active: boolean
+          max_daily_loss_amount: number | null
+          max_daily_loss_pct: number | null
+          max_drawdown_amount: number | null
+          max_drawdown_pct: number | null
+          monthly_fee: number | null
+          notes: string | null
+          payout_frequency: string | null
+          payout_split_pct: number | null
+          profit_target_amount: number | null
+          profit_target_pct: number | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          account_size: number
+          created_at?: string
+          drawdown_type?: string
+          firm_name: string
+          id?: string
+          is_active?: boolean
+          max_daily_loss_amount?: number | null
+          max_daily_loss_pct?: number | null
+          max_drawdown_amount?: number | null
+          max_drawdown_pct?: number | null
+          monthly_fee?: number | null
+          notes?: string | null
+          payout_frequency?: string | null
+          payout_split_pct?: number | null
+          profit_target_amount?: number | null
+          profit_target_pct?: number | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          account_size?: number
+          created_at?: string
+          drawdown_type?: string
+          firm_name?: string
+          id?: string
+          is_active?: boolean
+          max_daily_loss_amount?: number | null
+          max_daily_loss_pct?: number | null
+          max_drawdown_amount?: number | null
+          max_drawdown_pct?: number | null
+          monthly_fee?: number | null
+          notes?: string | null
+          payout_frequency?: string | null
+          payout_split_pct?: number | null
+          profit_target_amount?: number | null
+          profit_target_pct?: number | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
