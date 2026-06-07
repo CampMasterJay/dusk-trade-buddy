@@ -1159,3 +1159,72 @@ function MiniStat({
     </div>
   );
 }
+
+function ConditionsList({
+  conditions,
+}: {
+  conditions: Record<string, string | number | null | undefined>;
+}) {
+  const entries = Object.entries(conditions).filter(
+    ([, v]) => v !== null && v !== undefined && v !== "",
+  );
+  if (entries.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-data">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex gap-1.5">
+          <dt className="uppercase tracking-wider text-muted-foreground shrink-0">
+            {k}:
+          </dt>
+          <dd className="text-foreground truncate">{String(v)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+// Best-effort mapping from AI-returned condition keys into our Filters shape,
+// so the discovered setup can be saved + replayed in the filter engine.
+function filtersFromConditions(
+  c: Record<string, string | number | null | undefined>,
+): Partial<Filters> {
+  const out: Partial<Filters> = {};
+  const get = (k: string): string | undefined => {
+    const v = c[k];
+    return v == null || v === "" ? undefined : String(v);
+  };
+
+  const setup = get("setup");
+  if (setup) out.setups = [setup];
+
+  const dir = get("direction");
+  if (dir === "Long" || dir === "Short") out.direction = dir;
+
+  const regime = get("regime");
+  if (regime) out.regimes = [regime];
+
+  const timeBand = get("timeBand") ?? get("time");
+  if (timeBand) {
+    const m = timeBand.match(/(\d{1,2}):?(\d{0,2}).*?(\d{1,2}):?(\d{0,2})/);
+    if (m) {
+      out.hourRange = [Number(m[1]) || 0, Number(m[3]) || 23];
+    }
+  }
+
+  const vix = get("vix");
+  if (vix) {
+    const m = vix.match(/(\d+(?:\.\d+)?)\s*[-–to]+\s*(\d+(?:\.\d+)?)/i);
+    if (m) out.vixRange = [Number(m[1]), Number(m[2])];
+  }
+
+  const sess = get("sessionNum");
+  if (sess) {
+    const buckets: Array<1 | 2 | 3> = [];
+    if (/1st|^1/.test(sess)) buckets.push(1);
+    if (/2nd|^2/.test(sess)) buckets.push(2);
+    if (/3rd|3\+|^3/.test(sess)) buckets.push(3);
+    if (buckets.length) out.sessionNums = buckets;
+  }
+
+  return out;
+}
