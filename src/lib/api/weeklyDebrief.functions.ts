@@ -392,7 +392,13 @@ Return STRICT JSON with these keys (no markdown, no preamble):
       rule_violations: String(aiJson.rule_violations ?? "").slice(0, 1500),
       next_week_focus: String(aiJson.next_week_focus ?? "").slice(0, 800),
       position_sizing_recommendation: String(aiJson.position_sizing_recommendation ?? "").slice(0, 800),
-      source_stats: sourceStats,
+      behavioral_patterns: String(aiJson.behavioral_patterns ?? "").slice(0, 1500),
+      regime_performance: String(aiJson.regime_performance ?? "").slice(0, 1500),
+      setup_health_update: String(aiJson.setup_health_update ?? "").slice(0, 1500),
+      vix_impact: String(aiJson.vix_impact ?? "").slice(0, 1500),
+      prop_firm_progress: String(aiJson.prop_firm_progress ?? "").slice(0, 1500),
+      tier_progress: String(aiJson.tier_progress ?? "").slice(0, 1000),
+      source_stats: { ...sourceStats, phase9: phase9Stats },
     };
 
     const { data: upserted, error: upErr } = await supabase
