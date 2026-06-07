@@ -490,6 +490,8 @@ export function NewTradeSheet({
       if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
+      // Refresh prop-firm overlay so the next trade sees updated drawdown/daily-loss.
+      void propFirm.refresh();
       // Re-evaluate achievements after a successful save.
       void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
 
