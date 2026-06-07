@@ -141,7 +141,7 @@ export function BehaviorAlertOverlay({ active = true, className }: Props) {
                     <button
                       type="button"
                       onClick={() => handleOverride(a)}
-                      className="rounded-md border border-current/40 px-3 py-1 text-[11px] font-data font-semibold uppercase tracking-wider opacity-90 hover:opacity-100"
+                      className="rounded-md border border-current px-3 py-1 text-[11px] font-data font-semibold uppercase tracking-wider opacity-80 hover:opacity-100"
                     >
                       Acknowledge & Continue
                     </button>
