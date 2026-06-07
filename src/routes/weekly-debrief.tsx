@@ -31,6 +31,7 @@ import {
 } from "@/lib/api/weeklyDebrief.functions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OptionsWeeklyDebriefSection } from "@/components/OptionsWeeklyDebriefSection";
 
 export const Route = createFileRoute("/weekly-debrief")({
   head: () => ({
