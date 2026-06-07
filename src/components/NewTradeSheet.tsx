@@ -877,6 +877,98 @@ function Section({
   );
 }
 
+function StopReverseDialog({
+  open,
+  onOpenChange,
+  tradeId,
+  points,
+  setPoints,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  tradeId: string | null;
+  points: string;
+  setPoints: (v: string) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const save = async (reversed: boolean) => {
+    if (!tradeId) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const parsed = reversed
+        ? Number.isFinite(parseFloat(points))
+          ? Math.abs(parseFloat(points))
+          : null
+        : null;
+      const { error } = await supabase
+        .from("trades")
+        .update({
+          stop_and_reversed: reversed,
+          stop_and_reverse_points: parsed,
+        } as never)
+        .eq("id", tradeId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(
+        reversed ? "Stop-and-reverse logged" : "Normal stop hit recorded",
+      );
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-heading">Post-Trade Review</DialogTitle>
+          <DialogDescription>
+            Did price reverse after stopping you out?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label className="text-xs">
+            If yes, how many points did it reverse?
+          </Label>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step="0.25"
+            min="0"
+            value={points}
+            onChange={(e) => setPoints(e.target.value)}
+            placeholder="e.g. 5.0"
+          />
+        </div>
+        <DialogFooter className="mt-3 gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={() => save(false)}
+            disabled={saving}
+            className="font-data uppercase tracking-wider"
+          >
+            No — normal stop
+          </Button>
+          <Button
+            onClick={() => save(true)}
+            disabled={saving}
+            className="bg-trade-red text-background hover:bg-trade-red/90 font-data uppercase tracking-wider"
+          >
+            Yes — reversed
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Field({
   label,
   error,
