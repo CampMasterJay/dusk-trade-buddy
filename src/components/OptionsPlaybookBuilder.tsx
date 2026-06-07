@@ -535,6 +535,19 @@ export function OptionsPlaybookBuilder() {
             {stats.count} matching · {confidenceLabel(stats.count)} confidence
           </span>
         </div>
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn(
+              "h-full transition-all",
+              stats.count >= 18
+                ? "bg-trade-green"
+                : stats.count >= MIN_TRADES_FOR_RESULTS
+                  ? "bg-yellow-500"
+                  : "bg-trade-red",
+            )}
+            style={{ width: `${Math.min(100, (stats.count / 18) * 100)}%` }}
+          />
+        </div>
         {!enough ? (
           <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
             Need at least {MIN_TRADES_FOR_RESULTS} matching trades. Currently {stats.count}.
@@ -583,6 +596,59 @@ export function OptionsPlaybookBuilder() {
           </Button>
         </div>
       </Card>
+
+      {/* SAMPLE TRADES */}
+      {enough && (
+        <Card className="p-4 space-y-3">
+          <h2 className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            Sample Trades (last 10 matching)
+          </h2>
+          <div className="space-y-1">
+            {filtered.slice(0, 10).map((r) => {
+              const mp = Number(r.max_profit);
+              const np = Number(r.net_pnl);
+              const pctMax =
+                isFinite(mp) && mp > 0 && isFinite(np) ? Math.min(1, np / mp) : null;
+              const win = (r.net_pnl ?? 0) > 0;
+              return (
+                <div
+                  key={r.id}
+                  className="flex items-center justify-between text-xs py-1.5 border-b border-border/50 last:border-0"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-data text-[10px] text-muted-foreground w-20 shrink-0">
+                      {r.trade_date}
+                    </span>
+                    <span className="font-data text-[10px] w-12 shrink-0">{r.underlying}</span>
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      {r.strategy_type}
+                      {r.is_debit != null ? (r.is_debit ? " · D" : " · C") : ""}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "font-data text-[10px]",
+                        win ? "text-trade-green" : "text-trade-red",
+                      )}
+                    >
+                      {pctMax != null ? `${(pctMax * 100).toFixed(0)}% max` : win ? "Win" : "Loss"}
+                    </span>
+                    <span
+                      className={cn(
+                        "font-data text-[10px] w-14 text-right",
+                        Number(r.net_pnl ?? 0) >= 0 ? "text-trade-green" : "text-trade-red",
+                      )}
+                    >
+                      ${Number(r.net_pnl ?? 0).toFixed(0)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* FILTERS */}
       <Card className="p-4 space-y-5">
