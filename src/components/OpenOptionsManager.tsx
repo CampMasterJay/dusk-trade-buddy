@@ -111,7 +111,7 @@ export function OpenOptionsManager() {
     const { data } = await (supabase as any)
       .from("options_trades")
       .select(
-        "id, trade_date, underlying, strategy_type, direction_bias, status, is_debit, is_0dte, leg1_type, leg1_action, leg1_strike, leg1_expiration, leg1_premium, leg1_contracts, leg2_type, leg2_action, leg2_strike, leg2_premium, premium_paid_or_received, max_risk, max_profit, planned_profit_target_pct, planned_stop_loss_pct, entry_delta, entry_gamma, entry_theta, entry_vega, notes, iv_rank_at_entry",
+        "id, trade_date, underlying, strategy_type, direction_bias, status, is_debit, is_0dte, leg1_type, leg1_action, leg1_strike, leg1_expiration, leg1_premium, leg1_contracts, leg2_type, leg2_action, leg2_strike, leg2_premium, premium_paid_or_received, max_risk, max_profit, planned_profit_target_pct, planned_stop_loss_pct, entry_delta, entry_gamma, entry_theta, entry_vega, notes, iv_rank_at_entry, is_earnings_play",
       )
       .eq("user_id", user.id)
       .eq("status", "Open")
