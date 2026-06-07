@@ -218,6 +218,8 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     }
   }, [calcShape]);
 
+  const [sizingContracts, setSizingContracts] = useState(0);
+
   // Live "if price moves to X" rough simulator using intrinsic value at expiry
   const intrinsicAtPrice = (price: number, leg: LegState): number => {
     const strike = Number(leg.strike) || 0;
@@ -241,9 +243,7 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     const perSharePnl = intrinsicNet - entryNet;
     const contracts = Math.max(1, sizingContracts);
     return perSharePnl * 100 * contracts;
-  }, [simPrice, legs, strategy, calcShape]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const [sizingContracts, setSizingContracts] = useState(0);
+  }, [simPrice, legs, strategy, calcShape, sizingContracts]);
 
   const handleSave = async () => {
     if (!user) {
