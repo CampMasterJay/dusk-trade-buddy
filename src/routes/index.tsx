@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, CalendarRange, Brain } from "lucide-react";
+import { Plus, CalendarRange, Brain, Shield } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
