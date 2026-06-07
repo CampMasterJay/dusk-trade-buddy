@@ -332,6 +332,29 @@ function ChallengeSection() {
         </span>
       </Row>
 
+      <div className="mt-4 mb-2 text-[11px] uppercase tracking-[2px] text-trade-amber font-data">
+        Options Challenge
+      </div>
+      <Row label="Options starting balance">
+        <NumInput
+          prefix="$"
+          value={Number(settings.options_starting_balance ?? 100)}
+          onChange={(n) => save({ options_starting_balance: n } as Partial<typeof settings>)}
+        />
+      </Row>
+      <Row label="Options target balance">
+        <NumInput
+          prefix="$"
+          value={Number(settings.options_challenge_target ?? 1000)}
+          onChange={(n) => save({ options_challenge_target: n } as Partial<typeof settings>)}
+        />
+      </Row>
+      <Row label="Options current balance" sub="Auto-calculated from options P&L.">
+        <span className="text-sm font-data text-trade-amber">
+          ${Number(settings.options_current_balance ?? 0).toFixed(2)}
+        </span>
+      </Row>
+
       <div className="mt-4 rounded-lg border border-trade-red/30 bg-trade-red/5 p-3">
         <div className="flex items-start gap-2">
           <AlertTriangle className="size-4 text-trade-red shrink-0 mt-0.5" />

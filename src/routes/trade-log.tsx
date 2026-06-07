@@ -111,7 +111,15 @@ function TradeLogScreen() {
   const [instrumentFilter, setInstrumentFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("Newest");
-  const [marketFilter, setMarketFilter] = useState<MarketKey>("All");
+  const [marketFilter, setMarketFilter] = useState<MarketKey>(() => {
+    if (typeof window === "undefined") return "All";
+    try {
+      const m = localStorage.getItem("edgetrader.tradingMode.v1");
+      return m === "options" ? "Options" : "Futures";
+    } catch {
+      return "All";
+    }
+  });
   const [reloadKey, setReloadKey] = useState(0);
 
   // Auto-open New Trade sheet with prefill stashed by Chart Analyzer

@@ -1,34 +1,87 @@
-## Walkthroughs in Settings
+## Goal
 
-Add a "Walkthroughs" section in Settings that lists a catalog of guided tours. Each tour spotlights real UI elements with tooltip bubbles, navigating between screens as needed. No persistence — always replayable.
+Clicking the "EDGE TRADER" logo flips the entire app between two persistent modes — **Futures** and **Options** — each with its own balance, challenge target, and challenge history. Mode is remembered per device in `localStorage`.
 
-### Catalog (v1)
-1. **App overview** — Dashboard hero, stats, bottom nav (Dashboard → Analyzer → Setups → Trade Log → News → Settings).
-2. **Log a trade** — Opens the New Trade sheet, highlights instrument/direction/entry/stop/target/result fields, then Save.
-3. **Chart Analyzer** — Upload area → analysis result panel → "Execute trade from analysis" CTA.
-4. **All other features** — One combined tour covering Setup Advisor (ORB builder), News + high-impact tagging, Weekly Debrief generation, and Game Plan compliance.
+## UX
 
-### Implementation
+- `AppHeader` logo becomes a button. Click cycles Futures → Options → Futures.
+- Logo color/badge reflects active mode:
+  - Futures: current green `EDGE TRADER` with a small `· FUTURES` suffix.
+  - Options: amber tint with `· OPTIONS` suffix.
+- Brief toast on switch: "Switched to Options mode" / "Switched to Futures mode".
+- Balance pill in the header reads the active mode's balance.
 
-**New files**
-- `src/lib/walkthroughs/types.ts` — `Step { selector, title, body, route?, placement? }` and `Walkthrough { id, title, description, icon, steps }`.
-- `src/lib/walkthroughs/catalog.ts` — the 4 tours above with stable `data-tour="..."` selectors.
-- `src/components/walkthrough/WalkthroughProvider.tsx` — context + `useWalkthrough()` hook. Holds active tour + step index, exposes `start(id)`, `next()`, `prev()`, `stop()`. When a step has `route`, calls `navigate({ to })` then waits for the selector via a short `MutationObserver` poll (max ~2s).
-- `src/components/walkthrough/WalkthroughOverlay.tsx` — fixed full-screen dimmed overlay with a cut-out "spotlight" around the target element's `getBoundingClientRect()`, plus a floating tooltip card (title, body, "Step X of N", Back / Next / Skip). Recomputes on scroll/resize. Auto-scrolls the target into view. Mounted once near the app root.
-- `src/components/walkthrough/WalkthroughsSection.tsx` — catalog UI for Settings: list of cards (icon + title + description + "Start" button).
+## Scope of the mode switch
 
-**Edits**
-- `src/routes/__root.tsx` — wrap children in `<WalkthroughProvider>` and render `<WalkthroughOverlay />` once.
-- `src/routes/settings.tsx` — add a new "Walkthroughs" section that renders `<WalkthroughsSection />`.
-- Sprinkle `data-tour="..."` attributes on the elements each tour references (bottom-nav items, dashboard stat card, New Trade FAB, chart upload zone, analyzer result, setup builder tabs, news list item, debrief generate button, settings entry). Pure attribute additions, no logic changes.
+The active mode filters/swaps these surfaces:
+1. **Dashboard (`/`)** — shows the matching summary card (futures vs options) as primary, and corresponding "New Trade" button.
+2. **Trade Log** — default market filter follows mode (Futures shows futures trades, Options shows options trades). User can still override via existing market filter chips.
+3. **Playbook** — default tab follows mode (Futures Playbook vs Options Playbook).
+4. **Behavioral Analytics** — default sub-tab follows mode (Futures vs Options).
+5. **Scaling Plan, Challenges, Weekly Debrief, Weekly Report** — read the active mode's balance + challenge target, and list only that mode's archived challenges.
+6. **Chart Analyzer** — default analysis mode follows app mode.
+7. **Settings** — shows both modes' fields, but highlights the active one.
 
-### UX details
-- Tooltip auto-flips above/below the target based on viewport space; falls back to a centered modal if the selector isn't found within ~2s (with a "we couldn't find that element — continue?" message + Next/Skip).
-- ESC and a "Skip tour" button both call `stop()`.
-- Clicking the dimmed area does nothing (prevents accidental dismissal); a top-right ✕ closes.
-- Mobile-aware: tooltip width clamps to `min(360px, calc(100vw - 32px))`; spotlight padding ~8px.
-- No database changes, no new dependencies — pure React + Tailwind using existing design tokens.
+Routes unique to one market (e.g. `/options-risk`, `/earnings`) stay reachable from both modes; they just become more prominent in Options mode.
 
-### Out of scope
-- Tracking which tours have been completed.
-- First-run auto-launch on signup (can be added later by calling `start("app-overview")` from onboarding completion).
+## Data model
+
+Mode itself is **local-only** (`localStorage`), but the per-mode balances and challenge archives are stored in DB so they survive across devices for that mode.
+
+### Migration: add per-mode columns
+- `user_settings`: add
+  - `options_starting_balance numeric not null default 100`
+  - `options_current_balance numeric not null default 100`
+  - `options_challenge_target numeric not null default 1000`
+- `challenges`: add
+  - `mode text not null default 'futures'` with check `mode in ('futures','options')`
+  - index `(user_id, mode, ended_at desc)`
+
+Existing rows default to `futures` so nothing breaks.
+
+## Implementation
+
+### New: `src/lib/tradingMode.ts`
+- `TradingMode = 'futures' | 'options'`
+- `getTradingMode()` / `setTradingMode(mode)` backed by `localStorage` key `et.tradingMode` (default `'futures'`).
+- `useTradingMode()` React hook returning `[mode, setMode]` with a window `storage` + custom event listener so all components react instantly to a switch.
+
+### `src/components/AppHeader.tsx`
+- Accept `mode`/`onToggleMode` or read from the hook directly.
+- Wrap the brand text in a `<button>` with `aria-label="Switch trading mode"`.
+- Render suffix + accent based on mode. Balance prop becomes mode-aware (route passes the matching balance).
+
+### Routes/components that read balance
+- `useUserSettings` consumers (`/`, `scaling-plan`, `weekly-*`, `risk-of-ruin`, `OptionsSummaryCard`, etc.) call a new helper `getActiveBalance(settings, mode)` returning the right pair of `{ starting, current, target }`.
+- New Trade Sheets continue to write to the matching balance column on close (futures sheet → `current_balance`, options sheet → `options_current_balance`).
+
+### Dashboard (`src/routes/index.tsx`)
+- Reorders sections by active mode (active mode card on top).
+- "Quick action" CTA opens the matching trade sheet.
+
+### Trade Log (`src/routes/trade-log.tsx`)
+- Initial `MarketKey` filter derives from mode on mount (still user-overridable).
+
+### Playbook + Behavior Analytics
+- Initial tab state seeded from mode.
+
+### Challenges
+- `challengeArchive.ts`: write `mode` on insert (from active mode); read queries filter by `mode = activeMode`.
+- Challenge History section filters by active mode.
+- Reset/new challenge actions operate on the active mode's balance columns.
+
+### Settings
+- Add an "Options Challenge" subsection mirroring the existing Futures fields, editing the new columns.
+
+## QA checklist
+
+- Toggle logo on `/`, `/trade-log`, `/playbook`, `/scaling-plan`, `/weekly-debrief` — each view updates without reload.
+- Reload page → mode persists.
+- Logging a futures trade in Options mode is still possible via market filter, but the Dashboard balance/challenge that updates is the futures one (writes follow the trade's market, not the UI mode).
+- Archived challenges from prior to migration appear under Futures only.
+
+## Out of scope
+
+- Cross-device sync of the mode (explicitly chose localStorage).
+- Per-mode separate Settings/preferences beyond balances + challenge target.
+- A third "Both" mode.

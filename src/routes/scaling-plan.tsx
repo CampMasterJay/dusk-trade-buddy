@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,7 +48,8 @@ function ScalingPlanPage() {
 function Inner() {
   const { user } = useAuth();
   const { settings } = useUserSettings();
-  const balance = Number(settings?.current_balance ?? 100);
+  const [mode] = useTradingMode();
+  const balance = getActiveBalance(settings, mode).current;
 
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);

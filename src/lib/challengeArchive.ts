@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getLocalPrefs, setLocalPrefs } from "@/lib/localPrefs";
+import { getTradingMode } from "@/lib/tradingMode";
 
 export type ChallengeOutcome = "Won" | "Lost" | "Reset";
 
@@ -49,10 +50,17 @@ export async function archiveAndResetChallenge(opts: {
     const uid = userData.user?.id;
     if (!uid) throw new Error("Not signed in");
 
+    const mode = getTradingMode();
+    const startCol = mode === "options" ? "options_starting_balance" : "starting_balance";
+    const currentCol = mode === "options" ? "options_current_balance" : "current_balance";
+    const targetCol = mode === "options" ? "options_challenge_target" : "challenge_target";
+
     const [{ data: settings }, { data: trades }] = await Promise.all([
       supabase
         .from("user_settings")
-        .select("starting_balance,current_balance,challenge_target,created_at")
+        .select(
+          "starting_balance,current_balance,challenge_target,options_starting_balance,options_current_balance,options_challenge_target,created_at",
+        )
         .maybeSingle(),
       supabase
         .from("trades")
@@ -60,9 +68,10 @@ export async function archiveAndResetChallenge(opts: {
         .is("deleted_at", null),
     ]);
 
-    const startingBalance = Number(settings?.starting_balance ?? 0);
-    const currentBalance = Number(settings?.current_balance ?? startingBalance);
-    const targetBalance = Number(settings?.challenge_target ?? 0);
+    const s = settings as Record<string, unknown> | null;
+    const startingBalance = Number((s?.[startCol] as number | string | null | undefined) ?? 0);
+    const currentBalance = Number((s?.[currentCol] as number | string | null | undefined) ?? startingBalance);
+    const targetBalance = Number((s?.[targetCol] as number | string | null | undefined) ?? 0);
     const totalTrades = trades?.length ?? 0;
     const wins = (trades ?? []).filter((t) => t.result === "Win").length;
     const decided = (trades ?? []).filter(
@@ -157,6 +166,7 @@ export async function archiveAndResetChallenge(opts: {
           most_used_regime: mostUsedRegime,
           most_profitable_setup: mostProfitableSetup,
           biggest_behavioral_issue: biggestIssue,
+          mode,
         })
         .select("*")
         .single();
@@ -171,9 +181,11 @@ export async function archiveAndResetChallenge(opts: {
       .eq("user_id", uid);
     if (delError) throw delError;
 
+    const updatePatch: Record<string, number> = { [currentCol]: startingBalance };
     const { error: settingsError } = await supabase
       .from("user_settings")
-      .update({ current_balance: startingBalance })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(updatePatch as any)
       .eq("user_id", uid);
     if (settingsError) throw settingsError;
 
@@ -187,10 +199,12 @@ export async function archiveAndResetChallenge(opts: {
   }
 }
 
-export async function listChallenges(): Promise<ChallengeRow[]> {
+export async function listChallenges(mode?: "futures" | "options"): Promise<ChallengeRow[]> {
+  const activeMode = mode ?? getTradingMode();
   const { data, error } = await supabase
     .from("challenges")
     .select("*")
+    .eq("mode", activeMode)
     .order("ended_at", { ascending: false });
   if (error) return [];
   return (data ?? []) as ChallengeRow[];

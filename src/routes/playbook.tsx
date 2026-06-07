@@ -152,7 +152,16 @@ function PlaybookPage() {
   const [entries, setEntries] = useState<PlaybookRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
-  const [market, setMarket] = useState<"futures" | "options">("futures");
+  const [market, setMarket] = useState<"futures" | "options">(() => {
+    if (typeof window === "undefined") return "futures";
+    try {
+      return localStorage.getItem("edgetrader.tradingMode.v1") === "options"
+        ? "options"
+        : "futures";
+    } catch {
+      return "futures";
+    }
+  });
 
   useEffect(() => {
     if (!user) return;
