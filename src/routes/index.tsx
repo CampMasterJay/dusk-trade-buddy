@@ -19,6 +19,8 @@ import {
 } from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useTodayVix } from "@/hooks/useTodayVix";
+import { adjustRiskPct } from "@/lib/vixRisk";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
