@@ -103,6 +103,19 @@ type Analysis = {
     mtfStructure?: string;
     ltfSignal?: string;
   };
+  optionsRecommendation?: {
+    primaryStrategy?: string;
+    alternativeStrategy?: string;
+    reasoning?: string;
+    idealDTE?: string;
+    idealDelta?: string;
+    ivRankNote?: string;
+    strikeGuidance?: string;
+    expirationGuidance?: string;
+    maxRiskGuidance?: string;
+    earningsWarning?: boolean;
+    keyRisk?: string;
+  };
 };
 
 type Slot = "HTF" | "MTF" | "LTF";
