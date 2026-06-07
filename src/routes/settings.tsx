@@ -54,6 +54,13 @@ import {
   subscribeNotificationSettings,
   type NotificationSettings,
 } from "@/lib/notifications";
+import {
+  DEFAULT_BEHAVIOR_ALERT_SETTINGS,
+  getBehaviorAlertSettings,
+  setBehaviorAlertSettings,
+  subscribeBehaviorAlertSettings,
+  type BehaviorAlertSettings,
+} from "@/lib/behaviorAlerts";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -96,6 +103,7 @@ function Settings() {
         <RiskSection />
         <InstrumentsSection />
         <NotificationsSection />
+        <BehaviorAlertsSection />
         <NewsApiSection />
         <OfflineSection />
         <AchievementsSection />
