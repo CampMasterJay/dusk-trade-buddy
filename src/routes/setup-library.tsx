@@ -30,6 +30,8 @@ import {
 } from "@/lib/setupHealth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SetupReviewFlow } from "@/components/SetupReviewFlow";
+import { useSetupStatuses, statusFor, type SetupStatusRow } from "@/hooks/useSetupStatuses";
 
 export const Route = createFileRoute("/setup-library")({
   head: () => ({
@@ -402,6 +404,8 @@ function SetupLibraryPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // tag → last detected_at ISO string (most recent degradation log row)
   const [lastLogged, setLastLogged] = useState<Record<string, string>>({});
+  const { rows: statuses, reload: reloadStatuses } = useSetupStatuses();
+  const [reviewing, setReviewing] = useState<Setup | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -433,6 +437,50 @@ function SetupLibraryPage() {
     for (const s of SETUPS) map.set(s.tag, computeSetupHealth(trades, s.tag));
     return map;
   }, [trades]);
+
+  // Total decisive trades — used as the snooze counter.
+  const totalTrades = useMemo(
+    () => trades.filter((t) => t.result === "Win" || t.result === "Loss").length,
+    [trades],
+  );
+
+  // Probation auto-reactivation: if a paused setup is in probation and the
+  // first 10 probation trades have win rate > 55%, reactivate it.
+  useEffect(() => {
+    if (!user) return;
+    for (const st of statuses) {
+      if (st.state !== "probation" || st.probation_trades_at_start == null) continue;
+      const matching = trades
+        .filter(
+          (t) =>
+            (t as { setup_tag?: string | null }).setup_tag === st.setup_type &&
+            (t.result === "Win" || t.result === "Loss"),
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+      const startIdx = st.probation_trades_at_start;
+      const probationTrades = matching.slice(startIdx, startIdx + 10);
+      if (probationTrades.length < 10) continue;
+      const wr =
+        probationTrades.filter((t) => t.result === "Win").length /
+        probationTrades.length;
+      if (wr > 0.55) {
+        (async () => {
+          await supabase
+            .from("setup_status")
+            .update({
+              state: "active",
+              reactivated_at: new Date().toISOString(),
+            })
+            .eq("id", st.id);
+          toast.success(`${st.setup_type} reactivated — probation win rate ${(wr * 100).toFixed(0)}%`);
+          reloadStatuses();
+        })();
+      }
+    }
+  }, [statuses, trades, user?.id, reloadStatuses]);
 
   // Detect newly DEGRADING setups (no log within 7 days) and auto-log them.
   useEffect(() => {
@@ -493,10 +541,65 @@ function SetupLibraryPage() {
     () =>
       SETUPS.filter((s) => {
         const h = healthByTag.get(s.tag);
-        return h?.status === "DEGRADING" && !dismissed.has(s.tag);
+        if (h?.status !== "DEGRADING") return false;
+        if (dismissed.has(s.tag)) return false;
+        const st = statusFor(statuses, s.tag);
+        if (st?.state === "paused" || st?.state === "probation") return false;
+        // Honor snooze: hide if we have not yet logged 10 more trades.
+        if (
+          st?.snooze_until_trade_count != null &&
+          totalTrades < st.snooze_until_trade_count
+        )
+          return false;
+        return true;
       }),
-    [healthByTag, dismissed],
+    [healthByTag, dismissed, statuses, totalTrades],
   );
+
+  // Paused setups eligible for probation retest: 10+ trades on OTHER setups
+  // since the pause point.
+  const probationOffers = useMemo(() => {
+    return SETUPS.filter((s) => {
+      const st = statusFor(statuses, s.tag);
+      if (st?.state !== "paused") return false;
+      const since = (st.trade_count_at_change ?? 0);
+      return totalTrades - since >= 10;
+    });
+  }, [statuses, totalTrades]);
+
+  async function startProbation(tag: string) {
+    if (!user) return;
+    const st = statusFor(statuses, tag);
+    if (!st) return;
+    // Count this setup's existing trades — probation starts AFTER current count.
+    const setupTradeCount = trades.filter(
+      (t) =>
+        (t as { setup_tag?: string | null }).setup_tag === tag &&
+        (t.result === "Win" || t.result === "Loss"),
+    ).length;
+    await supabase
+      .from("setup_status")
+      .update({
+        state: "probation",
+        probation_started_at: new Date().toISOString(),
+        probation_trades_at_start: setupTradeCount,
+      })
+      .eq("id", st.id);
+    toast.success(`${tag} is now in probation mode (next 10 trades tracked)`);
+    reloadStatuses();
+  }
+
+  async function unpause(tag: string) {
+    if (!user) return;
+    const st = statusFor(statuses, tag);
+    if (!st) return;
+    await supabase
+      .from("setup_status")
+      .update({ state: "active", reactivated_at: new Date().toISOString() })
+      .eq("id", st.id);
+    toast.success(`${tag} reactivated`);
+    reloadStatuses();
+  }
 
   return (
     <ProtectedRoute>
@@ -551,22 +654,16 @@ function SetupLibraryPage() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => recordAction(s.tag, "Paused")}
+                      onClick={() => setReviewing(s)}
                       className="rounded-md border border-trade-red/40 bg-trade-red/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-red hover:bg-trade-red/25"
                     >
-                      Pause
+                      Open Review
                     </button>
                     <button
                       onClick={() => recordAction(s.tag, "Reviewed")}
                       className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
                     >
-                      Reviewed
-                    </button>
-                    <button
-                      onClick={() => recordAction(s.tag, "Continued")}
-                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
-                    >
-                      Continue
+                      Dismiss
                     </button>
                   </div>
                 </div>
@@ -575,12 +672,43 @@ function SetupLibraryPage() {
           );
         })}
 
+        {probationOffers.map((s) => (
+          <div
+            key={`prob-${s.tag}`}
+            className="rounded-xl border border-trade-amber/40 bg-trade-amber/10 p-3 text-xs"
+          >
+            <div className="font-semibold text-trade-amber">
+              🧪 Ready to retest {s.name}?
+            </div>
+            <p className="mt-1 leading-relaxed text-foreground/90">
+              You've logged 10+ trades since pausing this setup. Retest it in
+              probation mode — the next 10 {s.short} trades are tracked separately.
+              Auto-reactivates if probation win rate &gt; 55%.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => startProbation(s.tag)}
+                className="rounded-md border border-trade-amber/40 bg-trade-amber/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-amber hover:bg-trade-amber/25"
+              >
+                Start Probation
+              </button>
+              <button
+                onClick={() => unpause(s.tag)}
+                className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+              >
+                Reactivate Fully
+              </button>
+            </div>
+          </div>
+        ))}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SETUPS.map((s) => (
             <SetupCard
               key={s.id}
               setup={s}
               health={healthByTag.get(s.tag)}
+              status={statusFor(statuses, s.tag)}
               onOpen={() => setSelected(s)}
             />
           ))}
@@ -588,6 +716,22 @@ function SetupLibraryPage() {
       </div>
 
       {selected && <SetupDetailModal setup={selected} onClose={() => setSelected(null)} />}
+      {reviewing && (
+        <SetupReviewFlow
+          setupTag={reviewing.tag}
+          setupName={reviewing.name}
+          health={healthByTag.get(reviewing.tag)!}
+          totalTradesCount={totalTrades}
+          onClose={() => {
+            setReviewing(null);
+            reloadStatuses();
+          }}
+          onActionLogged={(action) => {
+            setDismissed((prev) => new Set(prev).add(reviewing.tag));
+            if (action === "Paused") setLastLogged((p) => ({ ...p, [reviewing.tag]: new Date().toISOString() }));
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }
@@ -596,10 +740,12 @@ function SetupCard({
   setup,
   onOpen,
   health,
+  status,
 }: {
   setup: Setup;
   onOpen: () => void;
   health?: SetupHealth;
+  status?: SetupStatusRow;
 }) {
   const Icon = setup.icon;
   const Diagram = setup.diagram;
@@ -623,6 +769,17 @@ function SetupCard({
             </div>
           </div>
         </div>
+        <div className="flex flex-col items-end gap-1">
+        {status && status.state !== "active" && (
+          <span className={cn(
+            "rounded-md border px-1.5 py-0.5 text-[9px] font-data uppercase tracking-wider",
+            status.state === "paused"
+              ? "border-trade-red/30 bg-trade-red/10 text-trade-red"
+              : "border-trade-amber/30 bg-trade-amber/10 text-trade-amber",
+          )}>
+            {status.state === "paused" ? "Paused" : "Probation"}
+          </span>
+        )}
         <span
           title={
             health
@@ -645,6 +802,7 @@ function SetupCard({
             ? `${((health!.last20WinRate ?? 0) * 100).toFixed(0)}%`
             : meta.label}
         </span>
+        </div>
       </div>
 
       <div className="aspect-[2/1] overflow-hidden rounded-md border border-border bg-background">

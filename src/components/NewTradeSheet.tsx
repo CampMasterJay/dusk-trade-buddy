@@ -50,6 +50,7 @@ import {
 import { Building2, Lock } from "lucide-react";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { adjustRiskPct } from "@/lib/vixRisk";
+import { useSetupStatuses } from "@/hooks/useSetupStatuses";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -215,6 +216,11 @@ export function NewTradeSheet({
   const baseRiskPct = Number(settings?.risk_pct ?? 15);
   const rrSetting = Number(settings?.rr_ratio ?? 1.5);
   const { vix: todayVix } = useTodayVix();
+  const { rows: setupStatuses } = useSetupStatuses();
+  const pausedTags = new Set(
+    setupStatuses.filter((s) => s.state === "paused").map((s) => s.setup_type),
+  );
+  const availableSetupTags = SETUP_TAGS.filter((s) => !pausedTags.has(s));
   const vixAdj = adjustRiskPct({
     baseRiskPct,
     currentVix: todayVix,
@@ -629,7 +635,7 @@ export function NewTradeSheet({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Untagged</SelectItem>
-                    {SETUP_TAGS.map((s) => (
+                    {availableSetupTags.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
