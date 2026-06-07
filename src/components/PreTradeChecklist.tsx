@@ -205,7 +205,7 @@ export function PreTradeChecklist({
   );
   const total = items_def.length + (propFirmItems?.length ?? 0);
   const totalScore = score + firmScore;
-  const verdict = verdictFor(score, total);
+  const verdict = verdictFor(totalScore, total);
   const c = verdictColor(verdict);
 
   const toggle = (k: string) => setItems((prev) => ({ ...prev, [k]: !prev[k] }));
@@ -257,6 +257,45 @@ export function PreTradeChecklist({
             );
           })}
         </ul>
+
+        {propFirmItems && propFirmItems.length > 0 && (
+          <>
+            <div className="mt-4 text-[10px] font-data uppercase tracking-[2px] text-trade-blue">
+              Prop Firm Rules
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {propFirmItems.map((it) => {
+                const checked = !!items[it.key];
+                return (
+                  <li key={it.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(it.key)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors",
+                        checked
+                          ? "border-trade-blue/50 bg-trade-blue/5 text-foreground"
+                          : "border-trade-red/40 bg-trade-red/5 text-trade-red hover:bg-trade-red/10",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                          checked
+                            ? "border-trade-blue bg-trade-blue text-background"
+                            : "border-trade-red bg-background",
+                        )}
+                      >
+                        {checked && <CheckCircle2 className="h-3 w-3" />}
+                      </span>
+                      <span className="flex-1">{it.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
 
         <div className={cn("mt-4 rounded-xl border p-4", c.border, c.bg)}>
           <div className="flex items-center justify-between gap-3">
