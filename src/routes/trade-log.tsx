@@ -24,6 +24,7 @@ import { StopAnalytics } from "@/components/StopAnalytics";
 import { ExitAnalytics } from "@/components/ExitAnalytics";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
 import { StreakBehavior } from "@/components/StreakBehavior";
+import { OptionsBehaviorAnalytics } from "@/components/OptionsBehaviorAnalytics";
 import { RegimePerformance } from "@/components/RegimePerformance";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
 import { BenchmarksPanel } from "@/components/BenchmarksPanel";
@@ -350,11 +351,26 @@ function TradeLogScreen() {
             </TabsContent>
             <TabsContent value="behavior" className="mt-0">
               <div className="space-y-4">
-                <BehaviorAnalytics trades={trades} />
-                <StreakBehavior
-                  trades={trades}
-                  startingBalance={Number(settings?.starting_balance ?? 100)}
-                />
+                <Tabs defaultValue="general" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-3">
+                    <TabsTrigger value="general" className="text-xs uppercase tracking-wider font-data">
+                      General
+                    </TabsTrigger>
+                    <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
+                      Options
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="general" className="mt-0 space-y-4">
+                    <BehaviorAnalytics trades={trades} />
+                    <StreakBehavior
+                      trades={trades}
+                      startingBalance={Number(settings?.starting_balance ?? 100)}
+                    />
+                  </TabsContent>
+                  <TabsContent value="options" className="mt-0">
+                    <OptionsBehaviorAnalytics />
+                  </TabsContent>
+                </Tabs>
               </div>
             </TabsContent>
             <TabsContent value="regime" className="mt-0">
