@@ -760,6 +760,9 @@ const TradeCard = memo(function TradeCard({
                 <span className="text-xs font-data text-muted-foreground">
                   {formatDate(trade.date)}
                 </span>
+                <Badge className="bg-sky-500/15 text-sky-300 border-sky-500/40">
+                  Futures
+                </Badge>
                 <span className="font-data font-semibold text-sm">
                   {trade.instrument}
                 </span>
