@@ -44,6 +44,7 @@ type OpenPosition = OpenOptionsRow & {
   planned_stop_loss_pct: number | null;
   notes: string | null;
   iv_rank_at_entry: number | null;
+  is_earnings_play: boolean | null;
 };
 
 function dteFrom(dateStr: string): number {
