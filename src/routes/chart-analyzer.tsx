@@ -912,6 +912,14 @@ function AnalysisView({
         </div>
       )}
 
+      {/* Section 6b — Options Play */}
+      {a.optionsRecommendation?.primaryStrategy && (
+        <OptionsPlayCard
+          rec={a.optionsRecommendation}
+          onBuild={onBuildOptionsTrade}
+        />
+      )}
+
       {/* Section 7 — Action Buttons */}
       {(onUseLevels || onSave) && (
       <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
