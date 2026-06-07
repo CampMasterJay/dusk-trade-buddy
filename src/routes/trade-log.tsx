@@ -323,6 +323,8 @@ function TradeLogScreen() {
             userId={userId}
             startingBalance={Number(settings?.starting_balance ?? 100)}
             stats={stats}
+            filteredTrades={filteredSorted}
+            isOptions={isOptions}
           />
         </div>
 
