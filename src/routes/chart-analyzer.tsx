@@ -58,6 +58,7 @@ import {
 } from "@/components/AnalysisFeedbackPrompt";
 import { ScanMode } from "@/components/ScanMode";
 import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
+import { useLocalPrefs } from "@/lib/localPrefs";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
