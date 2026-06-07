@@ -743,6 +743,22 @@ export function OptionsPlaybookBuilder() {
           format={(v) => String(v)}
         />
 
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            Debit / Credit
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["Debit", "Credit", "Both"] as const).map((d) => (
+              <Chip
+                key={d}
+                label={d}
+                on={filters.direction === d}
+                onClick={() => setFilters((f) => ({ ...f, direction: d }))}
+              />
+            ))}
+          </div>
+        </div>
+
         <div className="pt-2 border-t border-border">
           <button
             onClick={() => setFilters(DEFAULT_OPT_FILTERS)}
