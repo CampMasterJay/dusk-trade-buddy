@@ -715,6 +715,52 @@ function Toggle({
   );
 }
 
+// ---------- Behavioral Alerts ----------
+
+function BehaviorAlertsSection() {
+  const [s, setS] = useState<BehaviorAlertSettings>(
+    DEFAULT_BEHAVIOR_ALERT_SETTINGS,
+  );
+  useEffect(() => {
+    setS(getBehaviorAlertSettings());
+    return subscribeBehaviorAlertSettings(setS);
+  }, []);
+  const toggle = (k: keyof BehaviorAlertSettings) =>
+    setBehaviorAlertSettings({ [k]: !s[k] });
+  return (
+    <Section
+      icon={<Bell className="size-5" />}
+      title="Behavioral Alerts"
+      desc="Real-time banners shown on the chart analyzer and new-trade form."
+    >
+      <Toggle
+        label="Tilt alert"
+        sub="After 2+ consecutive losses today."
+        checked={s.tilt}
+        onChange={() => toggle("tilt")}
+      />
+      <Toggle
+        label="Overtrading alert"
+        sub="On your 3rd+ trade of the day."
+        checked={s.overtrading}
+        onChange={() => toggle("overtrading")}
+      />
+      <Toggle
+        label="Win-streak alert"
+        sub="After 3+ consecutive wins."
+        checked={s.streak}
+        onChange={() => toggle("streak")}
+      />
+      <Toggle
+        label="Weak-hour alert"
+        sub="When the current hour is your historical worst."
+        checked={s.time}
+        onChange={() => toggle("time")}
+      />
+    </Section>
+  );
+}
+
 // ---------- News & API ----------
 
 function NewsApiSection() {
