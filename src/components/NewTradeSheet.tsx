@@ -50,6 +50,7 @@ import {
 import { Building2, Lock } from "lucide-react";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { adjustRiskPct } from "@/lib/vixRisk";
+import { useSetupStatuses } from "@/hooks/useSetupStatuses";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
