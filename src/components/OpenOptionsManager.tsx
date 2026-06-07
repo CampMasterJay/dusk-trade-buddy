@@ -94,6 +94,14 @@ export function OpenOptionsManager() {
   const [adjTarget, setAdjTarget] = useState("");
   const [adjStop, setAdjStop] = useState("");
   const [busy, setBusy] = useState(false);
+  const [earningsEvents, setEarningsEvents] = useState<EarningsEvent[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetchEarningsEvents(user.id)
+      .then(setEarningsEvents)
+      .catch(() => setEarningsEvents([]));
+  }, [user?.id]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
