@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      behavioral_snapshots: {
+        Row: {
+          best_day_of_week: number | null
+          best_hour_of_day: number | null
+          created_at: string
+          id: string
+          snapshot_date: string
+          updated_at: string
+          user_id: string
+          win_rate_after_2_consec_losses: number | null
+          win_rate_after_2_consec_wins: number | null
+          win_rate_trade_1_of_day: number | null
+          win_rate_trade_2_of_day: number | null
+          win_rate_trade_3_of_day: number | null
+          worst_day_of_week: number | null
+          worst_hour_of_day: number | null
+        }
+        Insert: {
+          best_day_of_week?: number | null
+          best_hour_of_day?: number | null
+          created_at?: string
+          id?: string
+          snapshot_date?: string
+          updated_at?: string
+          user_id: string
+          win_rate_after_2_consec_losses?: number | null
+          win_rate_after_2_consec_wins?: number | null
+          win_rate_trade_1_of_day?: number | null
+          win_rate_trade_2_of_day?: number | null
+          win_rate_trade_3_of_day?: number | null
+          worst_day_of_week?: number | null
+          worst_hour_of_day?: number | null
+        }
+        Update: {
+          best_day_of_week?: number | null
+          best_hour_of_day?: number | null
+          created_at?: string
+          id?: string
+          snapshot_date?: string
+          updated_at?: string
+          user_id?: string
+          win_rate_after_2_consec_losses?: number | null
+          win_rate_after_2_consec_wins?: number | null
+          win_rate_trade_1_of_day?: number | null
+          win_rate_trade_2_of_day?: number | null
+          win_rate_trade_3_of_day?: number | null
+          worst_day_of_week?: number | null
+          worst_hour_of_day?: number | null
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           created_at: string
@@ -292,14 +343,19 @@ export type Database = {
       }
       trades: {
         Row: {
+          account_drawdown_pct_at_entry: number | null
           chart_url: string | null
           checklist_score: number | null
           checklist_verdict: string | null
+          consecutive_losses_before: number | null
+          consecutive_wins_before: number | null
           created_at: string
           date: string
+          day_of_week: number | null
           deleted_at: string | null
           direction: string
           entry: number
+          hour_of_day: number | null
           id: string
           instrument: string
           news_id: string | null
@@ -308,21 +364,31 @@ export type Database = {
           r_multiple: number | null
           range_size: number | null
           result: string
+          session_trade_number: number | null
           setup_tag: string | null
           stop: number
           target: number
+          time_since_market_open_minutes: number | null
+          trades_since_last_loss: number | null
+          trades_since_last_win: number | null
           updated_at: string
           user_id: string
+          was_revenge_trade: boolean | null
         }
         Insert: {
+          account_drawdown_pct_at_entry?: number | null
           chart_url?: string | null
           checklist_score?: number | null
           checklist_verdict?: string | null
+          consecutive_losses_before?: number | null
+          consecutive_wins_before?: number | null
           created_at?: string
           date: string
+          day_of_week?: number | null
           deleted_at?: string | null
           direction: string
           entry: number
+          hour_of_day?: number | null
           id?: string
           instrument: string
           news_id?: string | null
@@ -331,21 +397,31 @@ export type Database = {
           r_multiple?: number | null
           range_size?: number | null
           result: string
+          session_trade_number?: number | null
           setup_tag?: string | null
           stop: number
           target: number
+          time_since_market_open_minutes?: number | null
+          trades_since_last_loss?: number | null
+          trades_since_last_win?: number | null
           updated_at?: string
           user_id: string
+          was_revenge_trade?: boolean | null
         }
         Update: {
+          account_drawdown_pct_at_entry?: number | null
           chart_url?: string | null
           checklist_score?: number | null
           checklist_verdict?: string | null
+          consecutive_losses_before?: number | null
+          consecutive_wins_before?: number | null
           created_at?: string
           date?: string
+          day_of_week?: number | null
           deleted_at?: string | null
           direction?: string
           entry?: number
+          hour_of_day?: number | null
           id?: string
           instrument?: string
           news_id?: string | null
@@ -354,11 +430,16 @@ export type Database = {
           r_multiple?: number | null
           range_size?: number | null
           result?: string
+          session_trade_number?: number | null
           setup_tag?: string | null
           stop?: number
           target?: number
+          time_since_market_open_minutes?: number | null
+          trades_since_last_loss?: number | null
+          trades_since_last_win?: number | null
           updated_at?: string
           user_id?: string
+          was_revenge_trade?: boolean | null
         }
         Relationships: []
       }
@@ -583,7 +664,11 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      recalculate_all_behavioral_snapshots: { Args: never; Returns: undefined }
+      recalculate_behavioral_snapshot: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
