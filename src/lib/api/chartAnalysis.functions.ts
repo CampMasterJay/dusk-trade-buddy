@@ -24,6 +24,7 @@ const InputSchema = z
       .refine((s) => s.startsWith("data:image/"), "Must be an image data URL")
       .optional(),
     note: z.string().max(500).optional(),
+    marketType: z.enum(["standard", "options"]).optional(),
   })
   .refine((v) => !!v.frames?.length || !!v.imageDataUrl, {
     message: "Provide either frames or imageDataUrl",
@@ -54,9 +55,19 @@ export const analyzeChart = createServerFn({ method: "POST" })
           : [];
 
     const isMulti = frames.length > 1;
+    const isOptions = data.marketType === "options";
+
+    const optionsShape =
+      ',"optionsRecommendation":{"primaryStrategy":string,"alternativeStrategy":string,"reasoning":string,"idealDTE":string,"idealDelta":string,"ivRankNote":string,"strikeGuidance":string,"expirationGuidance":string,"maxRiskGuidance":string,"earningsWarning":boolean,"keyRisk":string}';
+
+    const optionsInstruction = isOptions
+      ? ' Also recommend the most appropriate options strategy. primaryStrategy must be one of: "Long Call","Long Put","Bull Call Spread","Bear Put Spread","Bull Put Spread","Bear Call Spread","Iron Condor","Iron Butterfly","Long Straddle","Long Strangle","Covered Call","Cash Secured Put","0DTE Play". idealDTE is a short range (e.g. "7–21 days"). idealDelta is a short range (e.g. "0.40–0.55 for long call"). earningsWarning=true if earnings appear within 7 days based on visible price action / news. Append optionsRecommendation to the JSON.'
+      : "";
 
     const singleShape =
-      '{"instrument":string|null,"timeframe":string|null,"trend":"bullish"|"bearish"|"sideways","structure":string,"keyLevels":{"support":string[],"resistance":string[]},"patterns":string[],"indicators":string[],"bias":string,"biasDirection":"Long"|"Short"|"Neutral","setupDetected":string,"setupQuality":number,"setupIdea":{"direction":"long"|"short"|"none","entry":string,"stop":string,"target":string,"rr":string},"confluenceFactors":string[],"riskFactors":string[],"risks":string[],"summary":string}';
+      '{"instrument":string|null,"timeframe":string|null,"trend":"bullish"|"bearish"|"sideways","structure":string,"keyLevels":{"support":string[],"resistance":string[]},"patterns":string[],"indicators":string[],"bias":string,"biasDirection":"Long"|"Short"|"Neutral","setupDetected":string,"setupQuality":number,"setupIdea":{"direction":"long"|"short"|"none","entry":string,"stop":string,"target":string,"rr":string},"confluenceFactors":string[],"riskFactors":string[],"risks":string[],"summary":string' +
+      (isOptions ? optionsShape : "") +
+      "}";
 
     const multiShape =
       '{"frames":{"HTF":{"timeframe":string|null,"trend":"bullish"|"bearish"|"sideways","structure":string,"summary":string}|null,"MTF":{"timeframe":string|null,"trend":"bullish"|"bearish"|"sideways","structure":string,"summary":string}|null,"LTF":{"timeframe":string|null,"trend":"bullish"|"bearish"|"sideways","structure":string,"summary":string}|null},"mtfAlignment":{"aligned":number,"total":number,"verdict":string,"htfTrend":string,"mtfStructure":string,"ltfSignal":string},' +
@@ -69,13 +80,15 @@ export const analyzeChart = createServerFn({ method: "POST" })
       systemBase +
       " You are given multiple chart screenshots of the same instrument at different timeframes (HTF=higher, MTF=entry, LTF=trigger). Analyze each frame, then produce a COMBINED trade idea using top-down logic (HTF bias → MTF structure → LTF trigger). Respond ONLY with compact JSON matching this shape: " +
       multiShape +
-      '. In mtfAlignment: "aligned" is how many frames agree directionally (count out of total provided), "total" is the number of frames provided, "verdict" is one short sentence (e.g. "Full alignment — strongest setup type"), and htfTrend/mtfStructure/ltfSignal are short labels like "Bullish", "At Support", "Breakout forming".';
+      '. In mtfAlignment: "aligned" is how many frames agree directionally (count out of total provided), "total" is the number of frames provided, "verdict" is one short sentence (e.g. "Full alignment — strongest setup type"), and htfTrend/mtfStructure/ltfSignal are short labels like "Bullish", "At Support", "Breakout forming".' +
+      optionsInstruction;
 
     const systemSingle =
       systemBase +
       " Analyze the chart screenshot and respond ONLY with compact JSON matching this shape: " +
       singleShape +
-      ".";
+      "." +
+      optionsInstruction;
 
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
