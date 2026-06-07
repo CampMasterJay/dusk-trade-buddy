@@ -67,39 +67,57 @@ export type Database = {
       }
       challenges: {
         Row: {
+          biggest_behavioral_issue: string | null
           created_at: string
+          edge_health_trend: string | null
           ended_at: string
+          ending_playbook: string | null
           final_balance: number
           id: string
+          most_profitable_setup: string | null
+          most_used_regime: string | null
           outcome: string
           started_at: string
           starting_balance: number
+          starting_playbook: string | null
           target_balance: number
           total_trades: number
           user_id: string
           win_rate: number
         }
         Insert: {
+          biggest_behavioral_issue?: string | null
           created_at?: string
+          edge_health_trend?: string | null
           ended_at?: string
+          ending_playbook?: string | null
           final_balance: number
           id?: string
+          most_profitable_setup?: string | null
+          most_used_regime?: string | null
           outcome: string
           started_at: string
           starting_balance: number
+          starting_playbook?: string | null
           target_balance: number
           total_trades?: number
           user_id: string
           win_rate?: number
         }
         Update: {
+          biggest_behavioral_issue?: string | null
           created_at?: string
+          edge_health_trend?: string | null
           ended_at?: string
+          ending_playbook?: string | null
           final_balance?: number
           id?: string
+          most_profitable_setup?: string | null
+          most_used_regime?: string | null
           outcome?: string
           started_at?: string
           starting_balance?: number
+          starting_playbook?: string | null
           target_balance?: number
           total_trades?: number
           user_id?: string

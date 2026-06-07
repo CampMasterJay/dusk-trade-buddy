@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WeeklyReportRouteImport } from './routes/weekly-report'
 import { Route as WeeklyDebriefRouteImport } from './routes/weekly-debrief'
+import { Route as TradingHistoryRouteImport } from './routes/trading-history'
 import { Route as TradeLogRouteImport } from './routes/trade-log'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SetupLibraryRouteImport } from './routes/setup-library'
@@ -40,6 +41,11 @@ const WeeklyReportRoute = WeeklyReportRouteImport.update({
 const WeeklyDebriefRoute = WeeklyDebriefRouteImport.update({
   id: '/weekly-debrief',
   path: '/weekly-debrief',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TradingHistoryRoute = TradingHistoryRouteImport.update({
+  id: '/trading-history',
+  path: '/trading-history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TradeLogRoute = TradeLogRouteImport.update({
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/setup-library': typeof SetupLibraryRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
+  '/trading-history': typeof TradingHistoryRoute
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByTo {
   '/setup-library': typeof SetupLibraryRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
+  '/trading-history': typeof TradingHistoryRoute
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/setup-library': typeof SetupLibraryRoute
   '/signup': typeof SignupRoute
   '/trade-log': typeof TradeLogRoute
+  '/trading-history': typeof TradingHistoryRoute
   '/weekly-debrief': typeof WeeklyDebriefRoute
   '/weekly-report': typeof WeeklyReportRoute
   '/news/$id': typeof NewsIdRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/setup-library'
     | '/signup'
     | '/trade-log'
+    | '/trading-history'
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/setup-library'
     | '/signup'
     | '/trade-log'
+    | '/trading-history'
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/setup-library'
     | '/signup'
     | '/trade-log'
+    | '/trading-history'
     | '/weekly-debrief'
     | '/weekly-report'
     | '/news/$id'
@@ -310,6 +322,7 @@ export interface RootRouteChildren {
   SetupLibraryRoute: typeof SetupLibraryRoute
   SignupRoute: typeof SignupRoute
   TradeLogRoute: typeof TradeLogRoute
+  TradingHistoryRoute: typeof TradingHistoryRoute
   WeeklyDebriefRoute: typeof WeeklyDebriefRoute
   WeeklyReportRoute: typeof WeeklyReportRoute
 }
@@ -328,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/weekly-debrief'
       fullPath: '/weekly-debrief'
       preLoaderRoute: typeof WeeklyDebriefRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trading-history': {
+      id: '/trading-history'
+      path: '/trading-history'
+      fullPath: '/trading-history'
+      preLoaderRoute: typeof TradingHistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trade-log': {
@@ -514,6 +534,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupLibraryRoute: SetupLibraryRoute,
   SignupRoute: SignupRoute,
   TradeLogRoute: TradeLogRoute,
+  TradingHistoryRoute: TradingHistoryRoute,
   WeeklyDebriefRoute: WeeklyDebriefRoute,
   WeeklyReportRoute: WeeklyReportRoute,
 }
