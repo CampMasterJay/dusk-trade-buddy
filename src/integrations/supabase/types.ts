@@ -272,12 +272,16 @@ export type Database = {
       playbook_entries: {
         Row: {
           avg_r: number | null
+          baseline_avg_r: number | null
+          baseline_trade_count: number | null
+          baseline_win_rate: number | null
           created_at: string
           filters: Json
           id: string
           name: string
           net_pnl: number | null
           notes: string | null
+          status: string
           trade_count: number
           updated_at: string
           user_id: string
@@ -285,12 +289,16 @@ export type Database = {
         }
         Insert: {
           avg_r?: number | null
+          baseline_avg_r?: number | null
+          baseline_trade_count?: number | null
+          baseline_win_rate?: number | null
           created_at?: string
           filters?: Json
           id?: string
           name: string
           net_pnl?: number | null
           notes?: string | null
+          status?: string
           trade_count?: number
           updated_at?: string
           user_id: string
@@ -298,12 +306,16 @@ export type Database = {
         }
         Update: {
           avg_r?: number | null
+          baseline_avg_r?: number | null
+          baseline_trade_count?: number | null
+          baseline_win_rate?: number | null
           created_at?: string
           filters?: Json
           id?: string
           name?: string
           net_pnl?: number | null
           notes?: string | null
+          status?: string
           trade_count?: number
           updated_at?: string
           user_id?: string
