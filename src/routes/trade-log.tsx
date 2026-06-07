@@ -83,6 +83,7 @@ export const Route = createFileRoute("/trade-log")({
 const PAGE_SIZE = 25;
 type FilterKey = "All" | "Wins" | "Losses";
 type SortKey = "Newest" | "Oldest" | "LargestWin" | "LargestLoss";
+type MarketKey = "All" | "Futures" | "Options" | "Stocks" | "Crypto";
 
 function TradeLog() {
   return (
@@ -110,6 +111,7 @@ function TradeLogScreen() {
   const [instrumentFilter, setInstrumentFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("Newest");
+  const [marketFilter, setMarketFilter] = useState<MarketKey>("All");
   const [reloadKey, setReloadKey] = useState(0);
 
   // Auto-open New Trade sheet with prefill stashed by Chart Analyzer
