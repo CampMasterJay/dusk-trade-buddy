@@ -17,6 +17,12 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { summarizeGreeks, type OpenOptionsRow } from "@/lib/portfolioGreeks";
+import {
+  fetchEarningsEvents,
+  findUpcomingEarnings,
+  daysUntil,
+  type EarningsEvent,
+} from "@/lib/earnings";
 
 type OpenPosition = OpenOptionsRow & {
   trade_date: string;
