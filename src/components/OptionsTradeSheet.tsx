@@ -451,6 +451,7 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
           .filter(Boolean)
           .join("\n") || null,
         checklist_score: checklistScore ? Number(checklistScore) : null,
+        is_earnings_play: isEarningsPlay,
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
