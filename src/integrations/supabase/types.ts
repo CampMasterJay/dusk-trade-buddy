@@ -478,6 +478,57 @@ export type Database = {
         }
         Relationships: []
       }
+      scaling_tiers: {
+        Row: {
+          created_at: string
+          extra_rules: string[]
+          focus: string | null
+          id: string
+          instruments: string[]
+          max_balance: number | null
+          max_risk_pct: number
+          max_trades_per_day: number
+          min_balance: number
+          name: string
+          target_rr: number
+          tier_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extra_rules?: string[]
+          focus?: string | null
+          id?: string
+          instruments?: string[]
+          max_balance?: number | null
+          max_risk_pct?: number
+          max_trades_per_day?: number
+          min_balance: number
+          name: string
+          target_rr?: number
+          tier_number: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extra_rules?: string[]
+          focus?: string | null
+          id?: string
+          instruments?: string[]
+          max_balance?: number | null
+          max_risk_pct?: number
+          max_trades_per_day?: number
+          min_balance?: number
+          name?: string
+          target_rr?: number
+          tier_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       setup_health_log: {
         Row: {
           action_taken: string
@@ -765,6 +816,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          acknowledged_tier_number: number
           baseline_vix: number
           challenge_target: number
           created_at: string
@@ -786,6 +838,7 @@ export type Database = {
           watchlist: string[]
         }
         Insert: {
+          acknowledged_tier_number?: number
           baseline_vix?: number
           challenge_target?: number
           created_at?: string
@@ -807,6 +860,7 @@ export type Database = {
           watchlist?: string[]
         }
         Update: {
+          acknowledged_tier_number?: number
           baseline_vix?: number
           challenge_target?: number
           created_at?: string

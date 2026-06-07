@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   LogOut,
@@ -18,6 +18,8 @@ import {
   Eye,
   EyeOff,
   PlayCircle,
+  Layers,
+  ChevronRight,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -102,6 +104,7 @@ function Settings() {
         <ChallengeHistorySection />
         <RiskSection />
         <InstrumentsSection />
+        <ScalingPlanSection />
         <NotificationsSection />
         <BehaviorAlertsSection />
         <NewsApiSection />
@@ -139,6 +142,26 @@ function Section({
       {!desc && <div className="mb-2" />}
       {children}
     </section>
+  );
+}
+
+// ---------- Scaling Plan ----------
+
+function ScalingPlanSection() {
+  return (
+    <Section
+      icon={<Layers className="h-4 w-4" />}
+      title="Scaling Plan"
+      desc="Rules that change as your capital grows beyond $1,000."
+    >
+      <Link
+        to="/scaling-plan"
+        className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2.5 text-sm hover:bg-accent/30"
+      >
+        <span>Edit capital scaling tiers</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
+    </Section>
   );
 }
 
