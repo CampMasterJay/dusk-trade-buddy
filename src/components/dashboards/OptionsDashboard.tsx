@@ -8,7 +8,6 @@ import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
 import { DailyThetaCard } from "@/components/DailyThetaCard";
 import { OptionsRollingPerformance } from "@/components/OptionsRollingPerformance";
 import { OptionsTradesList } from "@/components/OptionsTradesList";
-import { IvrGuidanceCard } from "@/components/IvrGuidanceCard";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
@@ -143,7 +142,6 @@ export function OptionsDashboard() {
         <OptionsDashboardSection onLogged={onLogged} />
         <OptionsSummaryCard />
         <DailyThetaCard />
-        <IvrGuidanceCard />
         <OptionsRollingPerformance trades={trades} />
 
         <section className="rounded-2xl border border-border bg-card p-4">
