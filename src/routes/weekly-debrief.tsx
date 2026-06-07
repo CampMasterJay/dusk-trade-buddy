@@ -184,6 +184,10 @@ function WeeklyDebriefPage() {
           </section>
         )}
 
+        {!loading && (
+          <OptionsWeeklyDebriefSection weekStart={week.start} weekEnd={week.end} />
+        )}
+
         {/* History */}
         <section className="mt-6">
           <div className="mb-3 flex items-center gap-1.5 text-[10px] font-data uppercase tracking-[3px] text-muted-foreground">
