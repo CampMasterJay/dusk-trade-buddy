@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, CalendarRange, Brain } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
+import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { ProjectionModal } from "@/components/ProjectionModal";
@@ -21,6 +21,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { adjustRiskPct } from "@/lib/vixRisk";
+import { buildVixTiers, classifyVix } from "@/lib/vixTiers";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,10 +170,17 @@ function Dashboard() {
       })
       .slice(-20);
     let running = startingBalance;
-    const series = [{ i: 0, balance: running }];
+    const series: { i: number; balance: number; vix: number | null }[] = [
+      { i: 0, balance: running, vix: null },
+    ];
     ordered.forEach((t, idx) => {
       running += Number(t.pnl) || 0;
-      series.push({ i: idx + 1, balance: running });
+      const v = (t as { vix_at_entry?: number | null }).vix_at_entry;
+      series.push({
+        i: idx + 1,
+        balance: running,
+        vix: v != null && Number.isFinite(Number(v)) ? Number(v) : null,
+      });
     });
     return series;
   }, [trades, startingBalance]);
@@ -240,6 +248,11 @@ function Dashboard() {
               color={sparkColor}
               startingBalance={startingBalance}
               currentBalance={sparkLast}
+              vixThresholds={{
+                low: settings?.vix_tier_low_max,
+                normal: settings?.vix_tier_normal_max,
+                elevated: settings?.vix_tier_elevated_max,
+              }}
             />
 
             <NextTradeCard
