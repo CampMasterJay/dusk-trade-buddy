@@ -1006,10 +1006,7 @@ function PropFirmOverlayBanner({
             {contractCap.binding === "daily"
               ? `daily loss remaining ${fmtMoney(contractCap.bindingLimit)}`
               : `drawdown remaining ${fmtMoney(contractCap.bindingLimit)}`}
-            . Firm rules override your personal {Math.round(
-              0,
-            )}
-            risk %.
+            . Firm rules override your personal risk %.
           </div>
           {contractCap.max === 0 && (
             <div className="mt-1 text-trade-red font-bold">
