@@ -18,6 +18,7 @@ import { Route as SetupAdvisorRouteImport } from './routes/setup-advisor'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RiskOfRuinRouteImport } from './routes/risk-of-ruin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PropFirmsRouteImport } from './routes/prop-firms'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NewsRouteImport } from './routes/news'
 import { Route as LoginRouteImport } from './routes/login'
@@ -71,6 +72,11 @@ const RiskOfRuinRoute = RiskOfRuinRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropFirmsRoute = PropFirmsRouteImport.update({
+  id: '/prop-firms',
+  path: '/prop-firms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/prop-firms': typeof PropFirmsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/prop-firms': typeof PropFirmsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/news': typeof NewsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/prop-firms': typeof PropFirmsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/risk-of-ruin': typeof RiskOfRuinRoute
   '/settings': typeof SettingsRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
     | '/settings'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
     | '/settings'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/news'
     | '/onboarding'
+    | '/prop-firms'
     | '/reset-password'
     | '/risk-of-ruin'
     | '/settings'
@@ -252,6 +264,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NewsRoute: typeof NewsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  PropFirmsRoute: typeof PropFirmsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   RiskOfRuinRoute: typeof RiskOfRuinRoute
   SettingsRoute: typeof SettingsRoute
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prop-firms': {
+      id: '/prop-firms'
+      path: '/prop-firms'
+      fullPath: '/prop-firms'
+      preLoaderRoute: typeof PropFirmsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -413,6 +433,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NewsRoute: NewsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  PropFirmsRoute: PropFirmsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   RiskOfRuinRoute: RiskOfRuinRoute,
   SettingsRoute: SettingsRoute,
