@@ -592,9 +592,19 @@ function SetupLibraryPage() {
   );
 }
 
-function SetupCard({ setup, onOpen }: { setup: Setup; onOpen: () => void }) {
+function SetupCard({
+  setup,
+  onOpen,
+  health,
+}: {
+  setup: Setup;
+  onOpen: () => void;
+  health?: SetupHealth;
+}) {
   const Icon = setup.icon;
   const Diagram = setup.diagram;
+  const meta = health ? STATUS_META[health.status] : STATUS_META.INSUFFICIENT;
+  const showRecent = health && health.last20WinRate != null && health.totalTrades >= 10;
   return (
     <button
       type="button"
@@ -613,8 +623,27 @@ function SetupCard({ setup, onOpen }: { setup: Setup; onOpen: () => void }) {
             </div>
           </div>
         </div>
-        <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-data text-muted-foreground">
-          {setup.winRate}
+        <span
+          title={
+            health
+              ? `${meta.label} · all-time ${(health.allTimeWinRate * 100).toFixed(0)}%, last 20 ${
+                  health.last20WinRate != null
+                    ? `${(health.last20WinRate * 100).toFixed(0)}%`
+                    : "—"
+                } (${health.totalTrades} trades)`
+              : "No data"
+          }
+          className={cn(
+            "rounded-md border px-1.5 py-0.5 text-[10px] font-data inline-flex items-center gap-1",
+            meta.border,
+            meta.bg,
+            meta.text,
+          )}
+        >
+          <span>{meta.dot}</span>
+          {showRecent
+            ? `${((health!.last20WinRate ?? 0) * 100).toFixed(0)}%`
+            : meta.label}
         </span>
       </div>
 
