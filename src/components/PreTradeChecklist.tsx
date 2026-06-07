@@ -127,6 +127,8 @@ interface Props {
   tradeDate?: string;
   /** Override regime detection. */
   regime?: MarketRegime | null;
+  /** Extra checklist items injected by the prop-firm rules engine. */
+  propFirmItems?: Array<{ key: string; label: string; checked: boolean }>;
 }
 
 export function PreTradeChecklist({
@@ -138,6 +140,7 @@ export function PreTradeChecklist({
   onConfirm,
   tradeDate,
   regime: regimeProp,
+  propFirmItems,
 }: Props) {
   const { user } = useAuth();
   const [loadedRegime, setLoadedRegime] = useState<MarketRegime | null>(null);
@@ -148,6 +151,9 @@ export function PreTradeChecklist({
     const base: Record<string, boolean> = Object.fromEntries(
       items_def.map((i) => [i.key as string, false]),
     );
+    if (propFirmItems) {
+      for (const it of propFirmItems) base[it.key] = it.checked;
+    }
     if (prefill) {
       for (const [k, v] of Object.entries(prefill)) {
         if (typeof v === "boolean") base[k] = v;
@@ -164,7 +170,7 @@ export function PreTradeChecklist({
   useEffect(() => {
     if (open) setItems(buildInitial());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, regime]);
+  }, [open, regime, propFirmItems]);
 
   // Auto-load today's regime from the daily game plan when not provided.
   useEffect(() => {
@@ -193,8 +199,13 @@ export function PreTradeChecklist({
     () => items_def.reduce((n, it) => n + (items[it.key as string] ? 1 : 0), 0),
     [items, items_def],
   );
-  const total = items_def.length;
-  const verdict = verdictFor(score, total);
+  const firmScore = useMemo(
+    () => (propFirmItems ?? []).reduce((n, it) => n + (items[it.key] ? 1 : 0), 0),
+    [items, propFirmItems],
+  );
+  const total = items_def.length + (propFirmItems?.length ?? 0);
+  const totalScore = score + firmScore;
+  const verdict = verdictFor(totalScore, total);
   const c = verdictColor(verdict);
 
   const toggle = (k: string) => setItems((prev) => ({ ...prev, [k]: !prev[k] }));
@@ -247,6 +258,45 @@ export function PreTradeChecklist({
           })}
         </ul>
 
+        {propFirmItems && propFirmItems.length > 0 && (
+          <>
+            <div className="mt-4 text-[10px] font-data uppercase tracking-[2px] text-trade-blue">
+              Prop Firm Rules
+            </div>
+            <ul className="mt-2 space-y-1.5">
+              {propFirmItems.map((it) => {
+                const checked = !!items[it.key];
+                return (
+                  <li key={it.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(it.key)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors",
+                        checked
+                          ? "border-trade-blue/50 bg-trade-blue/5 text-foreground"
+                          : "border-trade-red/40 bg-trade-red/5 text-trade-red hover:bg-trade-red/10",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                          checked
+                            ? "border-trade-blue bg-trade-blue text-background"
+                            : "border-trade-red bg-background",
+                        )}
+                      >
+                        {checked && <CheckCircle2 className="h-3 w-3" />}
+                      </span>
+                      <span className="flex-1">{it.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+
         <div className={cn("mt-4 rounded-xl border p-4", c.border, c.bg)}>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -254,7 +304,7 @@ export function PreTradeChecklist({
                 {regime ? `${regime} Score` : "Score"}
               </div>
               <div className={cn("text-3xl font-bold font-data", c.fg)}>
-                {score}
+                {totalScore}
                 <span className="text-sm text-muted-foreground">/{total}</span>
               </div>
             </div>
@@ -273,7 +323,7 @@ export function PreTradeChecklist({
           </Button>
           <Button
             onClick={() => {
-              onConfirm({ score, verdict, items, regime: regime ?? null, total });
+              onConfirm({ score: totalScore, verdict, items, regime: regime ?? null, total });
               onOpenChange(false);
             }}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"

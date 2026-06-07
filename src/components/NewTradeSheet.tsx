@@ -43,6 +43,11 @@ import {
   type ChecklistPrefill,
 } from "@/components/PreTradeChecklist";
 import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
+import {
+  usePropFirmConstraints,
+  maxContractsForStop,
+} from "@/hooks/usePropFirmConstraints";
+import { Building2, Lock } from "lucide-react";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
@@ -108,6 +113,8 @@ export function NewTradeSheet({
 }: Props) {
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const propFirm = usePropFirmConstraints();
+  const tickValuePerPoint = Number(settings?.tick_value ?? 5);
   const [openUncontrolled, setOpenUncontrolled] = useState(false);
   const open = openProp ?? openUncontrolled;
   const setOpen = (v: boolean) => {
@@ -301,6 +308,14 @@ export function NewTradeSheet({
 
   const actualPnl = Number.isFinite(rNum) ? rNum * riskDollar : 0;
 
+  // Prop firm overlay — per-trade max contracts based on stop distance.
+  const contractCap =
+    !isEdit && propFirm.hasActiveChallenge && stopDistance != null
+      ? maxContractsForStop(stopDistance, tickValuePerPoint, propFirm)
+      : null;
+  const propFirmBlocksSubmit =
+    !isEdit && propFirm.hasActiveChallenge && propFirm.locked;
+
   // Image preview
   useEffect(() => {
     if (!chartFile) {
@@ -475,6 +490,8 @@ export function NewTradeSheet({
       if (!isEdit) reset();
       setOpen(false);
       onLogged?.();
+      // Refresh prop-firm overlay so the next trade sees updated drawdown/daily-loss.
+      void propFirm.refresh();
       // Re-evaluate achievements after a successful save.
       void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
 
@@ -520,6 +537,14 @@ export function NewTradeSheet({
 
         <div className="mt-4 space-y-5">
           {!isEdit && <BehaviorAlertOverlay active={open} />}
+          {!isEdit && propFirm.hasActiveChallenge && (
+            <PropFirmOverlayBanner
+              constraints={propFirm}
+              contractCap={contractCap}
+              tickValuePerPoint={tickValuePerPoint}
+              stopDistance={stopDistance}
+            />
+          )}
           {/* Setup */}
           <Section title="Setup">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -826,10 +851,14 @@ export function NewTradeSheet({
           </Button>
           <Button
             onClick={submit}
-            disabled={submitting || !requiredOk}
+            disabled={submitting || !requiredOk || propFirmBlocksSubmit}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider disabled:opacity-40"
           >
-            {submitting ? "Saving..." : "Save Trade"}
+            {propFirmBlocksSubmit
+              ? "Locked by Firm Rules"
+              : submitting
+                ? "Saving..."
+                : "Save Trade"}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -848,6 +877,37 @@ export function NewTradeSheet({
       }}
       initial={checklist}
       onConfirm={(r) => setChecklist(r)}
+      propFirmItems={
+        propFirm.hasActiveChallenge
+          ? [
+              {
+                key: "firmDailyLossOk",
+                label:
+                  propFirm.maxDailyLoss != null
+                    ? `Firm daily loss limit not yet hit (${fmtMoney(propFirm.dailyLossUsed)} of ${fmtMoney(propFirm.maxDailyLoss)} used)`
+                    : "Firm daily loss limit not yet hit",
+                checked:
+                  propFirm.maxDailyLoss == null ||
+                  propFirm.dailyLossUsed < propFirm.maxDailyLoss,
+              },
+              {
+                key: "firmDrawdownSafe",
+                label: `This trade will not violate max drawdown if it loses (${fmtMoney(propFirm.drawdownRemaining)} room left)`,
+                checked: propFirm.drawdownRemaining >= 500,
+              },
+              {
+                key: "firmTargetNotHit",
+                label: "Profit target not yet hit — still in challenge",
+                checked: !propFirm.profitTargetReached,
+              },
+              {
+                key: "firmNotLocked",
+                label: "Account is NOT in an evaluation lockout period",
+                checked: !propFirm.locked,
+              },
+            ]
+          : undefined
+      }
     />
     <StopReverseDialog
       open={reverseOpen}
@@ -873,6 +933,88 @@ function Section({
         {title}
       </h3>
       {children}
+    </div>
+  );
+}
+
+function PropFirmOverlayBanner({
+  constraints,
+  contractCap,
+  tickValuePerPoint,
+  stopDistance,
+}: {
+  constraints: ReturnType<typeof usePropFirmConstraints>;
+  contractCap: ReturnType<typeof maxContractsForStop>;
+  tickValuePerPoint: number;
+  stopDistance: number | null;
+}) {
+  const tone = constraints.locked
+    ? "border-trade-red bg-trade-red/10 text-trade-red"
+    : constraints.drawdownRemaining < 1000 ||
+        (constraints.dailyLossRemaining != null &&
+          constraints.dailyLossRemaining < 200)
+      ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+      : "border-trade-blue/40 bg-trade-blue/5 text-foreground";
+  return (
+    <div className={`rounded-xl border p-3 ${tone}`}>
+      <div className="flex items-center gap-2 text-[10px] font-data uppercase tracking-wider">
+        {constraints.locked ? (
+          <Lock className="h-3.5 w-3.5" />
+        ) : (
+          <Building2 className="h-3.5 w-3.5" />
+        )}
+        {constraints.firmName} ·{" "}
+        {constraints.accountSize
+          ? fmtMoney(constraints.accountSize).replace(".00", "")
+          : ""}{" "}
+        · Firm Rules Active
+      </div>
+
+      {constraints.lockReason && (
+        <div className="mt-2 text-sm font-bold">{constraints.lockReason}</div>
+      )}
+
+      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span className="text-muted-foreground">Drawdown left: </span>
+          <span className="font-data">
+            {fmtMoney(constraints.drawdownRemaining)}
+          </span>
+        </div>
+        {constraints.maxDailyLoss != null && (
+          <div>
+            <span className="text-muted-foreground">Daily loss left: </span>
+            <span className="font-data">
+              {fmtMoney(constraints.dailyLossRemaining ?? 0)} /{" "}
+              {fmtMoney(constraints.maxDailyLoss)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {contractCap && stopDistance != null && stopDistance > 0 && (
+        <div className="mt-2 rounded-md border border-border bg-background/40 p-2 text-xs">
+          <div className="font-bold">
+            Firm rules limit you to {contractCap.max} contract
+            {contractCap.max === 1 ? "" : "s"} today
+          </div>
+          <div className="text-muted-foreground mt-0.5">
+            A full stop of {stopDistance.toFixed(2)} pts × {tickValuePerPoint}/pt
+            ={" "}
+            {fmtMoney(stopDistance * tickValuePerPoint)} loss per contract.
+            Binding limit:{" "}
+            {contractCap.binding === "daily"
+              ? `daily loss remaining ${fmtMoney(contractCap.bindingLimit)}`
+              : `drawdown remaining ${fmtMoney(contractCap.bindingLimit)}`}
+            . Firm rules override your personal risk %.
+          </div>
+          {contractCap.max === 0 && (
+            <div className="mt-1 text-trade-red font-bold">
+              0 contracts allowed — do not take this trade.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
