@@ -383,6 +383,34 @@ export function OpenOptionsManager() {
                     >
                       {status}
                     </span>
+                    {(() => {
+                      const ev = findUpcomingEarnings(
+                        earningsEvents,
+                        row.underlying,
+                        new Date().toISOString().slice(0, 10),
+                        30,
+                      );
+                      if (!ev) return null;
+                      const d = daysUntil(ev.earnings_date);
+                      const red = d <= 7;
+                      return (
+                        <span
+                          title={
+                            red
+                              ? `EARNINGS RISK: ${row.underlying} reports in ${d} day${d === 1 ? "" : "s"} while you hold this position.`
+                              : `${row.underlying} reports in ${d} days (${ev.earnings_date})`
+                          }
+                          className={cn(
+                            "text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border",
+                            red
+                              ? "border-rose-500/60 text-rose-300 bg-rose-500/10"
+                              : "border-amber-500/40 text-amber-300 bg-amber-500/10",
+                          )}
+                        >
+                          ER {d}d
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1 font-data">
                     {contracts}c · exp {row.leg1_expiration} · θ {fmt$(thetaPerDay)}/day
