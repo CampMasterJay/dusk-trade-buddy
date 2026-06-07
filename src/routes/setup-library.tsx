@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,6 +20,16 @@ import {
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { getAllTrades, type Trade } from "@/lib/tradeService";
+import {
+  computeSetupHealth,
+  STATUS_META,
+  type SetupHealth,
+} from "@/lib/setupHealth";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/setup-library")({
   head: () => ({
@@ -37,6 +47,7 @@ type Setup = {
   id: string;
   name: string;
   short: string;
+  tag: string; // setup_tag value used in trades table
   icon: LucideIcon;
   timeframe: string;
   entry: string;
@@ -257,6 +268,7 @@ const SETUPS: Setup[] = [
     id: "orb",
     name: "Opening Range Breakout",
     short: "ORB",
+    tag: "ORB",
     icon: Zap,
     timeframe: "5m / 15m (first 15–30m of session)",
     entry: "Buy/sell on a clean break and close beyond the opening range high/low with volume.",
@@ -277,6 +289,7 @@ const SETUPS: Setup[] = [
     id: "vwap-reclaim",
     name: "VWAP Reclaim",
     short: "VWAP",
+    tag: "VWAP Reclaim",
     icon: Activity,
     timeframe: "1m / 5m intraday",
     entry: "Enter on the first strong close back above (or below) VWAP after a failed breakdown/breakout.",
@@ -297,6 +310,7 @@ const SETUPS: Setup[] = [
     id: "flag",
     name: "Bull / Bear Flag",
     short: "FLAG",
+    tag: "Flag",
     icon: Flag,
     timeframe: "5m / 15m for intraday, 1h for swing",
     entry: "Enter on the breakout of the flag channel in the direction of the pole.",
@@ -317,6 +331,7 @@ const SETUPS: Setup[] = [
     id: "break-retest",
     name: "Break and Retest",
     short: "B&R",
+    tag: "B&R",
     icon: RefreshCw,
     timeframe: "15m / 1h for intraday swing levels",
     entry: "After a level breaks, enter on the retest as old resistance becomes new support (or vice versa).",
@@ -337,6 +352,7 @@ const SETUPS: Setup[] = [
     id: "inside-bar",
     name: "Inside Bar Breakout",
     short: "IB",
+    tag: "Inside Bar",
     icon: Box,
     timeframe: "15m / 1h / Daily",
     entry: "Enter on the break of the inside-bar high/low in the direction of the mother bar.",
@@ -357,6 +373,7 @@ const SETUPS: Setup[] = [
     id: "trend-pullback",
     name: "Trend Continuation Pullback",
     short: "TCP",
+    tag: "Other",
     icon: TrendingUp,
     timeframe: "5m / 15m / 1h",
     entry: "Buy a pullback to a moving average / prior structure inside an established trend; enter on bullish reversal candle.",
@@ -378,7 +395,108 @@ const SETUPS: Setup[] = [
 function SetupLibraryPage() {
   const [selected, setSelected] = useState<Setup | null>(null);
   const { settings } = useUserSettings();
+  const { user } = useAuth();
   const balance = Number(settings?.current_balance ?? settings?.starting_balance ?? 100);
+
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  // tag → last detected_at ISO string (most recent degradation log row)
+  const [lastLogged, setLastLogged] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: tradesData }, { data: logRows }] = await Promise.all([
+        getAllTrades(user.id),
+        supabase
+          .from("setup_health_log")
+          .select("setup_type, detected_at")
+          .eq("user_id", user.id)
+          .order("detected_at", { ascending: false }),
+      ]);
+      if (cancelled) return;
+      setTrades(tradesData ?? []);
+      const map: Record<string, string> = {};
+      for (const row of logRows ?? []) {
+        if (!map[row.setup_type]) map[row.setup_type] = row.detected_at;
+      }
+      setLastLogged(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const healthByTag = useMemo(() => {
+    const map = new Map<string, SetupHealth>();
+    for (const s of SETUPS) map.set(s.tag, computeSetupHealth(trades, s.tag));
+    return map;
+  }, [trades]);
+
+  // Detect newly DEGRADING setups (no log within 7 days) and auto-log them.
+  useEffect(() => {
+    if (!user || trades.length === 0) return;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const toLog: SetupHealth[] = [];
+    healthByTag.forEach((h) => {
+      if (h.status !== "DEGRADING") return;
+      const last = lastLogged[h.setupTag];
+      if (last && new Date(last).getTime() > sevenDaysAgo) return;
+      toLog.push(h);
+    });
+    if (toLog.length === 0) return;
+    (async () => {
+      const rows = toLog.map((h) => ({
+        user_id: user.id,
+        setup_type: h.setupTag,
+        all_time_win_rate: Number(h.allTimeWinRate.toFixed(4)),
+        recent_win_rate: Number((h.last20WinRate ?? 0).toFixed(4)),
+        recent_sample_size: 20,
+        action_taken: "Reviewed" as const,
+      }));
+      const { data, error } = await supabase
+        .from("setup_health_log")
+        .insert(rows)
+        .select("setup_type, detected_at");
+      if (!error && data) {
+        setLastLogged((prev) => {
+          const next = { ...prev };
+          for (const r of data) next[r.setup_type] = r.detected_at;
+          return next;
+        });
+      }
+    })();
+  }, [healthByTag, lastLogged, trades.length, user?.id]);
+
+  async function recordAction(tag: string, action: "Paused" | "Continued" | "Reviewed") {
+    if (!user) return;
+    const h = healthByTag.get(tag);
+    if (!h) return;
+    const { error } = await supabase.from("setup_health_log").insert({
+      user_id: user.id,
+      setup_type: tag,
+      all_time_win_rate: Number(h.allTimeWinRate.toFixed(4)),
+      recent_win_rate: Number((h.last20WinRate ?? 0).toFixed(4)),
+      recent_sample_size: 20,
+      action_taken: action,
+    });
+    if (error) {
+      toast.error("Could not save action");
+      return;
+    }
+    toast.success(`Marked ${tag} as ${action}`);
+    setDismissed((prev) => new Set(prev).add(tag));
+  }
+
+  const degradingAlerts = useMemo(
+    () =>
+      SETUPS.filter((s) => {
+        const h = healthByTag.get(s.tag);
+        return h?.status === "DEGRADING" && !dismissed.has(s.tag);
+      }),
+    [healthByTag, dismissed],
+  );
 
   return (
     <ProtectedRoute>
@@ -406,9 +524,65 @@ function SetupLibraryPage() {
           Reference cards for the 6 core day-trading setups. Tap any card for the full breakdown.
         </p>
 
+        {degradingAlerts.map((s) => {
+          const h = healthByTag.get(s.tag)!;
+          return (
+            <div
+              key={s.tag}
+              className="rounded-xl border border-trade-red/40 bg-trade-red/10 p-3 text-xs"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-trade-red" />
+                <div className="flex-1 space-y-2">
+                  <div className="font-semibold text-trade-red">
+                    ⚠️ SETUP ALERT: {s.name}
+                  </div>
+                  <p className="leading-relaxed text-foreground/90">
+                    Your {s.short} setup win rate has dropped from{" "}
+                    <span className="font-data font-semibold">
+                      {(h.allTimeWinRate * 100).toFixed(0)}%
+                    </span>{" "}
+                    (all-time) to{" "}
+                    <span className="font-data font-semibold">
+                      {((h.last20WinRate ?? 0) * 100).toFixed(0)}%
+                    </span>{" "}
+                    (last 20 trades). Consider pausing this setup and reviewing
+                    recent market conditions.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => recordAction(s.tag, "Paused")}
+                      className="rounded-md border border-trade-red/40 bg-trade-red/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-red hover:bg-trade-red/25"
+                    >
+                      Pause
+                    </button>
+                    <button
+                      onClick={() => recordAction(s.tag, "Reviewed")}
+                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Reviewed
+                    </button>
+                    <button
+                      onClick={() => recordAction(s.tag, "Continued")}
+                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SETUPS.map((s) => (
-            <SetupCard key={s.id} setup={s} onOpen={() => setSelected(s)} />
+            <SetupCard
+              key={s.id}
+              setup={s}
+              health={healthByTag.get(s.tag)}
+              onOpen={() => setSelected(s)}
+            />
           ))}
         </div>
       </div>
@@ -418,9 +592,19 @@ function SetupLibraryPage() {
   );
 }
 
-function SetupCard({ setup, onOpen }: { setup: Setup; onOpen: () => void }) {
+function SetupCard({
+  setup,
+  onOpen,
+  health,
+}: {
+  setup: Setup;
+  onOpen: () => void;
+  health?: SetupHealth;
+}) {
   const Icon = setup.icon;
   const Diagram = setup.diagram;
+  const meta = health ? STATUS_META[health.status] : STATUS_META.INSUFFICIENT;
+  const showRecent = health && health.last20WinRate != null && health.totalTrades >= 10;
   return (
     <button
       type="button"
@@ -439,8 +623,27 @@ function SetupCard({ setup, onOpen }: { setup: Setup; onOpen: () => void }) {
             </div>
           </div>
         </div>
-        <span className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-data text-muted-foreground">
-          {setup.winRate}
+        <span
+          title={
+            health
+              ? `${meta.label} · all-time ${(health.allTimeWinRate * 100).toFixed(0)}%, last 20 ${
+                  health.last20WinRate != null
+                    ? `${(health.last20WinRate * 100).toFixed(0)}%`
+                    : "—"
+                } (${health.totalTrades} trades)`
+              : "No data"
+          }
+          className={cn(
+            "rounded-md border px-1.5 py-0.5 text-[10px] font-data inline-flex items-center gap-1",
+            meta.border,
+            meta.bg,
+            meta.text,
+          )}
+        >
+          <span>{meta.dot}</span>
+          {showRecent
+            ? `${((health!.last20WinRate ?? 0) * 100).toFixed(0)}%`
+            : meta.label}
         </span>
       </div>
 

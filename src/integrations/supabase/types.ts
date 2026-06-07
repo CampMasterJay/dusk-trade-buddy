@@ -424,6 +424,48 @@ export type Database = {
         }
         Relationships: []
       }
+      setup_health_log: {
+        Row: {
+          action_taken: string
+          all_time_win_rate: number
+          created_at: string
+          detected_at: string
+          id: string
+          notes: string | null
+          recent_sample_size: number
+          recent_win_rate: number
+          setup_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_taken?: string
+          all_time_win_rate: number
+          created_at?: string
+          detected_at?: string
+          id?: string
+          notes?: string | null
+          recent_sample_size?: number
+          recent_win_rate: number
+          setup_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_taken?: string
+          all_time_win_rate?: number
+          created_at?: string
+          detected_at?: string
+          id?: string
+          notes?: string | null
+          recent_sample_size?: number
+          recent_win_rate?: number
+          setup_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trade_journals: {
         Row: {
           created_at: string
