@@ -555,6 +555,18 @@ export function NewTradeSheet({
               stopDistance={stopDistance}
             />
           )}
+          {!isEdit && vixAdj.active && (
+            <div className="rounded-lg border border-trade-amber/40 bg-trade-amber/10 px-3 py-2 text-xs text-trade-amber font-data flex items-center justify-between">
+              <span>
+                ⚡ VIX ADJUST: Using {vixAdj.adjustedPct.toFixed(2)}% risk
+                (VIX={todayVix?.toFixed(1)})
+              </span>
+              <span className="text-[10px] opacity-70">
+                base {baseRiskPct}% · {vixAdj.factor.toFixed(2)}×
+                {vixAdj.capped ? " (capped)" : ""}
+              </span>
+            </div>
+          )}
           {/* Setup */}
           <Section title="Setup">
             <div className="grid gap-3 sm:grid-cols-2">
