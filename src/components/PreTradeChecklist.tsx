@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, AlertTriangle, XCircle, ListChecks } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, ListChecks, Sparkles, ShieldAlert, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import type { MarketRegime } from "@/lib/marketRegime";
+import {
+  classifyConditions,
+  type Conditions,
+  type MatchResult,
+  type PlaybookEntryLite,
+  type PlaybookScore,
+} from "@/lib/playbookMatcher";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +27,8 @@ export type ChecklistResult = {
   items: Record<string, boolean>;
   regime?: MarketRegime | null;
   total?: number;
+  playbookScore?: PlaybookScore | null;
+  playbookEntryName?: string | null;
 };
 
 export type ChecklistPrefill = {
@@ -129,6 +138,8 @@ interface Props {
   regime?: MarketRegime | null;
   /** Extra checklist items injected by the prop-firm rules engine. */
   propFirmItems?: Array<{ key: string; label: string; checked: boolean }>;
+  /** Current trade conditions used to match against saved Playbook entries. */
+  conditions?: Conditions | null;
 }
 
 export function PreTradeChecklist({
@@ -141,9 +152,11 @@ export function PreTradeChecklist({
   tradeDate,
   regime: regimeProp,
   propFirmItems,
+  conditions,
 }: Props) {
   const { user } = useAuth();
   const [loadedRegime, setLoadedRegime] = useState<MarketRegime | null>(null);
+  const [playbookEntries, setPlaybookEntries] = useState<PlaybookEntryLite[]>([]);
   const regime = regimeProp ?? loadedRegime;
   const items_def = useMemo(() => getRegimeChecklist(regime), [regime]);
 
@@ -195,6 +208,28 @@ export function PreTradeChecklist({
     };
   }, [open, regimeProp, user, tradeDate]);
 
+  // Load saved Playbook entries for matching the current trade against.
+  useEffect(() => {
+    if (!open || !user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("playbook_entries")
+        .select("id, name, status, win_rate, baseline_win_rate, trade_count, baseline_trade_count, filters")
+        .eq("user_id", user.id);
+      if (cancelled) return;
+      setPlaybookEntries((data ?? []) as unknown as PlaybookEntryLite[]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user]);
+
+  const match = useMemo<MatchResult | null>(() => {
+    if (!conditions || playbookEntries.length === 0) return null;
+    return classifyConditions(playbookEntries, conditions);
+  }, [conditions, playbookEntries]);
+
   const score = useMemo(
     () => items_def.reduce((n, it) => n + (items[it.key as string] ? 1 : 0), 0),
     [items, items_def],
@@ -224,6 +259,8 @@ export function PreTradeChecklist({
               : "No regime set in today's Game Plan — using generic checklist."}
           </DialogDescription>
         </DialogHeader>
+
+        {match && <PlaybookBanner match={match} hasEntries={playbookEntries.length > 0} />}
 
         <ul className="mt-2 space-y-1.5">
           {items_def.map((it) => {
@@ -323,7 +360,15 @@ export function PreTradeChecklist({
           </Button>
           <Button
             onClick={() => {
-              onConfirm({ score: totalScore, verdict, items, regime: regime ?? null, total });
+              onConfirm({
+                score: totalScore,
+                verdict,
+                items,
+                regime: regime ?? null,
+                total,
+                playbookScore: match?.score ?? null,
+                playbookEntryName: match?.entry?.name ?? null,
+              });
               onOpenChange(false);
             }}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
@@ -333,5 +378,70 @@ export function PreTradeChecklist({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PlaybookBanner({ match, hasEntries }: { match: MatchResult; hasEntries: boolean }) {
+  if (!hasEntries) return null;
+  if (match.score === "A+ Match" && match.entry) {
+    const wr = Math.round((match.winRate ?? 0) * 100);
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-lg border border-trade-green/40 bg-trade-green/10 p-3 text-xs">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-trade-green" />
+        <div>
+          <div className="font-data uppercase tracking-wider text-[10px] text-trade-green font-semibold">
+            A+ Setup Match
+          </div>
+          <div className="mt-0.5 text-foreground">
+            This trade matches your <span className="font-semibold">'{match.entry.name}'</span> setup
+            {" "}({wr}% win rate, {match.tradeCount ?? 0} trades).
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (match.score === "Avoid Pattern" && match.entry) {
+    const wr = Math.round((match.winRate ?? 0) * 100);
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-lg border border-trade-red/40 bg-trade-red/10 p-3 text-xs">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-trade-red" />
+        <div>
+          <div className="font-data uppercase tracking-wider text-[10px] text-trade-red font-semibold">
+            Low Probability Match
+          </div>
+          <div className="mt-0.5 text-foreground">
+            This matches a pattern with only {wr}% win rate ({match.entry.name}). Strongly consider skipping.
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (match.score === "Partial Match" && match.entry) {
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <div>
+          <div className="font-data uppercase tracking-wider text-[10px] text-amber-400 font-semibold">
+            Partial Playbook Match
+          </div>
+          <div className="mt-0.5 text-foreground">
+            {match.matchedCount}/{match.totalChecks} conditions match '{match.entry.name}'. Confirm the missing pieces before entering.
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+      <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+      <div>
+        <div className="font-data uppercase tracking-wider text-[10px] text-amber-400 font-semibold">
+          Unclassified Setup
+        </div>
+        <div className="mt-0.5 text-foreground">
+          This setup doesn't match any playbook entry. Proceed only if it passes your full checklist.
+        </div>
+      </div>
+    </div>
   );
 }
