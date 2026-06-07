@@ -1,39 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
-
 /**
- * EdgeTrader typed Supabase client.
+ * Re-export of the single canonical Supabase client.
  *
- * Reads from VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (or
- * VITE_SUPABASE_PUBLISHABLE_KEY as fallback) which are injected at build time.
+ * Previously this file created its OWN Supabase client with the same
+ * storage key as `@/integrations/supabase/client`, which triggered the
+ * "Multiple GoTrueClient instances detected" warning and risked
+ * divergent auth state. We now re-export the auto-generated client so
+ * all callers share one instance.
  */
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+import { supabase } from "@/integrations/supabase/client";
 
-const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  process.env.SUPABASE_PUBLISHABLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  const missing = [
-    ...(!SUPABASE_URL ? ["VITE_SUPABASE_URL / SUPABASE_URL"] : []),
-    ...(!SUPABASE_ANON_KEY
-      ? ["VITE_SUPABASE_ANON_KEY / VITE_SUPABASE_PUBLISHABLE_KEY"]
-      : []),
-  ];
-  const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Connect Lovable Cloud.`;
-  console.error(`[EdgeTrader Supabase] ${message}`);
-  throw new Error(message);
-}
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: typeof window !== "undefined" ? localStorage : undefined,
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-});
+export { supabase };
 
 /**
  * Lightweight connection health check.
@@ -41,15 +17,12 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
  */
 export async function checkSupabaseHealth(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const { error } = await supabase.auth.getSession();
     if (error) {
       console.error("[EdgeTrader Supabase] Health check failed:", error.message);
       return false;
     }
-    console.log(
-      "[EdgeTrader Supabase] Health check passed — connected to",
-      SUPABASE_URL
-    );
+    console.log("[EdgeTrader Supabase] Health check passed");
     return true;
   } catch (err) {
     console.error(
