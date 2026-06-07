@@ -599,6 +599,10 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
                   />
                 </div>
               </div>
+              <IvrGuidanceCard
+                ivr={ivRank ? Number(ivRank) : null}
+                currentStrategy={strategy?.type ?? null}
+              />
               <div className="space-y-2">
                 <Label>Reason for trade</Label>
                 <Textarea
