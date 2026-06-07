@@ -30,6 +30,8 @@ import {
 } from "@/lib/setupHealth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SetupReviewFlow } from "@/components/SetupReviewFlow";
+import { useSetupStatuses, statusFor, type SetupStatusRow } from "@/hooks/useSetupStatuses";
 
 export const Route = createFileRoute("/setup-library")({
   head: () => ({
@@ -402,6 +404,8 @@ function SetupLibraryPage() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   // tag → last detected_at ISO string (most recent degradation log row)
   const [lastLogged, setLastLogged] = useState<Record<string, string>>({});
+  const { rows: statuses, reload: reloadStatuses } = useSetupStatuses();
+  const [reviewing, setReviewing] = useState<Setup | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -433,6 +437,50 @@ function SetupLibraryPage() {
     for (const s of SETUPS) map.set(s.tag, computeSetupHealth(trades, s.tag));
     return map;
   }, [trades]);
+
+  // Total decisive trades — used as the snooze counter.
+  const totalTrades = useMemo(
+    () => trades.filter((t) => t.result === "Win" || t.result === "Loss").length,
+    [trades],
+  );
+
+  // Probation auto-reactivation: if a paused setup is in probation and the
+  // first 10 probation trades have win rate > 55%, reactivate it.
+  useEffect(() => {
+    if (!user) return;
+    for (const st of statuses) {
+      if (st.state !== "probation" || st.probation_trades_at_start == null) continue;
+      const matching = trades
+        .filter(
+          (t) =>
+            (t as { setup_tag?: string | null }).setup_tag === st.setup_type &&
+            (t.result === "Win" || t.result === "Loss"),
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+      const startIdx = st.probation_trades_at_start;
+      const probationTrades = matching.slice(startIdx, startIdx + 10);
+      if (probationTrades.length < 10) continue;
+      const wr =
+        probationTrades.filter((t) => t.result === "Win").length /
+        probationTrades.length;
+      if (wr > 0.55) {
+        (async () => {
+          await supabase
+            .from("setup_status")
+            .update({
+              state: "active",
+              reactivated_at: new Date().toISOString(),
+            })
+            .eq("id", st.id);
+          toast.success(`${st.setup_type} reactivated — probation win rate ${(wr * 100).toFixed(0)}%`);
+          reloadStatuses();
+        })();
+      }
+    }
+  }, [statuses, trades, user?.id, reloadStatuses]);
 
   // Detect newly DEGRADING setups (no log within 7 days) and auto-log them.
   useEffect(() => {
@@ -493,10 +541,65 @@ function SetupLibraryPage() {
     () =>
       SETUPS.filter((s) => {
         const h = healthByTag.get(s.tag);
-        return h?.status === "DEGRADING" && !dismissed.has(s.tag);
+        if (h?.status !== "DEGRADING") return false;
+        if (dismissed.has(s.tag)) return false;
+        const st = statusFor(statuses, s.tag);
+        if (st?.state === "paused" || st?.state === "probation") return false;
+        // Honor snooze: hide if we have not yet logged 10 more trades.
+        if (
+          st?.snooze_until_trade_count != null &&
+          totalTrades < st.snooze_until_trade_count
+        )
+          return false;
+        return true;
       }),
-    [healthByTag, dismissed],
+    [healthByTag, dismissed, statuses, totalTrades],
   );
+
+  // Paused setups eligible for probation retest: 10+ trades on OTHER setups
+  // since the pause point.
+  const probationOffers = useMemo(() => {
+    return SETUPS.filter((s) => {
+      const st = statusFor(statuses, s.tag);
+      if (st?.state !== "paused") return false;
+      const since = (st.trade_count_at_change ?? 0);
+      return totalTrades - since >= 10;
+    });
+  }, [statuses, totalTrades]);
+
+  async function startProbation(tag: string) {
+    if (!user) return;
+    const st = statusFor(statuses, tag);
+    if (!st) return;
+    // Count this setup's existing trades — probation starts AFTER current count.
+    const setupTradeCount = trades.filter(
+      (t) =>
+        (t as { setup_tag?: string | null }).setup_tag === tag &&
+        (t.result === "Win" || t.result === "Loss"),
+    ).length;
+    await supabase
+      .from("setup_status")
+      .update({
+        state: "probation",
+        probation_started_at: new Date().toISOString(),
+        probation_trades_at_start: setupTradeCount,
+      })
+      .eq("id", st.id);
+    toast.success(`${tag} is now in probation mode (next 10 trades tracked)`);
+    reloadStatuses();
+  }
+
+  async function unpause(tag: string) {
+    if (!user) return;
+    const st = statusFor(statuses, tag);
+    if (!st) return;
+    await supabase
+      .from("setup_status")
+      .update({ state: "active", reactivated_at: new Date().toISOString() })
+      .eq("id", st.id);
+    toast.success(`${tag} reactivated`);
+    reloadStatuses();
+  }
 
   return (
     <ProtectedRoute>
