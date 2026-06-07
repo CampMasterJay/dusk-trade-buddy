@@ -35,6 +35,13 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { OptionsPositionSizer } from "@/components/OptionsPositionSizer";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
+import {
   calculateOptionsPnL,
   type StrategyType,
   type LegInput,
