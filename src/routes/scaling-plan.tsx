@@ -277,18 +277,18 @@ function TierCard({
           label="Max risk per trade (%)"
           value={Number(draft.max_risk_pct)}
           step={0.5}
-          onChange={(n) => onChange({ max_risk_pct: n as number })}
+          onChange={(n) => onChange({ max_risk_pct: typeof n === "number" ? n : 0 })}
         />
         <NumField
           label="Max trades / day"
           value={Number(draft.max_trades_per_day)}
-          onChange={(n) => onChange({ max_trades_per_day: n as number })}
+          onChange={(n) => onChange({ max_trades_per_day: typeof n === "number" ? n : 0 })}
         />
         <NumField
           label="Target R:R"
           value={Number(draft.target_rr)}
           step={0.1}
-          onChange={(n) => onChange({ target_rr: n as number })}
+          onChange={(n) => onChange({ target_rr: typeof n === "number" ? n : 0 })}
         />
         <div className="sm:col-span-2">
           <Label className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
