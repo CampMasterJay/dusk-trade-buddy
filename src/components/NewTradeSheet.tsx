@@ -635,7 +635,7 @@ export function NewTradeSheet({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Untagged</SelectItem>
-                    {SETUP_TAGS.map((s) => (
+                    {availableSetupTags.map((s) => (
                       <SelectItem key={s} value={s}>
                         {s}
                       </SelectItem>
