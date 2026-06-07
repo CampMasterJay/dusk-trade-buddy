@@ -20,6 +20,12 @@ export function getTradingMode(): TradingMode {
   }
 }
 
+/** Sync the active mode onto <html data-mode="…"> so CSS can theme per mode. */
+export function syncModeAttribute(mode: TradingMode): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-mode", mode);
+}
+
 export function setTradingMode(mode: TradingMode): void {
   if (typeof window === "undefined") return;
   try {
@@ -27,6 +33,7 @@ export function setTradingMode(mode: TradingMode): void {
   } catch {
     /* ignore */
   }
+  syncModeAttribute(mode);
   window.dispatchEvent(new CustomEvent(EVENT, { detail: mode }));
 }
 
@@ -39,13 +46,21 @@ export function toggleTradingMode(): TradingMode {
 export function useTradingMode(): [TradingMode, (m: TradingMode) => void] {
   const [mode, setMode] = useState<TradingMode>("futures");
   useEffect(() => {
-    setMode(getTradingMode());
+    const initial = getTradingMode();
+    setMode(initial);
+    syncModeAttribute(initial);
     const onCustom = (e: Event) => {
       const d = (e as CustomEvent<TradingMode>).detail;
-      setMode(d === "options" ? "options" : "futures");
+      const next: TradingMode = d === "options" ? "options" : "futures";
+      setMode(next);
+      syncModeAttribute(next);
     };
     const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY) setMode(getTradingMode());
+      if (e.key === KEY) {
+        const next = getTradingMode();
+        setMode(next);
+        syncModeAttribute(next);
+      }
     };
     window.addEventListener(EVENT, onCustom);
     window.addEventListener("storage", onStorage);

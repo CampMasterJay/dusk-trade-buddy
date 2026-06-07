@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, CalendarRange, Brain, Shield } from "lucide-react";
+import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -12,10 +12,7 @@ import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
 import { DrawdownTracker } from "@/components/DrawdownTracker";
 import { ConsistencyStreak } from "@/components/ConsistencyStreak";
 import { EdgeHealthSection } from "@/components/EdgeHealthSection";
-import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
-import { DailyThetaCard } from "@/components/DailyThetaCard";
-import { OptionsDashboardSection } from "@/components/OptionsDashboardSection";
-import { OptionsRollingPerformance } from "@/components/OptionsRollingPerformance";
+import { OptionsDashboard } from "@/components/dashboards/OptionsDashboard";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -66,9 +63,15 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <ProtectedRoute>
-      <Dashboard />
+      <DashboardSwitcher />
     </ProtectedRoute>
   );
+}
+
+function DashboardSwitcher() {
+  const [mode] = useTradingMode();
+  if (mode === "options") return <OptionsDashboard />;
+  return <Dashboard />;
 }
 
 function Dashboard() {
@@ -239,24 +242,6 @@ function Dashboard() {
             <StatsRow stats={stats} streak={streak} />
 
             <EdgeHealthSection trades={trades} />
-
-            <OptionsRollingPerformance trades={trades} />
-
-            <div className="space-y-2">
-              <div className="flex justify-end">
-                <Link
-                  to="/options-risk"
-                  className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-data px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition"
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Options Risk
-                </Link>
-              </div>
-              <OptionsDashboardSection onLogged={onTradeLogged} />
-              <OptionsSummaryCard />
-            </div>
-
-            <DailyThetaCard />
 
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 

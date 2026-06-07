@@ -1,87 +1,142 @@
-## Goal
 
-Clicking the "EDGE TRADER" logo flips the entire app between two persistent modes — **Futures** and **Options** — each with its own balance, challenge target, and challenge history. Mode is remembered per device in `localStorage`.
+# Separate Futures & Options into Two Distinct Experiences
 
-## UX
+Right now both modes share the same routes, terminology, colors, components, and AI prompts — the toggle just swaps a balance. This plan makes each mode feel like its own product, sharing only authentication, the app shell, and the user's settings record.
 
-- `AppHeader` logo becomes a button. Click cycles Futures → Options → Futures.
-- Logo color/badge reflects active mode:
-  - Futures: current green `EDGE TRADER` with a small `· FUTURES` suffix.
-  - Options: amber tint with `· OPTIONS` suffix.
-- Brief toast on switch: "Switched to Options mode" / "Switched to Futures mode".
-- Balance pill in the header reads the active mode's balance.
+## 1. Mode-aware shell & theming
 
-## Scope of the mode switch
+- Promote `useTradingMode()` to a top-level context provider mounted in `__root.tsx` so every component reads mode without prop drilling and re-renders together on toggle.
+- Add a `data-mode="futures|options"` attribute to `<html>` driven by the provider.
+- In `src/styles.css`, define two token blocks scoped to that attribute:
+  - **Futures** — green accent system (existing `--trade-green` lineage), sharper/tactical feel, mono-leaning data type, square corners.
+  - **Options** — amber/violet accent system, softer rounded surfaces, slightly more editorial type weight.
+  - Both override `--primary`, `--accent`, `--ring`, `--chart-1..5`, and a new `--mode-accent` / `--mode-accent-soft` pair.
+- AppHeader logo badge already shows the active mode — extend it with:
+  - Mode-tinted glow ring.
+  - Subtle dot indicator if the *other* mode has open positions or 0DTE alerts (single query on toggle hover/mount).
 
-The active mode filters/swaps these surfaces:
-1. **Dashboard (`/`)** — shows the matching summary card (futures vs options) as primary, and corresponding "New Trade" button.
-2. **Trade Log** — default market filter follows mode (Futures shows futures trades, Options shows options trades). User can still override via existing market filter chips.
-3. **Playbook** — default tab follows mode (Futures Playbook vs Options Playbook).
-4. **Behavioral Analytics** — default sub-tab follows mode (Futures vs Options).
-5. **Scaling Plan, Challenges, Weekly Debrief, Weekly Report** — read the active mode's balance + challenge target, and list only that mode's archived challenges.
-6. **Chart Analyzer** — default analysis mode follows app mode.
-7. **Settings** — shows both modes' fields, but highlights the active one.
+## 2. Terminology dictionary
 
-Routes unique to one market (e.g. `/options-risk`, `/earnings`) stay reachable from both modes; they just become more prominent in Options mode.
+Create `src/lib/modeCopy.ts` exporting `useModeCopy()` that returns a strongly-typed dictionary per mode. Every label below comes from this hook — no hard-coded strings in shared components.
 
-## Data model
+| Key | Futures | Options |
+|---|---|---|
+| `tradeNoun` | Trade | Position |
+| `tradeNounPlural` | Trades | Positions |
+| `newCta` | New Trade | New Position |
+| `instrumentLabel` | Instrument | Underlying |
+| `sizeLabel` | Contracts | Contracts (× leg) |
+| `riskLabel` | Risk ($) | Max Risk / Net Debit |
+| `targetLabel` | Target | Profit Target % |
+| `stopLabel` | Stop | Stop (% of credit/debit) |
+| `pnlLabel` | P&L | Net P&L |
+| `dashboardTitle` | Trading Floor | Options Desk |
+| `playbookTitle` | Setup Playbook | Strategy Playbook |
+| `weeklyDebriefTitle` | Weekly Trader Debrief | Options Week in Review |
+| `coachPersona` | "Pit boss" — tactical, scalper-flavored | "Strategist" — IV/Greeks-flavored |
+| `emptyStateTrades` | "No trades logged yet. Log your first contract." | "No positions yet. Open your first spread." |
 
-Mode itself is **local-only** (`localStorage`), but the per-mode balances and challenge archives are stored in DB so they survive across devices for that mode.
+Also includes mode-specific icon set choices (e.g. `TrendingUp` vs `Layers`) and accent class helpers.
 
-### Migration: add per-mode columns
-- `user_settings`: add
-  - `options_starting_balance numeric not null default 100`
-  - `options_current_balance numeric not null default 100`
-  - `options_challenge_target numeric not null default 1000`
-- `challenges`: add
-  - `mode text not null default 'futures'` with check `mode in ('futures','options')`
-  - index `(user_id, mode, ended_at desc)`
+## 3. Distinct navigation & route trees
 
-Existing rows default to `futures` so nothing breaks.
+Today both modes share `/`, `/trade-log`, `/playbook`, `/weekly-debrief`, etc. Split via a single source of truth:
 
-## Implementation
+- `src/lib/navConfig.ts` exports `getNav(mode)` returning the BottomNav + drawer items for that mode.
+- **Futures nav**: Dashboard · Trade Log · Game Plan · Playbook · Scaling Plan · Risk of Ruin · Weekly Debrief · Chart Analyzer · Setup Library · Prop Firms.
+- **Options nav**: Options Desk · Positions · Strategy Playbook · Options Risk · IVR & Theta · Earnings Calendar · Week in Review · Chart Analyzer.
+- Hide nav items that don't apply per mode (Prop Firms hidden in Options; Earnings Calendar hidden in Futures).
+- Routes still exist under one tree, but `BottomNav` and the `__root` drawer render only the active mode's items. Hitting a hidden route URL directly is allowed (for backward links) but won't surface in nav.
 
-### New: `src/lib/tradingMode.ts`
-- `TradingMode = 'futures' | 'options'`
-- `getTradingMode()` / `setTradingMode(mode)` backed by `localStorage` key `et.tradingMode` (default `'futures'`).
-- `useTradingMode()` React hook returning `[mode, setMode]` with a window `storage` + custom event listener so all components react instantly to a switch.
+## 4. Distinct dashboards
 
-### `src/components/AppHeader.tsx`
-- Accept `mode`/`onToggleMode` or read from the hook directly.
-- Wrap the brand text in a `<button>` with `aria-label="Switch trading mode"`.
-- Render suffix + accent based on mode. Balance prop becomes mode-aware (route passes the matching balance).
+- `src/routes/index.tsx` becomes a thin switcher: `mode === "futures" ? <FuturesDashboard /> : <OptionsDashboard />`.
+- **FuturesDashboard** (extracted from current index): challenge tier, futures balance, futures stats, game plan, VIX, regime, recent futures trades, scaling, futures-only behavior alerts.
+- **OptionsDashboard** (built from existing `OptionsDashboardSection` + new tiles): options balance, open positions count, today's unrealized P&L, net theta, next-expiring DTE, earnings-this-week, IVR snapshot, 0DTE module, recent options positions, "New Position" CTA.
+- Each dashboard uses its mode's accent and copy dictionary.
 
-### Routes/components that read balance
-- `useUserSettings` consumers (`/`, `scaling-plan`, `weekly-*`, `risk-of-ruin`, `OptionsSummaryCard`, etc.) call a new helper `getActiveBalance(settings, mode)` returning the right pair of `{ starting, current, target }`.
-- New Trade Sheets continue to write to the matching balance column on close (futures sheet → `current_balance`, options sheet → `options_current_balance`).
+## 5. Fully split data surfaces
 
-### Dashboard (`src/routes/index.tsx`)
-- Reorders sections by active mode (active mode card on top).
-- "Quick action" CTA opens the matching trade sheet.
+- **Trade Log → split into two routes**:
+  - `/trade-log` (futures only, no market filter shown).
+  - `/positions` (options only, redirect target when Options mode active).
+  - Active-mode default ensures `/` → correct list. The combined view is removed; each route reads only its own table.
+- **Playbook**: `OptionsPlaybookBuilder` becomes the entire `/playbook` page in Options mode; futures setup playbook stays in Futures mode. No tab switcher.
+- **Weekly Debrief**: separate generators and prompts (`weeklyDebrief.functions.ts` already exists; add `optionsWeeklyDebrief.functions.ts` or branch by mode). Stored `weekly_debriefs` gets a `mode` column so history filters correctly.
+- **Challenges**: already mode-scoped via `challenges.mode` — verified.
+- **AI coach memory**: pass `mode` to `coachChat.functions.ts`; system prompt swaps persona, glossary, and which trade tables it reads (`trades` vs `options_trades`). No cross-pollination of advice.
+- **Journal**: scoped — journal entries already join `trade_id`, and options have their own notes field; coach reads only the active mode's entries.
 
-### Trade Log (`src/routes/trade-log.tsx`)
-- Initial `MarketKey` filter derives from mode on mount (still user-overridable).
+## 6. Settings split
 
-### Playbook + Behavior Analytics
-- Initial tab state seeded from mode.
+- `/settings` renders shared blocks (account, theme, backup) plus a mode-aware section:
+  - **Futures-only**: tick value, instrument default, VIX tiers, prop firm constraints, scaling-tier rules.
+  - **Options-only**: default commission/contract, profit target %, stop %, 0DTE hard exit time, IVR source, earnings-play mode.
+- Onboarding asks which mode the user starts in and seeds only that mode's defaults.
 
-### Challenges
-- `challengeArchive.ts`: write `mode` on insert (from active mode); read queries filter by `mode = activeMode`.
-- Challenge History section filters by active mode.
-- Reset/new challenge actions operate on the active mode's balance columns.
+## 7. Cross-mode indicator (header only)
 
-### Settings
-- Add an "Options Challenge" subsection mirroring the existing Futures fields, editing the new columns.
+- New helper `useOtherModeSignals()` runs one lightweight query on mount/toggle:
+  - In Futures: count open `options_trades` + count expiring today.
+  - In Options: count of today's `trades` + open game-plan alerts.
+- AppHeader shows a tiny mode-tinted dot on the toggle when the other mode has any signal. Tooltip: "3 open options positions — tap to switch". No toasts, no banners, no notifications.
 
-## QA checklist
+## 8. Schema changes
 
-- Toggle logo on `/`, `/trade-log`, `/playbook`, `/scaling-plan`, `/weekly-debrief` — each view updates without reload.
-- Reload page → mode persists.
-- Logging a futures trade in Options mode is still possible via market filter, but the Dashboard balance/challenge that updates is the futures one (writes follow the trade's market, not the UI mode).
-- Archived challenges from prior to migration appear under Futures only.
+Single migration:
+- `weekly_debriefs.mode text not null default 'futures'` + index.
+- `trade_journals.mode text not null default 'futures'` (optional — only if we want to fully scope journal; otherwise infer from joined trade).
+- Backfill existing rows to `'futures'`.
 
-## Out of scope
+## 9. Cleanup
 
-- Cross-device sync of the mode (explicitly chose localStorage).
-- Per-mode separate Settings/preferences beyond balances + challenge target.
-- A third "Both" mode.
+- Delete the in-page tab switchers that today juggle both modes inside one screen (Playbook tabs, Trade Log market filter dropdown).
+- Move `OptionsDashboardSection` content into the new `OptionsDashboard` route component and delete the section file.
+- Audit `OptionsWeeklyDebriefSection`, `OptionsRollingPerformance`, `OptionsSettingsSection` — they become primary content on their respective Options routes, not embedded into futures pages.
+
+## Technical notes
+
+```text
+src/
+  lib/
+    modeCopy.ts            ← terminology dictionary hook
+    navConfig.ts           ← per-mode nav items
+    tradingModeContext.tsx ← provider, sets html[data-mode]
+    otherModeSignals.ts    ← cross-mode dot helper
+  components/
+    AppHeader.tsx          ← reads context, renders mode dot
+    BottomNav.tsx          ← reads navConfig
+    dashboards/
+      FuturesDashboard.tsx
+      OptionsDashboard.tsx
+  routes/
+    index.tsx              ← mode switcher
+    trade-log.tsx          ← futures only
+    positions.tsx          ← options only (new)
+    playbook.tsx           ← branches by mode
+    weekly-debrief.tsx     ← branches by mode + reads scoped debriefs
+    settings.tsx           ← branches mode-specific block
+  styles.css               ← [data-mode="futures"] / [data-mode="options"] token blocks
+```
+
+## Out of scope (deliberate)
+
+- No second logo or brand identity — same product, two skins.
+- No separate Supabase project or separate auth.
+- No hard archive of the other mode's data; switching is instant and reversible.
+- No combined "all markets" report view — fully split per your choice.
+
+## Rollout order
+
+1. Migration (debrief mode column).
+2. Context provider + `data-mode` + token blocks in styles.css.
+3. `modeCopy.ts` + replace hard-coded labels in shared components.
+4. `navConfig.ts` + BottomNav/drawer per-mode rendering.
+5. Split dashboards (`/`).
+6. Split Trade Log → `/trade-log` + `/positions`.
+7. Branch Playbook, Weekly Debrief, Settings.
+8. Mode-scope AI coach + weekly debrief generator.
+9. Cross-mode header dot.
+10. Delete dead tab-switcher code.
+
+After approval I'll execute these in order, verifying the build between each major step.
