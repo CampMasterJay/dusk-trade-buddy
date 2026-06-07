@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity } from "lucide-react";
+import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity, Sparkles, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { discoverSetup, type DiscoveredSetup } from "@/lib/api/discoverSetup.functions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -277,6 +279,83 @@ function PlaybookPage() {
     toast.success(`Loaded "${row.name}"`);
   }
 
+  /* -------------------- AI Discovery -------------------- */
+  const MIN_TRADES_FOR_DISCOVERY = 50;
+  const runDiscover = useServerFn(discoverSetup);
+  const [discovering, setDiscovering] = useState(false);
+  const [discovery, setDiscovery] = useState<DiscoveredSetup | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+  const tradesNeeded = Math.max(0, MIN_TRADES_FOR_DISCOVERY - trades.length);
+
+  async function handleDiscover() {
+    if (trades.length < MIN_TRADES_FOR_DISCOVERY) return;
+    setDiscovering(true);
+    setDiscoveryError(null);
+    try {
+      const payload = trades.slice(0, 200).map((t) => ({
+        setup: t.setup_tag ?? null,
+        direction: t.direction ?? null,
+        result: t.result ?? null,
+        rMultiple: t.r_multiple != null ? Number(t.r_multiple) : null,
+        pnl: t.pnl != null ? Number(t.pnl) : null,
+        hour: t.hour_of_day ?? null,
+        dayOfWeek: t.day_of_week ?? null,
+        regime: t.market_regime ?? null,
+        vix: t.vix_at_entry != null ? Number(t.vix_at_entry) : null,
+        sessionNum: t.session_trade_number ?? null,
+        checklistScore: t.checklist_score ?? null,
+        instrument: t.instrument ?? null,
+      }));
+      const res = await runDiscover({ data: { trades: payload } });
+      if (res.ok) {
+        setDiscovery(res.data);
+      } else {
+        setDiscoveryError(res.error);
+        toast.error(res.error);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setDiscoveryError(msg);
+      toast.error(msg);
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
+  async function saveDiscoveredAsEntry() {
+    if (!user || !discovery) return;
+    if (entries.length >= MAX_ENTRIES) {
+      toast.error(`Maximum ${MAX_ENTRIES} playbook entries. Retire one first.`);
+      return;
+    }
+    const top = discovery.topSetup;
+    const f: Filters = { ...DEFAULT_FILTERS, ...filtersFromConditions(top.conditions) };
+    const { data, error } = await supabase
+      .from("playbook_entries")
+      .insert({
+        user_id: user.id,
+        name: top.name,
+        notes: top.insight,
+        filters: f as never,
+        trade_count: top.tradeCount,
+        win_rate: top.winRate,
+        avg_r: top.avgR,
+        net_pnl: top.ev * top.tradeCount,
+        baseline_win_rate: top.winRate,
+        baseline_avg_r: top.avgR,
+        baseline_trade_count: top.tradeCount,
+        status: "Testing",
+      })
+      .select()
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEntries((e) => [data as unknown as PlaybookRow, ...e]);
+    toast.success("A+ setup saved to your playbook");
+  }
+
   return (
     <ProtectedRoute>
       <AppHeader balance={balance} />
@@ -304,6 +383,133 @@ function PlaybookPage() {
           Filter your trade history by multiple conditions. Find your edge, then
           save the combination as a playbook entry.
         </p>
+
+        {/* AI DISCOVERY */}
+        <div className="rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-xs font-bold font-data uppercase tracking-wider">
+                Discover My A+ Setup
+              </h2>
+            </div>
+            <button
+              onClick={handleDiscover}
+              disabled={discovering || trades.length < MIN_TRADES_FOR_DISCOVERY}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[10px] font-data uppercase tracking-wider transition-colors",
+                trades.length < MIN_TRADES_FOR_DISCOVERY
+                  ? "border border-border bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+              )}
+            >
+              {discovering ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Analyzing…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3" />
+                  Find My Best Setup
+                </>
+              )}
+            </button>
+          </div>
+          {trades.length < MIN_TRADES_FOR_DISCOVERY ? (
+            <p className="text-xs text-muted-foreground">
+              AI scans your last 100+ trades to find the condition combo with
+              the highest win rate. <span className="font-data font-semibold text-foreground">{tradesNeeded} more trades needed</span> ({trades.length}/{MIN_TRADES_FOR_DISCOVERY}).
+            </p>
+          ) : !discovery && !discoveryError ? (
+            <p className="text-xs text-muted-foreground">
+              AI will scan your {Math.min(trades.length, 200)} most recent trades for the
+              highest-win-rate condition combo (and the worst one to avoid).
+            </p>
+          ) : null}
+
+          {discoveryError && (
+            <div className="rounded-md border border-trade-red/40 bg-trade-red/10 p-2.5 text-[11px] text-trade-red">
+              {discoveryError}
+            </div>
+          )}
+
+          {discovery && (
+            <div className="space-y-3">
+              {/* A+ SETUP */}
+              <div className="rounded-lg border border-trade-green/50 bg-trade-green/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-3.5 w-3.5 text-trade-green" />
+                  <span className="text-[9px] font-data uppercase tracking-wider text-trade-green">
+                    Your A+ Setup
+                  </span>
+                </div>
+                <div className="text-sm font-bold">{discovery.topSetup.name}</div>
+                <ConditionsList conditions={discovery.topSetup.conditions} />
+                <div className="grid grid-cols-4 gap-2">
+                  <MiniStat label="Trades" value={String(discovery.topSetup.tradeCount)} />
+                  <MiniStat
+                    label="Win Rate"
+                    value={`${(discovery.topSetup.winRate * 100).toFixed(0)}%`}
+                    tone="good"
+                  />
+                  <MiniStat label="Avg R" value={discovery.topSetup.avgR.toFixed(2)} tone="good" />
+                  <MiniStat label="EV" value={`$${discovery.topSetup.ev.toFixed(2)}`} tone="good" />
+                </div>
+                <p className="text-[11px] italic text-foreground/80">
+                  💡 {discovery.topSetup.insight}
+                </p>
+                <button
+                  onClick={saveDiscoveredAsEntry}
+                  className="w-full rounded-md bg-trade-green/90 px-3 py-2 text-[10px] font-data uppercase tracking-wider text-white hover:bg-trade-green"
+                >
+                  <Save className="inline h-3 w-3 mr-1.5" />
+                  Save as Playbook Entry
+                </button>
+              </div>
+
+              {/* WORST SETUP */}
+              <div className="rounded-lg border border-trade-red/50 bg-trade-red/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="h-3.5 w-3.5 text-trade-red" />
+                  <span className="text-[9px] font-data uppercase tracking-wider text-trade-red">
+                    Setup to Avoid
+                  </span>
+                </div>
+                <div className="text-sm font-bold">{discovery.worstSetup.name}</div>
+                <ConditionsList conditions={discovery.worstSetup.conditions} />
+                <div className="grid grid-cols-2 gap-2">
+                  <MiniStat label="Trades" value={String(discovery.worstSetup.tradeCount)} />
+                  <MiniStat
+                    label="Win Rate"
+                    value={`${(discovery.worstSetup.winRate * 100).toFixed(0)}%`}
+                    tone="bad"
+                  />
+                </div>
+                <p className="text-[11px] italic text-foreground/80">
+                  ⚠ {discovery.worstSetup.recommendation}
+                </p>
+              </div>
+
+              {/* KEY INSIGHTS */}
+              {discovery.keyInsights.length > 0 && (
+                <div className="rounded-lg border border-border bg-background p-3 space-y-1.5">
+                  <span className="text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+                    Key Insights
+                  </span>
+                  <ul className="space-y-1">
+                    {discovery.keyInsights.map((tip, i) => (
+                      <li key={i} className="flex gap-2 text-[11px]">
+                        <span className="text-primary shrink-0">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* RESULTS CARD */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
@@ -952,4 +1158,73 @@ function MiniStat({
       </div>
     </div>
   );
+}
+
+function ConditionsList({
+  conditions,
+}: {
+  conditions: Record<string, string | number | null | undefined>;
+}) {
+  const entries = Object.entries(conditions).filter(
+    ([, v]) => v !== null && v !== undefined && v !== "",
+  );
+  if (entries.length === 0) return null;
+  return (
+    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] font-data">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex gap-1.5">
+          <dt className="uppercase tracking-wider text-muted-foreground shrink-0">
+            {k}:
+          </dt>
+          <dd className="text-foreground truncate">{String(v)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+// Best-effort mapping from AI-returned condition keys into our Filters shape,
+// so the discovered setup can be saved + replayed in the filter engine.
+function filtersFromConditions(
+  c: Record<string, string | number | null | undefined>,
+): Partial<Filters> {
+  const out: Partial<Filters> = {};
+  const get = (k: string): string | undefined => {
+    const v = c[k];
+    return v == null || v === "" ? undefined : String(v);
+  };
+
+  const setup = get("setup");
+  if (setup) out.setups = [setup];
+
+  const dir = get("direction");
+  if (dir === "Long" || dir === "Short") out.direction = dir;
+
+  const regime = get("regime");
+  if (regime) out.regimes = [regime];
+
+  const timeBand = get("timeBand") ?? get("time");
+  if (timeBand) {
+    const m = timeBand.match(/(\d{1,2}):?(\d{0,2}).*?(\d{1,2}):?(\d{0,2})/);
+    if (m) {
+      out.hourRange = [Number(m[1]) || 0, Number(m[3]) || 23];
+    }
+  }
+
+  const vix = get("vix");
+  if (vix) {
+    const m = vix.match(/(\d+(?:\.\d+)?)\s*[-–to]+\s*(\d+(?:\.\d+)?)/i);
+    if (m) out.vixRange = [Number(m[1]), Number(m[2])];
+  }
+
+  const sess = get("sessionNum");
+  if (sess) {
+    const buckets: Array<1 | 2 | 3> = [];
+    if (/1st|^1/.test(sess)) buckets.push(1);
+    if (/2nd|^2/.test(sess)) buckets.push(2);
+    if (/3rd|3\+|^3/.test(sess)) buckets.push(3);
+    if (buckets.length) out.sessionNums = buckets;
+  }
+
+  return out;
 }
