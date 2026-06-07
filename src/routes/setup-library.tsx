@@ -654,22 +654,16 @@ function SetupLibraryPage() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => recordAction(s.tag, "Paused")}
+                      onClick={() => setReviewing(s)}
                       className="rounded-md border border-trade-red/40 bg-trade-red/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-red hover:bg-trade-red/25"
                     >
-                      Pause
+                      Open Review
                     </button>
                     <button
                       onClick={() => recordAction(s.tag, "Reviewed")}
                       className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
                     >
-                      Reviewed
-                    </button>
-                    <button
-                      onClick={() => recordAction(s.tag, "Continued")}
-                      className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
-                    >
-                      Continue
+                      Dismiss
                     </button>
                   </div>
                 </div>
@@ -678,12 +672,43 @@ function SetupLibraryPage() {
           );
         })}
 
+        {probationOffers.map((s) => (
+          <div
+            key={`prob-${s.tag}`}
+            className="rounded-xl border border-trade-amber/40 bg-trade-amber/10 p-3 text-xs"
+          >
+            <div className="font-semibold text-trade-amber">
+              🧪 Ready to retest {s.name}?
+            </div>
+            <p className="mt-1 leading-relaxed text-foreground/90">
+              You've logged 10+ trades since pausing this setup. Retest it in
+              probation mode — the next 10 {s.short} trades are tracked separately.
+              Auto-reactivates if probation win rate &gt; 55%.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => startProbation(s.tag)}
+                className="rounded-md border border-trade-amber/40 bg-trade-amber/15 px-2.5 py-1 text-[10px] font-data uppercase tracking-wider text-trade-amber hover:bg-trade-amber/25"
+              >
+                Start Probation
+              </button>
+              <button
+                onClick={() => unpause(s.tag)}
+                className="rounded-md border border-border bg-card px-2.5 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
+              >
+                Reactivate Fully
+              </button>
+            </div>
+          </div>
+        ))}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SETUPS.map((s) => (
             <SetupCard
               key={s.id}
               setup={s}
               health={healthByTag.get(s.tag)}
+              status={statusFor(statuses, s.tag)}
               onOpen={() => setSelected(s)}
             />
           ))}
@@ -691,6 +716,22 @@ function SetupLibraryPage() {
       </div>
 
       {selected && <SetupDetailModal setup={selected} onClose={() => setSelected(null)} />}
+      {reviewing && (
+        <SetupReviewFlow
+          setupTag={reviewing.tag}
+          setupName={reviewing.name}
+          health={healthByTag.get(reviewing.tag)!}
+          totalTradesCount={totalTrades}
+          onClose={() => {
+            setReviewing(null);
+            reloadStatuses();
+          }}
+          onActionLogged={(action) => {
+            setDismissed((prev) => new Set(prev).add(reviewing.tag));
+            if (action === "Paused") setLastLogged((p) => ({ ...p, [reviewing.tag]: new Date().toISOString() }));
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }
