@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AlertTriangle, Info } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
@@ -46,9 +46,14 @@ export function OptionsPositionSizer({
     return r;
   }, [accountBalance, riskPct, calc, commissionPerContractPerSide]);
 
-  // Surface to parent (e.g., to lock in contracts on save)
-  useMemo(() => {
-    onComputed?.(result);
+  // Surface to parent (e.g., to lock in contracts on save). Only fire when
+  // the recommended contract count actually changes — avoids render loops.
+  const lastContracts = useRef<number | null>(null);
+  useEffect(() => {
+    if (lastContracts.current !== result.contracts) {
+      lastContracts.current = result.contracts;
+      onComputed?.(result);
+    }
   }, [result, onComputed]);
 
   const breakEvenLabel = Array.isArray(result.breakEven)
