@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTodayVix } from "@/hooks/useTodayVix";
+import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { adjustRiskPct } from "@/lib/vixRisk";
 import { buildVixTiers, classifyVix } from "@/lib/vixTiers";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
@@ -74,6 +75,7 @@ function Dashboard() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { settings, refresh: refreshSettings } = useUserSettings();
+  const [mode] = useTradingMode();
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStats | null>(null);
@@ -97,9 +99,10 @@ function Dashboard() {
     };
   }, [userId, reloadKey]);
 
-  const startingBalance = Number(settings?.starting_balance ?? 100);
-  const currentBalance = Number(settings?.current_balance ?? startingBalance);
-  const targetBalance = Number(settings?.challenge_target ?? 1000);
+  const _bal = getActiveBalance(settings, mode);
+  const startingBalance = _bal.starting;
+  const currentBalance = _bal.current;
+  const targetBalance = _bal.target;
   const riskPct = Number(settings?.risk_pct ?? 15);
   const rrRatio = Number(settings?.rr_ratio ?? 1.5);
   const timeframeDays = Number(settings?.timeframe_days ?? 30);
