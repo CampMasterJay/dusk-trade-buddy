@@ -9,6 +9,7 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
+import { StreakBehavior } from "@/components/StreakBehavior";
 import { SetupPerformanceBreakdown } from "@/components/SetupPerformanceBreakdown";
 import { BenchmarksPanel } from "@/components/BenchmarksPanel";
 import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
@@ -312,7 +313,13 @@ function TradeLogScreen() {
               <TradeStats stats={stats} trades={trades} />
             </TabsContent>
             <TabsContent value="behavior" className="mt-0">
-              <BehaviorAnalytics trades={trades} />
+              <div className="space-y-4">
+                <BehaviorAnalytics trades={trades} />
+                <StreakBehavior
+                  trades={trades}
+                  startingBalance={Number(settings?.starting_balance ?? 100)}
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
