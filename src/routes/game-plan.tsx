@@ -183,6 +183,10 @@ function GamePlanScreen() {
 
   async function handleSave() {
     if (!userId) return;
+    if (!regime) {
+      toast.error("Pick a market regime before saving today's plan.");
+      return;
+    }
     setSaving(true);
     const cleanedLevels = keyLevels
       .map((v) => v.trim())
