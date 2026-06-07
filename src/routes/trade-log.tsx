@@ -11,6 +11,9 @@ import { IvrPerformanceTracker } from "@/components/IvrPerformanceTracker";
 import { IvrHistoryChart } from "@/components/IvrHistoryChart";
 import { OptionsTradesList } from "@/components/OptionsTradesList";
 import { OpenOptionsManager } from "@/components/OpenOptionsManager";
+import { OptionsTradeStats } from "@/components/OptionsTradeStats";
+import { OptionsPnLAttribution } from "@/components/OptionsPnLAttribution";
+import { DailyThetaCard } from "@/components/DailyThetaCard";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
@@ -370,6 +373,9 @@ function TradeLogScreen() {
             <TabsContent value="options" className="mt-0">
               <div className="space-y-3">
                 <OpenOptionsManager />
+                <DailyThetaCard />
+                <OptionsTradeStats />
+                <OptionsPnLAttribution />
                 <IvrHistoryChart />
                 <IvrPerformanceTracker />
                 <div>
