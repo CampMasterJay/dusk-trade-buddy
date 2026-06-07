@@ -47,6 +47,14 @@ import {
   type StrategyType,
   type LegInput,
 } from "@/lib/optionsPnLEngine";
+import {
+  FUTURES_OPTIONS,
+  getFuturesOption,
+  isFuturesUnderlying,
+  multiplierFor,
+  EQUITY_OPTION_MULTIPLIER,
+} from "@/lib/futuresOptions";
+import { Switch } from "@/components/ui/switch";
 
 const COMMON_UNDERLYINGS = [
   "SPY",
@@ -128,6 +136,16 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   const [underlying, setUnderlying] = useState("SPY");
   const [underlyingPrice, setUnderlyingPrice] = useState("");
   const [strategy, setStrategy] = useState<StrategyDef | null>(null);
+
+  // Futures options toggle — auto-on when the underlying starts with "/".
+  const [futuresMode, setFuturesMode] = useState(false);
+  useEffect(() => {
+    setFuturesMode(isFuturesUnderlying(underlying));
+  }, [underlying]);
+  const futuresSpec = futuresMode ? getFuturesOption(underlying) : null;
+  const multiplier = futuresMode
+    ? (futuresSpec?.multiplier ?? multiplierFor(underlying))
+    : EQUITY_OPTION_MULTIPLIER;
 
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
@@ -285,8 +303,9 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
       extraLegs: parsedLegs.slice(2),
       profitTargetPct,
       stopLossPct,
+      multiplier,
     };
-  }, [strategy, legs, profitTargetPct, stopLossPct]);
+  }, [strategy, legs, profitTargetPct, stopLossPct, multiplier]);
 
   // Position sizer computes contracts; we display max-risk / break-even
   const oneContractCalc = useMemo(() => {
@@ -322,8 +341,8 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
     );
     const perSharePnl = intrinsicNet - entryNet;
     const contracts = Math.max(1, sizingContracts);
-    return perSharePnl * 100 * contracts;
-  }, [simPrice, legs, strategy, calcShape, sizingContracts]);
+    return perSharePnl * multiplier * contracts;
+  }, [simPrice, legs, strategy, calcShape, sizingContracts, multiplier]);
 
   const handleSave = async () => {
     if (!user) {
@@ -386,7 +405,7 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         leg2_premium: legs[1] ? Number(legs[1].premium) : null,
         leg2_contracts: legs[1] ? contracts : null,
 
-        premium_paid_or_received: premiumNet * 100 * contracts,
+        premium_paid_or_received: premiumNet * multiplier * contracts,
         max_risk: oneContract ? oneContract.maxRisk * contracts : null,
         max_profit: oneContract && isFinite(oneContract.maxProfit)
           ? oneContract.maxProfit * contracts
