@@ -181,9 +181,11 @@ export async function archiveAndResetChallenge(opts: {
       .eq("user_id", uid);
     if (delError) throw delError;
 
+    const updatePatch: Record<string, number> = { [currentCol]: startingBalance };
     const { error: settingsError } = await supabase
       .from("user_settings")
-      .update({ [currentCol]: startingBalance })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(updatePatch as any)
       .eq("user_id", uid);
     if (settingsError) throw settingsError;
 
