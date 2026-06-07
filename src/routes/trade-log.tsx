@@ -5,7 +5,6 @@ import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
-import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { OptionsTradeSheet } from "@/components/OptionsTradeSheet";
 import { IvrPerformanceTracker } from "@/components/IvrPerformanceTracker";
 import { IvrHistoryChart } from "@/components/IvrHistoryChart";
