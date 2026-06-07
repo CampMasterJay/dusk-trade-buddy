@@ -308,6 +308,14 @@ export function NewTradeSheet({
 
   const actualPnl = Number.isFinite(rNum) ? rNum * riskDollar : 0;
 
+  // Prop firm overlay — per-trade max contracts based on stop distance.
+  const contractCap =
+    !isEdit && propFirm.hasActiveChallenge && stopDistance != null
+      ? maxContractsForStop(stopDistance, tickValuePerPoint, propFirm)
+      : null;
+  const propFirmBlocksSubmit =
+    !isEdit && propFirm.hasActiveChallenge && propFirm.locked;
+
   // Image preview
   useEffect(() => {
     if (!chartFile) {
