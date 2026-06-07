@@ -384,6 +384,133 @@ function PlaybookPage() {
           save the combination as a playbook entry.
         </p>
 
+        {/* AI DISCOVERY */}
+        <div className="rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-xs font-bold font-data uppercase tracking-wider">
+                Discover My A+ Setup
+              </h2>
+            </div>
+            <button
+              onClick={handleDiscover}
+              disabled={discovering || trades.length < MIN_TRADES_FOR_DISCOVERY}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[10px] font-data uppercase tracking-wider transition-colors",
+                trades.length < MIN_TRADES_FOR_DISCOVERY
+                  ? "border border-border bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90",
+              )}
+            >
+              {discovering ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Analyzing…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3 w-3" />
+                  Find My Best Setup
+                </>
+              )}
+            </button>
+          </div>
+          {trades.length < MIN_TRADES_FOR_DISCOVERY ? (
+            <p className="text-xs text-muted-foreground">
+              AI scans your last 100+ trades to find the condition combo with
+              the highest win rate. <span className="font-data font-semibold text-foreground">{tradesNeeded} more trades needed</span> ({trades.length}/{MIN_TRADES_FOR_DISCOVERY}).
+            </p>
+          ) : !discovery && !discoveryError ? (
+            <p className="text-xs text-muted-foreground">
+              AI will scan your {Math.min(trades.length, 200)} most recent trades for the
+              highest-win-rate condition combo (and the worst one to avoid).
+            </p>
+          ) : null}
+
+          {discoveryError && (
+            <div className="rounded-md border border-trade-red/40 bg-trade-red/10 p-2.5 text-[11px] text-trade-red">
+              {discoveryError}
+            </div>
+          )}
+
+          {discovery && (
+            <div className="space-y-3">
+              {/* A+ SETUP */}
+              <div className="rounded-lg border border-trade-green/50 bg-trade-green/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-3.5 w-3.5 text-trade-green" />
+                  <span className="text-[9px] font-data uppercase tracking-wider text-trade-green">
+                    Your A+ Setup
+                  </span>
+                </div>
+                <div className="text-sm font-bold">{discovery.topSetup.name}</div>
+                <ConditionsList conditions={discovery.topSetup.conditions} />
+                <div className="grid grid-cols-4 gap-2">
+                  <MiniStat label="Trades" value={String(discovery.topSetup.tradeCount)} />
+                  <MiniStat
+                    label="Win Rate"
+                    value={`${(discovery.topSetup.winRate * 100).toFixed(0)}%`}
+                    tone="good"
+                  />
+                  <MiniStat label="Avg R" value={discovery.topSetup.avgR.toFixed(2)} tone="good" />
+                  <MiniStat label="EV" value={`$${discovery.topSetup.ev.toFixed(2)}`} tone="good" />
+                </div>
+                <p className="text-[11px] italic text-foreground/80">
+                  💡 {discovery.topSetup.insight}
+                </p>
+                <button
+                  onClick={saveDiscoveredAsEntry}
+                  className="w-full rounded-md bg-trade-green/90 px-3 py-2 text-[10px] font-data uppercase tracking-wider text-white hover:bg-trade-green"
+                >
+                  <Save className="inline h-3 w-3 mr-1.5" />
+                  Save as Playbook Entry
+                </button>
+              </div>
+
+              {/* WORST SETUP */}
+              <div className="rounded-lg border border-trade-red/50 bg-trade-red/10 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="h-3.5 w-3.5 text-trade-red" />
+                  <span className="text-[9px] font-data uppercase tracking-wider text-trade-red">
+                    Setup to Avoid
+                  </span>
+                </div>
+                <div className="text-sm font-bold">{discovery.worstSetup.name}</div>
+                <ConditionsList conditions={discovery.worstSetup.conditions} />
+                <div className="grid grid-cols-2 gap-2">
+                  <MiniStat label="Trades" value={String(discovery.worstSetup.tradeCount)} />
+                  <MiniStat
+                    label="Win Rate"
+                    value={`${(discovery.worstSetup.winRate * 100).toFixed(0)}%`}
+                    tone="bad"
+                  />
+                </div>
+                <p className="text-[11px] italic text-foreground/80">
+                  ⚠ {discovery.worstSetup.recommendation}
+                </p>
+              </div>
+
+              {/* KEY INSIGHTS */}
+              {discovery.keyInsights.length > 0 && (
+                <div className="rounded-lg border border-border bg-background p-3 space-y-1.5">
+                  <span className="text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+                    Key Insights
+                  </span>
+                  <ul className="space-y-1">
+                    {discovery.keyInsights.map((tip, i) => (
+                      <li key={i} className="flex gap-2 text-[11px]">
+                        <span className="text-primary shrink-0">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* RESULTS CARD */}
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
