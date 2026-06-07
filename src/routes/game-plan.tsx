@@ -113,6 +113,10 @@ function GamePlanScreen() {
   const [maxLoss, setMaxLoss] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [regime, setRegime] = useState<MarketRegime | null>(null);
+  const [vix, setVix] = useState<string>("");
+  const [vixFetching, setVixFetching] = useState(false);
+  const [vixNote, setVixNote] = useState<string | null>(null);
+  const fetchVix = useServerFn(fetchCurrentVix);
 
   // Derive default max loss from settings (risk_pct of current balance)
   const defaultMaxLoss = useMemo(() => {
@@ -143,6 +147,7 @@ function GamePlanScreen() {
           setMaxLoss(p.max_loss != null ? String(p.max_loss) : "");
           setNotes(p.notes ?? "");
           setRegime((p.market_regime as MarketRegime | null) ?? null);
+          setVix(p.vix != null ? String(p.vix) : "");
         } else {
           setBias("Neutral");
           setKeyLevels(["", "", "", "", ""]);
@@ -151,6 +156,7 @@ function GamePlanScreen() {
           setMaxLoss(defaultMaxLoss != null ? String(defaultMaxLoss) : "");
           setNotes("");
           setRegime(null);
+          setVix("");
         }
         setTrades(tradesRes.data ?? []);
       })
