@@ -171,6 +171,34 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   );
   const isEarningsPlay = !!upcomingEarnings;
 
+  // Pre-trade context for the checklist
+  const [todayRegime, setTodayRegime] = useState<string | null>(null);
+  const [hadLossToday, setHadLossToday] = useState<boolean>(false);
+  useEffect(() => {
+    if (!user || !open) return;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: plan } = await (supabase as any)
+        .from("daily_game_plans")
+        .select("market_regime")
+        .eq("user_id", user.id)
+        .eq("plan_date", today)
+        .maybeSingle();
+      setTodayRegime(plan?.market_regime ?? null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: losses } = await (supabase as any)
+        .from("trades")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("date", today)
+        .eq("result", "Loss")
+        .is("deleted_at", null)
+        .limit(1);
+      setHadLossToday((losses ?? []).length > 0);
+    })();
+  }, [user, open]);
+
   // Step 2 — legs
   const [legs, setLegs] = useState<LegState[]>([emptyLeg()]);
   const [sharedExp, setSharedExp] = useState<Date | undefined>(undefined);
