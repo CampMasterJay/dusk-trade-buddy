@@ -74,6 +74,7 @@ export type Database = {
           ending_playbook: string | null
           final_balance: number
           id: string
+          mode: string
           most_profitable_setup: string | null
           most_used_regime: string | null
           outcome: string
@@ -93,6 +94,7 @@ export type Database = {
           ending_playbook?: string | null
           final_balance: number
           id?: string
+          mode?: string
           most_profitable_setup?: string | null
           most_used_regime?: string | null
           outcome: string
@@ -112,6 +114,7 @@ export type Database = {
           ending_playbook?: string | null
           final_balance?: number
           id?: string
+          mode?: string
           most_profitable_setup?: string | null
           most_used_regime?: string | null
           outcome?: string
@@ -1045,6 +1048,9 @@ export type Database = {
           current_balance: number
           instrument: string | null
           onboarding_completed: boolean
+          options_challenge_target: number
+          options_current_balance: number
+          options_starting_balance: number
           risk_pct: number
           rr_ratio: number
           session: string | null
@@ -1067,6 +1073,9 @@ export type Database = {
           current_balance?: number
           instrument?: string | null
           onboarding_completed?: boolean
+          options_challenge_target?: number
+          options_current_balance?: number
+          options_starting_balance?: number
           risk_pct?: number
           rr_ratio?: number
           session?: string | null
@@ -1089,6 +1098,9 @@ export type Database = {
           current_balance?: number
           instrument?: string | null
           onboarding_completed?: boolean
+          options_challenge_target?: number
+          options_current_balance?: number
+          options_starting_balance?: number
           risk_pct?: number
           rr_ratio?: number
           session?: string | null
