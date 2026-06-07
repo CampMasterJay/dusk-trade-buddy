@@ -43,6 +43,11 @@ import {
   type ChecklistPrefill,
 } from "@/components/PreTradeChecklist";
 import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
+import {
+  usePropFirmConstraints,
+  maxContractsForStop,
+} from "@/hooks/usePropFirmConstraints";
+import { Building2, Lock } from "lucide-react";
 
 const INSTRUMENTS = ["MES", "MNQ", "MBT", "NQ", "ES", "Other"] as const;
 
