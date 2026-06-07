@@ -304,3 +304,52 @@
     0 0 40px color-mix(in oklab, var(--trade-green) 20%, transparent),
     0 0 12px color-mix(in oklab, var(--trade-green) 18%, transparent);
 }
+
+/* ===== Per-trading-mode theming =====
+   The html[data-mode] attribute is synced by src/lib/tradingMode.ts whenever
+   the user toggles. Components that opt in via the `mode-accent-*` utilities
+   automatically pick up the active mode's color, glow, and corner radius. */
+
+:root {
+  /* Defaults assume Futures so SSR / first paint stays consistent. */
+  --mode-accent: var(--trade-green);
+  --mode-accent-soft: color-mix(in oklab, var(--trade-green) 18%, transparent);
+  --mode-accent-glow: 0 0 16px color-mix(in oklab, var(--trade-green) 35%, transparent);
+  --mode-radius: 0.5rem;
+}
+
+html[data-mode="futures"] {
+  --mode-accent: var(--trade-green);
+  --mode-accent-soft: color-mix(in oklab, var(--trade-green) 18%, transparent);
+  --mode-accent-glow: 0 0 16px color-mix(in oklab, var(--trade-green) 35%, transparent);
+  /* Futures: tactical / square */
+  --mode-radius: 0.375rem;
+}
+
+html[data-mode="options"] {
+  --mode-accent: var(--trade-amber);
+  --mode-accent-soft: color-mix(in oklab, var(--trade-amber) 16%, transparent);
+  --mode-accent-glow: 0 0 18px color-mix(in oklab, var(--trade-amber) 35%, transparent);
+  /* Options: softer / rounder */
+  --mode-radius: 0.875rem;
+  /* Retune primary so any unbranded primary buttons pick up amber. */
+  --primary: var(--trade-amber);
+  --ring: var(--trade-amber);
+}
+
+/* Mode-accent utilities — use these in shared components instead of hard
+   coding text-trade-green / border-trade-green. */
+.mode-accent-text { color: var(--mode-accent); }
+.mode-accent-border { border-color: var(--mode-accent); }
+.mode-accent-bg-soft { background-color: var(--mode-accent-soft); }
+.mode-accent-glow { box-shadow: var(--mode-accent-glow); }
+.mode-accent-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--mode-accent) 50%, transparent),
+    0 0 16px color-mix(in oklab, var(--mode-accent) 25%, transparent);
+}
+
+/* Smooth color transition when the user toggles mode. */
+html[data-mode] body {
+  transition: background-color 220ms ease, color 220ms ease;
+}
