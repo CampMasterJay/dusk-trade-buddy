@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Trade } from "@/lib/tradeService";
+import type { MarketRegime } from "@/lib/marketRegime";
 
 export type Bias = "Bullish" | "Bearish" | "Neutral";
 
@@ -13,6 +14,7 @@ export interface GamePlan {
   max_trades: number;
   max_loss: number | null;
   notes: string | null;
+  market_regime: MarketRegime | null;
   discipline_score: number | null;
   stuck_to_max_trades: boolean | null;
   stayed_within_loss: boolean | null;
@@ -30,6 +32,7 @@ export interface GamePlanInput {
   max_trades: number;
   max_loss: number | null;
   notes: string | null;
+  market_regime: MarketRegime | null;
 }
 
 export function todayLocalDate(): string {
