@@ -216,6 +216,11 @@ export function NewTradeSheet({
   const baseRiskPct = Number(settings?.risk_pct ?? 15);
   const rrSetting = Number(settings?.rr_ratio ?? 1.5);
   const { vix: todayVix } = useTodayVix();
+  const { rows: setupStatuses } = useSetupStatuses();
+  const pausedTags = new Set(
+    setupStatuses.filter((s) => s.state === "paused").map((s) => s.setup_type),
+  );
+  const availableSetupTags = SETUP_TAGS.filter((s) => !pausedTags.has(s));
   const vixAdj = adjustRiskPct({
     baseRiskPct,
     currentVix: todayVix,
