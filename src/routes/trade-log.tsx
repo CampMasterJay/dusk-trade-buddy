@@ -7,6 +7,9 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { OptionsTradeSheet } from "@/components/OptionsTradeSheet";
+import { IvrPerformanceTracker } from "@/components/IvrPerformanceTracker";
+import { IvrHistoryChart } from "@/components/IvrHistoryChart";
+import { OptionsTradesList } from "@/components/OptionsTradesList";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
@@ -311,7 +314,7 @@ function TradeLogScreen() {
         {/* Stats */}
         <div className="mb-4">
           <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-3">
+            <TabsList className="grid w-full grid-cols-6 mb-3">
               <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
                 Stats
               </TabsTrigger>
@@ -326,6 +329,9 @@ function TradeLogScreen() {
               </TabsTrigger>
               <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
                 Exits
+              </TabsTrigger>
+              <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
+                Options
               </TabsTrigger>
             </TabsList>
             <TabsContent value="stats" className="mt-0">
@@ -359,6 +365,18 @@ function TradeLogScreen() {
                 trades={trades}
                 tickValue={Number(settings?.tick_value ?? 5)}
               />
+            </TabsContent>
+            <TabsContent value="options" className="mt-0">
+              <div className="space-y-3">
+                <IvrHistoryChart />
+                <IvrPerformanceTracker />
+                <div>
+                  <h3 className="text-xs uppercase tracking-wider font-data text-muted-foreground mb-2 px-1">
+                    Recent options trades
+                  </h3>
+                  <OptionsTradesList />
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
