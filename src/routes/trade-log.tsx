@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { NewTradeSheet } from "@/components/NewTradeSheet";
+import { OptionsTradeSheet } from "@/components/OptionsTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
@@ -273,6 +274,10 @@ function TradeLogScreen() {
               if (!v) setPrefill(null);
             }}
           />
+        </div>
+
+        <div className="flex justify-end -mt-2 mb-3">
+          <OptionsTradeSheet onLogged={refresh} />
         </div>
 
         <TradeLockBanner
