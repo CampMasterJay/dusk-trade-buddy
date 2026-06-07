@@ -167,6 +167,24 @@ function ScalingPlanSection() {
   );
 }
 
+function TradingHistorySection() {
+  return (
+    <Section
+      icon={<LineChart className="h-4 w-4" />}
+      title="My Trading History"
+      desc="Lifetime stats, skill progression, AI trader profile, and your full challenge archive."
+    >
+      <Link
+        to="/trading-history"
+        className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2.5 text-sm hover:bg-accent/30"
+      >
+        <span>Open performance archive</span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
+    </Section>
+  );
+}
+
 function Row({
   label,
   sub,
