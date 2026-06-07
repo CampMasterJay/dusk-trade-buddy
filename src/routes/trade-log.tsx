@@ -884,7 +884,7 @@ function escapeCsvCell(v: string | number | null | undefined): string {
   return str;
 }
 
-function buildCsv(allTrades: Trade[], startingBalance: number): string {
+function buildFuturesCsv(trades: Trade[], startingBalance: number): string {
   const headers = [
     "Date",
     "Instrument",
@@ -900,7 +900,7 @@ function buildCsv(allTrades: Trade[], startingBalance: number): string {
   ];
   let csv = headers.map(escapeCsvCell).join(",") + "\n";
   let running = startingBalance;
-  for (const t of allTrades) {
+  for (const t of trades) {
     running += Number(t.pnl ?? 0);
     const row = [
       t.date,
@@ -913,6 +913,44 @@ function buildCsv(allTrades: Trade[], startingBalance: number): string {
       t.r_multiple == null ? "" : Number(t.r_multiple).toFixed(2),
       Number(t.pnl ?? 0).toFixed(2),
       running.toFixed(2),
+      t.notes ?? "",
+    ];
+    csv += row.map(escapeCsvCell).join(",") + "\n";
+  }
+  return csv;
+}
+
+function buildOptionsCsv(trades: Trade[], startingBalance: number): string {
+  const headers = [
+    "Date",
+    "Underlying",
+    "Direction",
+    "Entry",
+    "Stop",
+    "Target",
+    "Result",
+    "R Multiple",
+    "Net P&L",
+    "Running Balance",
+    "Setup Tag",
+    "Notes",
+  ];
+  let csv = headers.map(escapeCsvCell).join(",") + "\n";
+  let running = startingBalance;
+  for (const t of trades) {
+    running += Number(t.pnl ?? 0);
+    const row = [
+      t.date,
+      t.instrument,
+      t.direction,
+      t.entry,
+      t.stop,
+      t.target,
+      t.result,
+      t.r_multiple == null ? "" : Number(t.r_multiple).toFixed(2),
+      Number(t.pnl ?? 0).toFixed(2),
+      running.toFixed(2),
+      t.setup_tag ?? "",
       t.notes ?? "",
     ];
     csv += row.map(escapeCsvCell).join(",") + "\n";
@@ -1004,27 +1042,33 @@ function ExportButtons({
   userId,
   startingBalance,
   stats,
+  filteredTrades,
+  isOptions,
 }: {
   userId: string | null;
   startingBalance: number;
   stats: TradeStatsType | null;
+  filteredTrades: Trade[];
+  isOptions: boolean;
 }) {
   const [exporting, setExporting] = useState(false);
 
-  const handleExportCsv = async () => {
+  const handleExportCsv = () => {
     if (!userId) return;
     setExporting(true);
-    const res = await getAllTrades(userId);
-    setExporting(false);
-    if (res.error || !res.data) {
-      toast.error("Failed to load trades for export");
-      return;
-    }
-    const csv = buildCsv(res.data, startingBalance);
+
     const today = new Date().toISOString().slice(0, 10);
-    const filename = `EdgeTrader_trades_${today}.csv`;
+    const modeLabel = isOptions ? "options" : "futures";
+    const count = filteredTrades.length;
+    const filename = `EdgeTrader_${modeLabel}_${today}_${count}-items.csv`;
+
+    const csv = isOptions
+      ? buildOptionsCsv(filteredTrades, startingBalance)
+      : buildFuturesCsv(filteredTrades, startingBalance);
+
     triggerDownload(filename, csv);
-    toast.success("CSV exported");
+    toast.success(`${count} ${isOptions ? "positions" : "trades"} exported`);
+    setExporting(false);
   };
 
   const handleCopySummary = async () => {
@@ -1047,7 +1091,7 @@ function ExportButtons({
     <>
       <button
         onClick={handleExportCsv}
-        disabled={exporting}
+        disabled={exporting || filteredTrades.length === 0}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-data uppercase tracking-wider text-muted-foreground hover:text-foreground hover:border-trade-green/50 disabled:opacity-50"
       >
         <Download className="h-3.5 w-3.5" />
