@@ -12,6 +12,7 @@ import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
 import { DrawdownTracker } from "@/components/DrawdownTracker";
 import { ConsistencyStreak } from "@/components/ConsistencyStreak";
 import { EdgeHealthSection } from "@/components/EdgeHealthSection";
+import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -232,6 +233,8 @@ function Dashboard() {
             <StatsRow stats={stats} streak={streak} />
 
             <EdgeHealthSection trades={trades} />
+
+            <OptionsSummaryCard />
 
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 

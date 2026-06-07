@@ -35,6 +35,13 @@ import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { OptionsPositionSizer } from "@/components/OptionsPositionSizer";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
+import {
   calculateOptionsPnL,
   type StrategyType,
   type LegInput,
@@ -137,6 +144,12 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
   const [reason, setReason] = useState("");
   const [catalyst, setCatalyst] = useState("");
   const [checklistScore, setChecklistScore] = useState("");
+
+  // Greeks (optional, per-contract from broker option chain)
+  const [entryDelta, setEntryDelta] = useState("");
+  const [entryGamma, setEntryGamma] = useState("");
+  const [entryTheta, setEntryTheta] = useState("");
+  const [entryVega, setEntryVega] = useState("");
 
   // P&L simulator
   const [simPrice, setSimPrice] = useState("");
@@ -320,6 +333,11 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
         planned_profit_target_pct: profitTargetPct,
         planned_stop_loss_pct: stopLossPct,
 
+        entry_delta: entryDelta ? Number(entryDelta) : null,
+        entry_gamma: entryGamma ? Number(entryGamma) : null,
+        entry_theta: entryTheta ? Number(entryTheta) : null,
+        entry_vega: entryVega ? Number(entryVega) : null,
+
         notes: [reason && `Reason: ${reason}`, catalyst && `Catalyst: ${catalyst}`]
           .filter(Boolean)
           .join("\n") || null,
@@ -343,6 +361,10 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
       setChecklistScore("");
       setSimPrice("");
       setPlannedExitDte("");
+      setEntryDelta("");
+      setEntryGamma("");
+      setEntryTheta("");
+      setEntryVega("");
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Failed to log options trade");
@@ -596,6 +618,46 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
             </Section>
           )}
 
+          {/* Greeks at entry (optional, encouraged) */}
+          {strategy && (
+            <Section title="5. Greeks at Entry (optional)">
+              <p className="text-xs text-muted-foreground -mt-1">
+                Enter per-contract greeks from your broker's option chain. Used to compute
+                portfolio-wide exposure on your dashboard.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <GreekInput
+                  label="Delta"
+                  hint="How much does this option move per $1 move in underlying?"
+                  placeholder="0.45"
+                  value={entryDelta}
+                  onChange={setEntryDelta}
+                />
+                <GreekInput
+                  label="Gamma"
+                  hint="Rate of delta change. How fast delta moves as the underlying moves."
+                  placeholder="0.02"
+                  value={entryGamma}
+                  onChange={setEntryGamma}
+                />
+                <GreekInput
+                  label="Theta ($/day)"
+                  hint="How much value does this position lose per day to time decay?"
+                  placeholder="-12.50"
+                  value={entryTheta}
+                  onChange={setEntryTheta}
+                />
+                <GreekInput
+                  label="Vega"
+                  hint="How much does IV changing 1% affect your P&L?"
+                  placeholder="8.30"
+                  value={entryVega}
+                  onChange={setEntryVega}
+                />
+              </div>
+            </Section>
+          )}
+
           {/* Live P&L simulator */}
           {strategy && oneContractCalc && (
             <Section title="Live P&L Simulator">
@@ -669,6 +731,50 @@ function MiniStat({ label, value }: { label: string; value: string }) {
       </div>
       <div className="font-mono text-sm mt-0.5">{value}</div>
     </Card>
+  );
+}
+
+function GreekInput({
+  label,
+  hint,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  placeholder: string;
+  value: string;
+  onChange: (s: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-xs">{label}</Label>
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`${label} info`}
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[220px] text-xs">
+              {hint}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <Input
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
   );
 }
 
