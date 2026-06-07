@@ -437,7 +437,7 @@ export function NewTradeSheet({
           mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
         max_favorable_excursion_points:
           mfe === "" || Number.isNaN(parseFloat(mfe)) ? null : Math.abs(parseFloat(mfe)),
-      } as Parameters<typeof createTrade>[0] extends infer P ? Omit<P, "user_id"> : never;
+      } as Omit<Parameters<typeof createTrade>[0], "user_id">;
 
       const res = isEdit && editTrade
         ? await updateTrade(editTrade.id, payload)
