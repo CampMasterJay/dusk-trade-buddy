@@ -329,7 +329,7 @@ function PlaybookPage() {
       return;
     }
     const top = discovery.topSetup;
-    const f = filtersFromConditions(top.conditions);
+    const f: Filters = { ...DEFAULT_FILTERS, ...filtersFromConditions(top.conditions) };
     const { data, error } = await supabase
       .from("playbook_entries")
       .insert({
