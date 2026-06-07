@@ -13,6 +13,7 @@ import { DrawdownTracker } from "@/components/DrawdownTracker";
 import { ConsistencyStreak } from "@/components/ConsistencyStreak";
 import { EdgeHealthSection } from "@/components/EdgeHealthSection";
 import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
+import { DailyThetaCard } from "@/components/DailyThetaCard";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -235,6 +236,8 @@ function Dashboard() {
             <EdgeHealthSection trades={trades} />
 
             <OptionsSummaryCard />
+
+            <DailyThetaCard />
 
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
