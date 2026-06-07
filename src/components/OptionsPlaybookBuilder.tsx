@@ -475,6 +475,13 @@ export function OptionsPlaybookBuilder() {
               <p className="text-[11px] italic text-foreground/80">
                 💡 {discovery.topSetup.insight}
               </p>
+              <button
+                onClick={saveDiscoveredAsEntry}
+                className="w-full rounded-md bg-trade-green/90 px-3 py-2 text-[10px] font-data uppercase tracking-wider text-white hover:bg-trade-green"
+              >
+                <Save className="inline h-3 w-3 mr-1.5" />
+                Save as Playbook Entry
+              </button>
             </div>
 
             <div className="rounded-lg border border-trade-red/50 bg-trade-red/10 p-3 space-y-2">
