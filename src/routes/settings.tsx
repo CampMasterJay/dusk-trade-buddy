@@ -467,6 +467,41 @@ function RiskSection() {
         </button>
       </Row>
 
+      <Row
+        label="VIX Thresholds"
+        sub="Customise your VIX risk tiers. Used in Volatility Performance & sparkline overlay."
+      >
+        <div className="flex flex-col items-end gap-1 text-[11px] font-data text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <span>Low &lt;</span>
+            <NumInput
+              value={Number(settings.vix_tier_low_max ?? 15).toFixed(1)}
+              step={0.5}
+              min={1}
+              onChange={(n) => updateSettings({ vix_tier_low_max: n })}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span>Normal &lt;</span>
+            <NumInput
+              value={Number(settings.vix_tier_normal_max ?? 20).toFixed(1)}
+              step={0.5}
+              min={1}
+              onChange={(n) => updateSettings({ vix_tier_normal_max: n })}
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span>Elevated &lt;</span>
+            <NumInput
+              value={Number(settings.vix_tier_elevated_max ?? 30).toFixed(1)}
+              step={0.5}
+              min={1}
+              onChange={(n) => updateSettings({ vix_tier_elevated_max: n })}
+            />
+          </div>
+        </div>
+      </Row>
+
       <Row label="Max trades per day" sub="Enforced by the trading lock.">
         <div className="inline-flex items-center gap-1">
           <button
