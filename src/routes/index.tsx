@@ -243,24 +243,6 @@ function Dashboard() {
 
             <EdgeHealthSection trades={trades} />
 
-            <OptionsRollingPerformance trades={trades} />
-
-            <div className="space-y-2">
-              <div className="flex justify-end">
-                <Link
-                  to="/options-risk"
-                  className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-data px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition"
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Options Risk
-                </Link>
-              </div>
-              <OptionsDashboardSection onLogged={onTradeLogged} />
-              <OptionsSummaryCard />
-            </div>
-
-            <DailyThetaCard />
-
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
             <ConsistencyStreak />
