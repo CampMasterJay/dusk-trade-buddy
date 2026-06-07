@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { OptionsPlaybookBuilder } from "@/components/OptionsPlaybookBuilder";
 
 export const Route = createFileRoute("/playbook")({
   head: () => ({
@@ -151,6 +152,7 @@ function PlaybookPage() {
   const [entries, setEntries] = useState<PlaybookRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
+  const [market, setMarket] = useState<"futures" | "options">("futures");
 
   useEffect(() => {
     if (!user) return;
@@ -384,6 +386,28 @@ function PlaybookPage() {
           save the combination as a playbook entry.
         </p>
 
+        {/* MARKET TOGGLE */}
+        <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+          {(["futures", "options"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMarket(m)}
+              className={cn(
+                "px-3 py-1.5 text-[10px] font-data uppercase tracking-wider rounded-sm transition-colors",
+                market === m
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {m === "futures" ? "Futures Playbook" : "Options Playbook"}
+            </button>
+          ))}
+        </div>
+
+        {market === "options" ? (
+          <OptionsPlaybookBuilder />
+        ) : (
+        <>
         {/* AI DISCOVERY */}
         <div className="rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
