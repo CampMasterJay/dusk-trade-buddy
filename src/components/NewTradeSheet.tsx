@@ -6,6 +6,14 @@ import { z } from "zod";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { createTrade, updateTrade, type Trade } from "@/lib/tradeService";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { ARTICLES, type Article } from "@/lib/newsData";
 import { cn } from "@/lib/utils";
@@ -147,6 +155,25 @@ export function NewTradeSheet({
   const [setupTag, setSetupTag] = useState<string>(
     (editTrade as { setup_tag?: string | null } | null | undefined)?.setup_tag ?? "",
   );
+
+  // Stop analytics — MAE / MFE (optional)
+  const [mae, setMae] = useState<string>(
+    (editTrade as { max_adverse_excursion_points?: number | null } | null | undefined)
+      ?.max_adverse_excursion_points != null
+      ? String((editTrade as { max_adverse_excursion_points?: number }).max_adverse_excursion_points)
+      : "",
+  );
+  const [mfe, setMfe] = useState<string>(
+    (editTrade as { max_favorable_excursion_points?: number | null } | null | undefined)
+      ?.max_favorable_excursion_points != null
+      ? String((editTrade as { max_favorable_excursion_points?: number }).max_favorable_excursion_points)
+      : "",
+  );
+
+  // Stop-and-reverse post-loss prompt
+  const [reverseOpen, setReverseOpen] = useState(false);
+  const [reverseTradeId, setReverseTradeId] = useState<string | null>(null);
+  const [reversePoints, setReversePoints] = useState<string>("");
   // Track whether user manually edited the R multiple — so we don't auto-overwrite in edit mode.
   const [rTouched, setRTouched] = useState(isEdit);
   const [chartFile, setChartFile] = useState<File | null>(null);
@@ -327,6 +354,8 @@ export function NewTradeSheet({
     setNotes("");
     setRangeSize("");
     setSetupTag("");
+    setMae("");
+    setMfe("");
     setChartFile(null);
     setExistingChart(null);
     setErrors({});
@@ -404,11 +433,20 @@ export function NewTradeSheet({
         checklist_verdict: checklist?.verdict ?? null,
         news_id: newsId,
         setup_tag: setupTag === "" ? null : setupTag,
-      };
+        max_adverse_excursion_points:
+          mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
+        max_favorable_excursion_points:
+          mfe === "" || Number.isNaN(parseFloat(mfe)) ? null : Math.abs(parseFloat(mfe)),
+      } as Omit<Parameters<typeof createTrade>[0], "user_id">;
 
-      const { error } = isEdit && editTrade
+      const res = isEdit && editTrade
         ? await updateTrade(editTrade.id, payload)
         : await createTrade({ user_id: user.id, ...payload });
+      const { error } = res;
+      const insertedId =
+        !isEdit && (res as { data?: { id?: string } | null }).data?.id
+          ? (res as { data?: { id?: string } }).data!.id!
+          : null;
 
       if (error) {
         toast.error(error.message);
@@ -439,6 +477,13 @@ export function NewTradeSheet({
       onLogged?.();
       // Re-evaluate achievements after a successful save.
       void import("@/lib/achievements").then((m) => m.triggerAchievementCheck());
+
+      // Post-loss prompt: ask whether the stop-and-reverse happened.
+      if (!isEdit && result === "Loss" && insertedId) {
+        setReverseTradeId(insertedId);
+        setReversePoints("");
+        setReverseOpen(true);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -735,6 +780,40 @@ export function NewTradeSheet({
             />
           </Section>
 
+          {/* Stop Analytics (optional) */}
+          <Section title="Stop Analytics (optional)">
+            <div
+              className="mb-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300"
+              title="Tracking MAE/MFE will unlock Stop Analytics — highly recommended for improving win rate"
+            >
+              Tracking MAE/MFE unlocks Stop Analytics — highly recommended for improving win rate.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="MAE (points price went against you)">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.25"
+                  min="0"
+                  value={mae}
+                  onChange={(e) => setMae(e.target.value)}
+                  placeholder="e.g. 2.5"
+                />
+              </Field>
+              <Field label="MFE (points price went in favor)">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.25"
+                  min="0"
+                  value={mfe}
+                  onChange={(e) => setMfe(e.target.value)}
+                  placeholder="e.g. 4.0"
+                />
+              </Field>
+            </div>
+          </Section>
+
           {/* News Event */}
           <Section title="News Event (optional)">
             <NewsPicker value={newsId} onChange={setNewsId} />
@@ -770,6 +849,13 @@ export function NewTradeSheet({
       initial={checklist}
       onConfirm={(r) => setChecklist(r)}
     />
+    <StopReverseDialog
+      open={reverseOpen}
+      onOpenChange={setReverseOpen}
+      tradeId={reverseTradeId}
+      points={reversePoints}
+      setPoints={setReversePoints}
+    />
     </>
   );
 }
@@ -788,6 +874,98 @@ function Section({
       </h3>
       {children}
     </div>
+  );
+}
+
+function StopReverseDialog({
+  open,
+  onOpenChange,
+  tradeId,
+  points,
+  setPoints,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  tradeId: string | null;
+  points: string;
+  setPoints: (v: string) => void;
+}) {
+  const [saving, setSaving] = useState(false);
+
+  const save = async (reversed: boolean) => {
+    if (!tradeId) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const parsed = reversed
+        ? Number.isFinite(parseFloat(points))
+          ? Math.abs(parseFloat(points))
+          : null
+        : null;
+      const { error } = await supabase
+        .from("trades")
+        .update({
+          stop_and_reversed: reversed,
+          stop_and_reverse_points: parsed,
+        } as never)
+        .eq("id", tradeId);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success(
+        reversed ? "Stop-and-reverse logged" : "Normal stop hit recorded",
+      );
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-heading">Post-Trade Review</DialogTitle>
+          <DialogDescription>
+            Did price reverse after stopping you out?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label className="text-xs">
+            If yes, how many points did it reverse?
+          </Label>
+          <Input
+            type="number"
+            inputMode="decimal"
+            step="0.25"
+            min="0"
+            value={points}
+            onChange={(e) => setPoints(e.target.value)}
+            placeholder="e.g. 5.0"
+          />
+        </div>
+        <DialogFooter className="mt-3 gap-2 sm:gap-2">
+          <Button
+            variant="outline"
+            onClick={() => save(false)}
+            disabled={saving}
+            className="font-data uppercase tracking-wider"
+          >
+            No — normal stop
+          </Button>
+          <Button
+            onClick={() => save(true)}
+            disabled={saving}
+            className="bg-trade-red text-background hover:bg-trade-red/90 font-data uppercase tracking-wider"
+          >
+            Yes — reversed
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
