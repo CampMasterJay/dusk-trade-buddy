@@ -11,6 +11,7 @@ import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
 import { PerformanceTrends } from "@/components/PerformanceTrends";
 import { StopAnalytics } from "@/components/StopAnalytics";
+import { ExitAnalytics } from "@/components/ExitAnalytics";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
 import { StreakBehavior } from "@/components/StreakBehavior";
 import { RegimePerformance } from "@/components/RegimePerformance";
@@ -305,7 +306,7 @@ function TradeLogScreen() {
         {/* Stats */}
         <div className="mb-4">
           <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-3">
+            <TabsList className="grid w-full grid-cols-5 mb-3">
               <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
                 Stats
               </TabsTrigger>
@@ -317,6 +318,9 @@ function TradeLogScreen() {
               </TabsTrigger>
               <TabsTrigger value="stops" className="text-xs uppercase tracking-wider font-data">
                 Stops
+              </TabsTrigger>
+              <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
+                Exits
               </TabsTrigger>
             </TabsList>
             <TabsContent value="stats" className="mt-0">
@@ -341,6 +345,12 @@ function TradeLogScreen() {
             </TabsContent>
             <TabsContent value="stops" className="mt-0">
               <StopAnalytics
+                trades={trades}
+                tickValue={Number(settings?.tick_value ?? 5)}
+              />
+            </TabsContent>
+            <TabsContent value="exits" className="mt-0">
+              <ExitAnalytics
                 trades={trades}
                 tickValue={Number(settings?.tick_value ?? 5)}
               />
