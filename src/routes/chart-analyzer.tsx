@@ -340,6 +340,8 @@ function ChartAnalyzer() {
           ))}
         </div>
 
+        <ChartAnalyzerModeToggle />
+
         {tab === "scan" && <ScanMode />}
 
         {tab === "history" && (
