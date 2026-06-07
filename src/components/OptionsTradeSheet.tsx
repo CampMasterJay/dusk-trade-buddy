@@ -734,6 +734,50 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function GreekInput({
+  label,
+  hint,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  placeholder: string;
+  value: string;
+  onChange: (s: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-xs">{label}</Label>
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label={`${label} info`}
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[220px] text-xs">
+              {hint}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      <Input
+        inputMode="decimal"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
 function ExpirationPicker({
   value,
   onChange,
