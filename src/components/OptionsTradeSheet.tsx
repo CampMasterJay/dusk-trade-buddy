@@ -618,6 +618,46 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
             </Section>
           )}
 
+          {/* Greeks at entry (optional, encouraged) */}
+          {strategy && (
+            <Section title="5. Greeks at Entry (optional)">
+              <p className="text-xs text-muted-foreground -mt-1">
+                Enter per-contract greeks from your broker's option chain. Used to compute
+                portfolio-wide exposure on your dashboard.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <GreekInput
+                  label="Delta"
+                  hint="How much does this option move per $1 move in underlying?"
+                  placeholder="0.45"
+                  value={entryDelta}
+                  onChange={setEntryDelta}
+                />
+                <GreekInput
+                  label="Gamma"
+                  hint="Rate of delta change. How fast delta moves as the underlying moves."
+                  placeholder="0.02"
+                  value={entryGamma}
+                  onChange={setEntryGamma}
+                />
+                <GreekInput
+                  label="Theta ($/day)"
+                  hint="How much value does this position lose per day to time decay?"
+                  placeholder="-12.50"
+                  value={entryTheta}
+                  onChange={setEntryTheta}
+                />
+                <GreekInput
+                  label="Vega"
+                  hint="How much does IV changing 1% affect your P&L?"
+                  placeholder="8.30"
+                  value={entryVega}
+                  onChange={setEntryVega}
+                />
+              </div>
+            </Section>
+          )}
+
           {/* Live P&L simulator */}
           {strategy && oneContractCalc && (
             <Section title="Live P&L Simulator">
