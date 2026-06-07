@@ -269,6 +269,48 @@ export type Database = {
         }
         Relationships: []
       }
+      playbook_entries: {
+        Row: {
+          avg_r: number | null
+          created_at: string
+          filters: Json
+          id: string
+          name: string
+          net_pnl: number | null
+          notes: string | null
+          trade_count: number
+          updated_at: string
+          user_id: string
+          win_rate: number | null
+        }
+        Insert: {
+          avg_r?: number | null
+          created_at?: string
+          filters?: Json
+          id?: string
+          name: string
+          net_pnl?: number | null
+          notes?: string | null
+          trade_count?: number
+          updated_at?: string
+          user_id: string
+          win_rate?: number | null
+        }
+        Update: {
+          avg_r?: number | null
+          created_at?: string
+          filters?: Json
+          id?: string
+          name?: string
+          net_pnl?: number | null
+          notes?: string | null
+          trade_count?: number
+          updated_at?: string
+          user_id?: string
+          win_rate?: number | null
+        }
+        Relationships: []
+      }
       price_alerts: {
         Row: {
           active: boolean
