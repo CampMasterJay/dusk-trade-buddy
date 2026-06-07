@@ -34,6 +34,12 @@ import {
   todayLocalDate,
   upsertPlan,
 } from "@/lib/gamePlanService";
+import {
+  MARKET_REGIMES,
+  REGIME_GUIDANCE,
+  winRateForRegime,
+  type MarketRegime,
+} from "@/lib/marketRegime";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/game-plan")({
