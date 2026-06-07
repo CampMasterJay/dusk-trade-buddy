@@ -183,6 +183,7 @@ export type Database = {
           discipline_score: number | null
           id: string
           key_levels: number[]
+          market_regime: string | null
           max_loss: number | null
           max_trades: number
           notes: string | null
@@ -201,6 +202,7 @@ export type Database = {
           discipline_score?: number | null
           id?: string
           key_levels?: number[]
+          market_regime?: string | null
           max_loss?: number | null
           max_trades?: number
           notes?: string | null
@@ -219,6 +221,7 @@ export type Database = {
           discipline_score?: number | null
           id?: string
           key_levels?: number[]
+          market_regime?: string | null
           max_loss?: number | null
           max_trades?: number
           notes?: string | null
@@ -358,6 +361,7 @@ export type Database = {
           hour_of_day: number | null
           id: string
           instrument: string
+          market_regime: string | null
           news_id: string | null
           notes: string | null
           pnl: number | null
@@ -391,6 +395,7 @@ export type Database = {
           hour_of_day?: number | null
           id?: string
           instrument: string
+          market_regime?: string | null
           news_id?: string | null
           notes?: string | null
           pnl?: number | null
@@ -424,6 +429,7 @@ export type Database = {
           hour_of_day?: number | null
           id?: string
           instrument?: string
+          market_regime?: string | null
           news_id?: string | null
           notes?: string | null
           pnl?: number | null
