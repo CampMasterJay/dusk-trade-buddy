@@ -11,8 +11,7 @@ import { PatternOfTheDay } from "@/components/PatternOfTheDay";
 import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
 import { DrawdownTracker } from "@/components/DrawdownTracker";
 import { ConsistencyStreak } from "@/components/ConsistencyStreak";
-import { EdgeHealthScore } from "@/components/RollingPerformance";
-import { ScalingTierCard } from "@/components/ScalingTierCard";
+import { EdgeHealthSection } from "@/components/EdgeHealthSection";
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -232,9 +231,7 @@ function Dashboard() {
 
             <StatsRow stats={stats} streak={streak} />
 
-            <EdgeHealthScore trades={trades} />
-
-            <ScalingTierCard />
+            <EdgeHealthSection trades={trades} />
 
             <DrawdownTracker trades={trades} startingBalance={startingBalance} />
 
