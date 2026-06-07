@@ -574,7 +574,7 @@ function TradeLogScreen() {
         )}
 
         {/* Infinite scroll sentinel + load more */}
-        {!loading && !error && hasMore && (
+        {!isOptions && !loading && !error && hasMore && (
           <div ref={sentinelRef} className="py-6 flex justify-center">
             {loadingMore ? (
               <LoadingSpinner />
