@@ -9,6 +9,7 @@ import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { TradeDetailSheet } from "@/components/TradeDetailSheet";
 import { TradeStats } from "@/components/TradeStats";
 import { RollingPerformance, EdgeHealthScore } from "@/components/RollingPerformance";
+import { PerformanceTrends } from "@/components/PerformanceTrends";
 import { BehaviorAnalytics } from "@/components/BehaviorAnalytics";
 import { StreakBehavior } from "@/components/StreakBehavior";
 import { RegimePerformance } from "@/components/RegimePerformance";
@@ -318,6 +319,7 @@ function TradeLogScreen() {
               <div className="space-y-3">
                 <EdgeHealthScore trades={trades} />
                 <RollingPerformance trades={trades} />
+                <PerformanceTrends trades={trades} />
                 <TradeStats stats={stats} trades={trades} />
               </div>
             </TabsContent>
