@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,6 +20,16 @@ import {
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { getAllTrades, type Trade } from "@/lib/tradeService";
+import {
+  computeSetupHealth,
+  STATUS_META,
+  type SetupHealth,
+} from "@/lib/setupHealth";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/setup-library")({
   head: () => ({
@@ -37,6 +47,7 @@ type Setup = {
   id: string;
   name: string;
   short: string;
+  tag: string; // setup_tag value used in trades table
   icon: LucideIcon;
   timeframe: string;
   entry: string;
