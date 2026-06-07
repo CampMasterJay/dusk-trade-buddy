@@ -503,6 +503,7 @@ export type Database = {
           trades_since_last_win: number | null
           updated_at: string
           user_id: string
+          vix_at_entry: number | null
           was_revenge_trade: boolean | null
         }
         Insert: {
@@ -544,6 +545,7 @@ export type Database = {
           trades_since_last_win?: number | null
           updated_at?: string
           user_id: string
+          vix_at_entry?: number | null
           was_revenge_trade?: boolean | null
         }
         Update: {
@@ -585,6 +587,7 @@ export type Database = {
           trades_since_last_win?: number | null
           updated_at?: string
           user_id?: string
+          vix_at_entry?: number | null
           was_revenge_trade?: boolean | null
         }
         Relationships: []
@@ -627,6 +630,9 @@ export type Database = {
           updated_at: string
           user_id: string
           vix_adjustment_enabled: boolean
+          vix_tier_elevated_max: number
+          vix_tier_low_max: number
+          vix_tier_normal_max: number
           watchlist: string[]
         }
         Insert: {
@@ -645,6 +651,9 @@ export type Database = {
           updated_at?: string
           user_id: string
           vix_adjustment_enabled?: boolean
+          vix_tier_elevated_max?: number
+          vix_tier_low_max?: number
+          vix_tier_normal_max?: number
           watchlist?: string[]
         }
         Update: {
@@ -663,6 +672,9 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vix_adjustment_enabled?: boolean
+          vix_tier_elevated_max?: number
+          vix_tier_low_max?: number
+          vix_tier_normal_max?: number
           watchlist?: string[]
         }
         Relationships: []
