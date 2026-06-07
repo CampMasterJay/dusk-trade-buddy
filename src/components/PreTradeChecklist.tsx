@@ -304,7 +304,7 @@ export function PreTradeChecklist({
                 {regime ? `${regime} Score` : "Score"}
               </div>
               <div className={cn("text-3xl font-bold font-data", c.fg)}>
-                {score}
+                {totalScore}
                 <span className="text-sm text-muted-foreground">/{total}</span>
               </div>
             </div>
@@ -323,7 +323,7 @@ export function PreTradeChecklist({
           </Button>
           <Button
             onClick={() => {
-              onConfirm({ score, verdict, items, regime: regime ?? null, total });
+              onConfirm({ score: totalScore, verdict, items, regime: regime ?? null, total });
               onOpenChange(false);
             }}
             className="bg-trade-green text-background hover:bg-trade-green/90 font-data uppercase tracking-wider"
