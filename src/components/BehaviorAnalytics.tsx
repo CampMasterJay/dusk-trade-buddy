@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Clock, CalendarDays, Hash } from "lucide-react";
+import { AlertTriangle, Clock, CalendarDays, Hash, BookOpen } from "lucide-react";
 import type { Trade } from "@/lib/tradeService";
 import { cn } from "@/lib/utils";
 import { computeOverrideStats, type BehaviorAlertType } from "@/lib/behaviorAlerts";
@@ -410,6 +410,7 @@ export function BehaviorAnalytics({ trades }: Props) {
       </div>
 
       <AlertOverrideSection trades={trades} />
+      <PlaybookComplianceSection trades={trades} />
     </section>
   );
 }
