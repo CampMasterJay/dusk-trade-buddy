@@ -263,6 +263,12 @@ function GamePlanScreen() {
           </div>
         ) : (
           <>
+            {/* Market regime */}
+            <RegimeSection
+              regime={regime}
+              onChange={setRegime}
+              trades={trades}
+            />
             {/* Bias */}
             <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
