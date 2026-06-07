@@ -206,6 +206,7 @@ function GamePlanScreen() {
       .map((v) => Number(v))
       .filter((n) => Number.isFinite(n));
     const maxLossNum = maxLoss.trim() === "" ? null : Number(maxLoss);
+    const vixNum = vix.trim() === "" ? null : Number(vix);
     const { data, error } = await upsertPlan(userId, {
       plan_date: date,
       bias,
@@ -215,6 +216,7 @@ function GamePlanScreen() {
       max_loss: maxLossNum != null && Number.isFinite(maxLossNum) ? maxLossNum : null,
       notes: notes.trim() || null,
       market_regime: regime,
+      vix: vixNum != null && Number.isFinite(vixNum) && vixNum > 0 ? vixNum : null,
     });
     setSaving(false);
     if (error) {
