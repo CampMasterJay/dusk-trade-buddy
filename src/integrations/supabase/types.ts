@@ -305,6 +305,59 @@ export type Database = {
         }
         Relationships: []
       }
+      prop_firm_accounts: {
+        Row: {
+          challenge_start_date: string
+          created_at: string
+          current_balance: number
+          id: string
+          is_active: boolean
+          notes: string | null
+          peak_balance: number
+          prop_firm_id: string
+          starting_balance: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_start_date?: string
+          created_at?: string
+          current_balance: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          peak_balance: number
+          prop_firm_id: string
+          starting_balance: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_start_date?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          peak_balance?: number
+          prop_firm_id?: string
+          starting_balance?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prop_firm_accounts_prop_firm_id_fkey"
+            columns: ["prop_firm_id"]
+            isOneToOne: false
+            referencedRelation: "prop_firms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prop_firms: {
         Row: {
           account_size: number
