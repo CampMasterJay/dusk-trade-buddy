@@ -1,6 +1,12 @@
 import { type Trade, type TradeStats } from "@/lib/tradeService";
 import { cn } from "@/lib/utils";
-import { Newspaper, Sparkles } from "lucide-react";
+import { Newspaper, Sparkles, Activity } from "lucide-react";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import {
+  buildVixTiers,
+  bucketTradesByVix,
+  type VixBucketStats,
+} from "@/lib/vixTiers";
 
 interface TradeStatsProps {
   stats: TradeStats | null;
@@ -90,6 +96,21 @@ function newsRecommendation(
 export function TradeStats({ stats, trades }: TradeStatsProps) {
   const streak = calcStreak(trades);
   const s = stats;
+  const { settings } = useUserSettings();
+  const vixTiers = buildVixTiers({
+    low: settings?.vix_tier_low_max,
+    normal: settings?.vix_tier_normal_max,
+    elevated: settings?.vix_tier_elevated_max,
+  });
+  const vixBuckets = bucketTradesByVix(trades, vixTiers);
+  const vixCovered = vixBuckets.reduce((s, b) => s + b.count, 0);
+  const maxNet = Math.max(1, ...vixBuckets.map((b) => Math.abs(b.netPnl)));
+  const lowBucket = vixBuckets.find((b) => b.tier.key === "low");
+  const elevatedBucket = vixBuckets.find((b) => b.tier.key === "elevated");
+  let vixInsight: string | null = null;
+  if (lowBucket && elevatedBucket && lowBucket.count >= 3 && elevatedBucket.count >= 3) {
+    vixInsight = `Your win rate in low VIX (< ${lowBucket.tier.max}) is ${(lowBucket.winRate * 100).toFixed(0)}% vs ${(elevatedBucket.winRate * 100).toFixed(0)}% in elevated VIX. ORB setups perform best when VIX is between ${lowBucket.tier.max} and ${elevatedBucket.tier.max - 2}.`;
+  }
 
   const winRatePct = (s?.winRate ?? 0) * 100;
   const lossRatePct = 100 - winRatePct;
@@ -213,7 +234,115 @@ export function TradeStats({ stats, trades }: TradeStatsProps) {
           </p>
         )}
       </div>
+
+      {/* Volatility Performance */}
+      <div className="rounded-xl border border-border bg-card p-3">
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-data">
+          <Activity className="h-3 w-3" />
+          Volatility Performance
+        </div>
+        {vixCovered === 0 ? (
+          <p className="text-[11px] text-muted-foreground">
+            Set today's VIX in your Game Plan before logging trades to track performance by volatility regime.
+          </p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[11px] font-data">
+                <thead className="text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="py-1 font-normal">Tier</th>
+                    <th className="py-1 font-normal text-right">Trades</th>
+                    <th className="py-1 font-normal text-right">Win %</th>
+                    <th className="py-1 font-normal text-right">Avg R</th>
+                    <th className="py-1 font-normal text-right">Net P&amp;L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vixBuckets.map((b) => (
+                    <tr key={b.tier.key} className="border-t border-border/50">
+                      <td className="py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block size-2 rounded-full"
+                            style={{ background: b.tier.color }}
+                          />
+                          <span>
+                            {b.tier.label}
+                            <span className="ml-1 text-muted-foreground">
+                              ({b.tier.range})
+                            </span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-1.5 text-right">{b.count}</td>
+                      <td className="py-1.5 text-right">
+                        {b.count > 0 ? `${(b.winRate * 100).toFixed(0)}%` : "—"}
+                      </td>
+                      <td
+                        className={cn(
+                          "py-1.5 text-right",
+                          b.avgR > 0 && "text-trade-green",
+                          b.avgR < 0 && "text-trade-red",
+                        )}
+                      >
+                        {b.count > 0 ? `${b.avgR >= 0 ? "+" : ""}${b.avgR.toFixed(2)}R` : "—"}
+                      </td>
+                      <td
+                        className={cn(
+                          "py-1.5 text-right",
+                          b.netPnl > 0 && "text-trade-green",
+                          b.netPnl < 0 && "text-trade-red",
+                        )}
+                      >
+                        {b.count > 0 ? fmtUSD(b.netPnl) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 space-y-1.5">
+              {vixBuckets.map((b) => (
+                <VixBar key={b.tier.key} bucket={b} maxAbs={maxNet} />
+              ))}
+            </div>
+
+            {vixInsight && (
+              <div className="mt-2 flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5 text-xs leading-snug text-primary">
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{vixInsight}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </section>
+  );
+}
+
+function VixBar({ bucket, maxAbs }: { bucket: VixBucketStats; maxAbs: number }) {
+  const pct = Math.min(100, (Math.abs(bucket.netPnl) / maxAbs) * 100);
+  const positive = bucket.netPnl >= 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-20 shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground font-data">
+        {bucket.tier.label}
+      </div>
+      <div className="flex-1 h-2 rounded-full bg-muted/40 overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${pct}%`,
+            background: positive ? bucket.tier.color : "var(--trade-red)",
+          }}
+        />
+      </div>
+      <div className="w-16 shrink-0 text-right font-data text-[11px]">
+        {bucket.count > 0 ? fmtUSD(bucket.netPnl) : "—"}
+      </div>
+    </div>
   );
 }
 

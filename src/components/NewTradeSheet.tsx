@@ -462,6 +462,7 @@ export function NewTradeSheet({
           mae === "" || Number.isNaN(parseFloat(mae)) ? null : Math.abs(parseFloat(mae)),
         max_favorable_excursion_points:
           mfe === "" || Number.isNaN(parseFloat(mfe)) ? null : Math.abs(parseFloat(mfe)),
+        vix_at_entry: todayVix ?? null,
       } as Omit<Parameters<typeof createTrade>[0], "user_id">;
 
       const res = isEdit && editTrade
