@@ -34,6 +34,7 @@ import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
 import { computeDrawdown } from "@/lib/drawdown";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useTradingMode } from "@/lib/tradingMode";
 import {
   getTrades,
   getAllTrades,
@@ -83,7 +84,6 @@ export const Route = createFileRoute("/trade-log")({
 const PAGE_SIZE = 25;
 type FilterKey = "All" | "Wins" | "Losses";
 type SortKey = "Newest" | "Oldest" | "LargestWin" | "LargestLoss";
-type MarketKey = "All" | "Futures" | "Options" | "Stocks" | "Crypto";
 
 function TradeLog() {
   return (
@@ -97,6 +97,8 @@ function TradeLogScreen() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { settings } = useUserSettings();
+  const [mode] = useTradingMode();
+  const isOptions = mode === "options";
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStatsType | null>(null);
@@ -111,15 +113,6 @@ function TradeLogScreen() {
   const [instrumentFilter, setInstrumentFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("Newest");
-  const [marketFilter, setMarketFilter] = useState<MarketKey>(() => {
-    if (typeof window === "undefined") return "All";
-    try {
-      const m = localStorage.getItem("edgetrader.tradingMode.v1");
-      return m === "options" ? "Options" : "Futures";
-    } catch {
-      return "All";
-    }
-  });
   const [reloadKey, setReloadKey] = useState(0);
 
   // Auto-open New Trade sheet with prefill stashed by Chart Analyzer
