@@ -834,6 +834,8 @@ function PlaybookPage() {
         {loading && (
           <p className="text-center text-xs text-muted-foreground">Loading…</p>
         )}
+        </>
+        )}
       </div>
     </ProtectedRoute>
   );
