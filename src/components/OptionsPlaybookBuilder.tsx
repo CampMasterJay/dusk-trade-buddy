@@ -784,54 +784,16 @@ export function OptionsPlaybookBuilder() {
         ) : (
           <div className="space-y-3">
             {entries.map((e) => (
-              <div
+              <OptionsEntryCard
                 key={e.id}
-                className="rounded-lg border border-border bg-background p-3 space-y-2"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-bold truncate">{e.name}</div>
-                    <div className="text-[10px] text-muted-foreground font-data">
-                      {e.trade_count} trades · {confidenceLabel(e.trade_count)} confidence
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => loadEntry(e)}
-                      className="rounded border border-border px-2 py-1 text-[10px] font-data uppercase tracking-wider hover:bg-accent"
-                    >
-                      Load
-                    </button>
-                    <button
-                      onClick={() => handleDelete(e.id)}
-                      className="rounded border border-trade-red/40 px-2 py-1 text-trade-red hover:bg-trade-red/10"
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-[10px]">
-                  <div className="rounded border border-border px-2 py-1">
-                    <div className="uppercase text-muted-foreground">Win Rate</div>
-                    <div className="font-mono">
-                      {e.win_rate != null ? `${(e.win_rate * 100).toFixed(0)}%` : "—"}
-                    </div>
-                  </div>
-                  <div className="rounded border border-border px-2 py-1">
-                    <div className="uppercase text-muted-foreground">Avg P&L</div>
-                    <div className="font-mono">
-                      ${(e.net_pnl != null && e.trade_count > 0 ? e.net_pnl / e.trade_count : 0).toFixed(0)}
-                    </div>
-                  </div>
-                  <div className="rounded border border-border px-2 py-1">
-                    <div className="uppercase text-muted-foreground">% Max</div>
-                    <div className="font-mono">
-                      {e.avg_r != null ? `${(e.avg_r * 100).toFixed(0)}%` : "—"}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                entry={e}
+                rows={closed}
+                regimeMap={regimeMap}
+                vixMap={vixMap}
+                onLoad={() => loadEntry(e)}
+                onDelete={() => handleDelete(e.id)}
+                onStatusChange={(s) => handleStatusChange(e.id, s)}
+              />
             ))}
           </div>
         )}
