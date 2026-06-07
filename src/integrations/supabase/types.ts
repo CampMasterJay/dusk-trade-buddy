@@ -362,15 +362,22 @@ export type Database = {
           id: string
           instrument: string
           market_regime: string | null
+          max_adverse_excursion_points: number | null
+          max_favorable_excursion_points: number | null
           news_id: string | null
           notes: string | null
           pnl: number | null
+          price_came_within_ticks_of_stop: number | null
           r_multiple: number | null
           range_size: number | null
           result: string
           session_trade_number: number | null
           setup_tag: string | null
           stop: number
+          stop_and_reverse_points: number | null
+          stop_and_reversed: boolean | null
+          stop_distance_points: number | null
+          stop_was_hit_before_target: boolean | null
           target: number
           time_since_market_open_minutes: number | null
           trades_since_last_loss: number | null
@@ -396,15 +403,22 @@ export type Database = {
           id?: string
           instrument: string
           market_regime?: string | null
+          max_adverse_excursion_points?: number | null
+          max_favorable_excursion_points?: number | null
           news_id?: string | null
           notes?: string | null
           pnl?: number | null
+          price_came_within_ticks_of_stop?: number | null
           r_multiple?: number | null
           range_size?: number | null
           result: string
           session_trade_number?: number | null
           setup_tag?: string | null
           stop: number
+          stop_and_reverse_points?: number | null
+          stop_and_reversed?: boolean | null
+          stop_distance_points?: number | null
+          stop_was_hit_before_target?: boolean | null
           target: number
           time_since_market_open_minutes?: number | null
           trades_since_last_loss?: number | null
@@ -430,15 +444,22 @@ export type Database = {
           id?: string
           instrument?: string
           market_regime?: string | null
+          max_adverse_excursion_points?: number | null
+          max_favorable_excursion_points?: number | null
           news_id?: string | null
           notes?: string | null
           pnl?: number | null
+          price_came_within_ticks_of_stop?: number | null
           r_multiple?: number | null
           range_size?: number | null
           result?: string
           session_trade_number?: number | null
           setup_tag?: string | null
           stop?: number
+          stop_and_reverse_points?: number | null
+          stop_and_reversed?: boolean | null
+          stop_distance_points?: number | null
+          stop_was_hit_before_target?: boolean | null
           target?: number
           time_since_market_open_minutes?: number | null
           trades_since_last_loss?: number | null
