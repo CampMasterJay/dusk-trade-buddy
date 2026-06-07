@@ -1,5 +1,6 @@
 import { useCountUp } from "@/hooks/useCountUp";
 import { useTradingMode, toggleTradingMode } from "@/lib/tradingMode";
+import { useOtherModeSignals } from "@/lib/otherModeSignals";
 import { toast } from "sonner";
 
 export interface AppHeaderProps {
@@ -14,12 +15,15 @@ export function AppHeader({ balance }: AppHeaderProps) {
     minimumFractionDigits: 2,
   }).format(animated);
   const [mode] = useTradingMode();
+  const other = useOtherModeSignals();
   const isOptions = mode === "options";
   const accent = isOptions ? "text-trade-amber" : "text-trade-green";
   const badgeBorder = isOptions
     ? "border-trade-amber/30 bg-trade-amber/10 text-trade-amber"
     : "border-trade-green/30 bg-trade-green/10 text-trade-green";
   const dotColor = isOptions ? "bg-trade-amber" : "bg-trade-green";
+  const otherDotColor = isOptions ? "bg-trade-green" : "bg-trade-amber";
+  const otherModeLabel = isOptions ? "Futures" : "Options";
 
   const onToggle = () => {
     const next = toggleTradingMode();
@@ -35,20 +39,27 @@ export function AppHeader({ balance }: AppHeaderProps) {
         <button
           type="button"
           onClick={onToggle}
-          aria-label={`Switch trading mode (currently ${mode})`}
-          className={`group flex items-baseline gap-2 text-sm font-bold font-data uppercase tracking-[4px] ${accent} transition hover:opacity-80`}
+          aria-label={`Switch trading mode (currently ${mode}${other.hasSignal ? `, ${other.label} in ${otherModeLabel}` : ""})`}
+          title={other.hasSignal ? `${other.label} — tap to switch to ${otherModeLabel}` : `Switch to ${otherModeLabel}`}
+          className={`group relative flex items-baseline gap-2 text-sm font-bold font-data uppercase tracking-[4px] ${accent} transition hover:opacity-80`}
         >
           EDGE TRADER
           <span
-            className={`text-[9px] tracking-[2px] rounded px-1.5 py-0.5 border ${badgeBorder}`}
+            className={`relative text-[9px] tracking-[2px] rounded px-1.5 py-0.5 border ${badgeBorder}`}
           >
             {isOptions ? "OPTIONS" : "FUTURES"}
+            {other.hasSignal && (
+              <span
+                aria-hidden
+                className={`absolute -top-1 -right-1 h-2 w-2 rounded-full ${otherDotColor} ring-2 ring-background animate-pulse`}
+              />
+            )}
           </span>
         </button>
 
         {/* Balance Badge */}
         <div
-          className={`balance-glow flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-data ${badgeBorder}`}
+          className={`mode-accent-ring flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-data ${badgeBorder}`}
         >
           <span className={`h-2 w-2 rounded-full ${dotColor} animate-pulse`} />
           {formattedBalance}
