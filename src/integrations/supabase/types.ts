@@ -257,6 +257,171 @@ export type Database = {
         }
         Relationships: []
       }
+      options_trades: {
+        Row: {
+          actual_exit_reason: string | null
+          break_even_price: number | null
+          checklist_score: number | null
+          commission_total: number
+          created_at: string
+          deleted_at: string | null
+          direction_bias: string | null
+          dte_at_entry: number | null
+          emotion: string | null
+          entry_delta: number | null
+          entry_gamma: number | null
+          entry_theta: number | null
+          entry_vega: number | null
+          exit_premium: number | null
+          gross_pnl: number | null
+          id: string
+          is_0dte: boolean
+          is_debit: boolean
+          iv_rank_at_entry: number | null
+          leg1_action: string
+          leg1_contracts: number
+          leg1_delta_at_entry: number | null
+          leg1_expiration: string
+          leg1_iv_at_entry: number | null
+          leg1_premium: number
+          leg1_strike: number
+          leg1_type: string
+          leg2_action: string | null
+          leg2_contracts: number | null
+          leg2_delta_at_entry: number | null
+          leg2_expiration: string | null
+          leg2_iv_at_entry: number | null
+          leg2_premium: number | null
+          leg2_strike: number | null
+          leg2_type: string | null
+          market_type: string
+          max_profit: number | null
+          max_risk: number | null
+          net_pnl: number | null
+          notes: string | null
+          planned_exit_dte: number | null
+          planned_profit_target_pct: number | null
+          planned_stop_loss_pct: number | null
+          premium_paid_or_received: number | null
+          status: string
+          strategy_type: string
+          trade_date: string
+          underlying: string
+          underlying_price_at_entry: number | null
+          underlying_price_at_exit: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_exit_reason?: string | null
+          break_even_price?: number | null
+          checklist_score?: number | null
+          commission_total?: number
+          created_at?: string
+          deleted_at?: string | null
+          direction_bias?: string | null
+          dte_at_entry?: number | null
+          emotion?: string | null
+          entry_delta?: number | null
+          entry_gamma?: number | null
+          entry_theta?: number | null
+          entry_vega?: number | null
+          exit_premium?: number | null
+          gross_pnl?: number | null
+          id?: string
+          is_0dte?: boolean
+          is_debit?: boolean
+          iv_rank_at_entry?: number | null
+          leg1_action: string
+          leg1_contracts?: number
+          leg1_delta_at_entry?: number | null
+          leg1_expiration: string
+          leg1_iv_at_entry?: number | null
+          leg1_premium: number
+          leg1_strike: number
+          leg1_type: string
+          leg2_action?: string | null
+          leg2_contracts?: number | null
+          leg2_delta_at_entry?: number | null
+          leg2_expiration?: string | null
+          leg2_iv_at_entry?: number | null
+          leg2_premium?: number | null
+          leg2_strike?: number | null
+          leg2_type?: string | null
+          market_type?: string
+          max_profit?: number | null
+          max_risk?: number | null
+          net_pnl?: number | null
+          notes?: string | null
+          planned_exit_dte?: number | null
+          planned_profit_target_pct?: number | null
+          planned_stop_loss_pct?: number | null
+          premium_paid_or_received?: number | null
+          status?: string
+          strategy_type: string
+          trade_date?: string
+          underlying: string
+          underlying_price_at_entry?: number | null
+          underlying_price_at_exit?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_exit_reason?: string | null
+          break_even_price?: number | null
+          checklist_score?: number | null
+          commission_total?: number
+          created_at?: string
+          deleted_at?: string | null
+          direction_bias?: string | null
+          dte_at_entry?: number | null
+          emotion?: string | null
+          entry_delta?: number | null
+          entry_gamma?: number | null
+          entry_theta?: number | null
+          entry_vega?: number | null
+          exit_premium?: number | null
+          gross_pnl?: number | null
+          id?: string
+          is_0dte?: boolean
+          is_debit?: boolean
+          iv_rank_at_entry?: number | null
+          leg1_action?: string
+          leg1_contracts?: number
+          leg1_delta_at_entry?: number | null
+          leg1_expiration?: string
+          leg1_iv_at_entry?: number | null
+          leg1_premium?: number
+          leg1_strike?: number
+          leg1_type?: string
+          leg2_action?: string | null
+          leg2_contracts?: number | null
+          leg2_delta_at_entry?: number | null
+          leg2_expiration?: string | null
+          leg2_iv_at_entry?: number | null
+          leg2_premium?: number | null
+          leg2_strike?: number | null
+          leg2_type?: string | null
+          market_type?: string
+          max_profit?: number | null
+          max_risk?: number | null
+          net_pnl?: number | null
+          notes?: string | null
+          planned_exit_dte?: number | null
+          planned_profit_target_pct?: number | null
+          planned_stop_loss_pct?: number | null
+          premium_paid_or_received?: number | null
+          status?: string
+          strategy_type?: string
+          trade_date?: string
+          underlying?: string
+          underlying_price_at_entry?: number | null
+          underlying_price_at_exit?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       performance_logs: {
         Row: {
           created_at: string
