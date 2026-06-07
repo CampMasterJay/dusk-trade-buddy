@@ -127,6 +127,8 @@ interface Props {
   tradeDate?: string;
   /** Override regime detection. */
   regime?: MarketRegime | null;
+  /** Extra checklist items injected by the prop-firm rules engine. */
+  propFirmItems?: Array<{ key: string; label: string; checked: boolean }>;
 }
 
 export function PreTradeChecklist({
@@ -138,6 +140,7 @@ export function PreTradeChecklist({
   onConfirm,
   tradeDate,
   regime: regimeProp,
+  propFirmItems,
 }: Props) {
   const { user } = useAuth();
   const [loadedRegime, setLoadedRegime] = useState<MarketRegime | null>(null);
@@ -148,6 +151,9 @@ export function PreTradeChecklist({
     const base: Record<string, boolean> = Object.fromEntries(
       items_def.map((i) => [i.key as string, false]),
     );
+    if (propFirmItems) {
+      for (const it of propFirmItems) base[it.key] = it.checked;
+    }
     if (prefill) {
       for (const [k, v] of Object.entries(prefill)) {
         if (typeof v === "boolean") base[k] = v;
@@ -164,7 +170,7 @@ export function PreTradeChecklist({
   useEffect(() => {
     if (open) setItems(buildInitial());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, regime]);
+  }, [open, regime, propFirmItems]);
 
   // Auto-load today's regime from the daily game plan when not provided.
   useEffect(() => {
@@ -193,7 +199,12 @@ export function PreTradeChecklist({
     () => items_def.reduce((n, it) => n + (items[it.key as string] ? 1 : 0), 0),
     [items, items_def],
   );
-  const total = items_def.length;
+  const firmScore = useMemo(
+    () => (propFirmItems ?? []).reduce((n, it) => n + (items[it.key] ? 1 : 0), 0),
+    [items, propFirmItems],
+  );
+  const total = items_def.length + (propFirmItems?.length ?? 0);
+  const totalScore = score + firmScore;
   const verdict = verdictFor(score, total);
   const c = verdictColor(verdict);
 
