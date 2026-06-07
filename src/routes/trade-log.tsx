@@ -5,7 +5,6 @@ import { Trash2, Search, BookOpen, CalendarDays, Shield, Download, ClipboardCopy
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
-import { NewTradeSheet } from "@/components/NewTradeSheet";
 import { OptionsTradeSheet } from "@/components/OptionsTradeSheet";
 import { IvrPerformanceTracker } from "@/components/IvrPerformanceTracker";
 import { IvrHistoryChart } from "@/components/IvrHistoryChart";
@@ -34,6 +33,7 @@ import { TradeLockGate, TradeLockBanner } from "@/components/TradeLockGate";
 import { computeDrawdown } from "@/lib/drawdown";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useTradingMode } from "@/lib/tradingMode";
 import {
   getTrades,
   getAllTrades,
@@ -83,7 +83,6 @@ export const Route = createFileRoute("/trade-log")({
 const PAGE_SIZE = 25;
 type FilterKey = "All" | "Wins" | "Losses";
 type SortKey = "Newest" | "Oldest" | "LargestWin" | "LargestLoss";
-type MarketKey = "All" | "Futures" | "Options" | "Stocks" | "Crypto";
 
 function TradeLog() {
   return (
@@ -97,6 +96,8 @@ function TradeLogScreen() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { settings } = useUserSettings();
+  const [mode] = useTradingMode();
+  const isOptions = mode === "options";
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [stats, setStats] = useState<TradeStatsType | null>(null);
@@ -111,15 +112,6 @@ function TradeLogScreen() {
   const [instrumentFilter, setInstrumentFilter] = useState<string>("All");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("Newest");
-  const [marketFilter, setMarketFilter] = useState<MarketKey>(() => {
-    if (typeof window === "undefined") return "All";
-    try {
-      const m = localStorage.getItem("edgetrader.tradingMode.v1");
-      return m === "options" ? "Options" : "Futures";
-    } catch {
-      return "All";
-    }
-  });
   const [reloadKey, setReloadKey] = useState(0);
 
   // Auto-open New Trade sheet with prefill stashed by Chart Analyzer
@@ -285,6 +277,7 @@ function TradeLogScreen() {
               {trades.length} {trades.length === 1 ? "trade" : "trades"}
             </p>
           </div>
+          {!isOptions && (
           <TradeLockGate
             locked={drawdown.lockTrading}
             defaultInstrument={settings?.instrument ?? "MES"}
@@ -296,11 +289,14 @@ function TradeLogScreen() {
               if (!v) setPrefill(null);
             }}
           />
+          )}
         </div>
 
-        <div className="flex justify-end -mt-2 mb-3">
-          <OptionsTradeSheet onLogged={refresh} />
-        </div>
+        {isOptions && (
+          <div className="flex justify-end -mt-2 mb-3">
+            <OptionsTradeSheet onLogged={refresh} />
+          </div>
+        )}
 
         <TradeLockBanner
           level={drawdown.level}
@@ -332,26 +328,37 @@ function TradeLogScreen() {
 
         {/* Stats */}
         <div className="mb-4">
-          <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-3">
+          <Tabs defaultValue={isOptions ? "options" : "stats"} className="w-full">
+            <TabsList
+              className={cn(
+                "grid w-full mb-3",
+                isOptions ? "grid-cols-2" : "grid-cols-5",
+              )}
+            >
               <TabsTrigger value="stats" className="text-xs uppercase tracking-wider font-data">
                 Stats
               </TabsTrigger>
-              <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
-                Behavior
-              </TabsTrigger>
-              <TabsTrigger value="regime" className="text-xs uppercase tracking-wider font-data">
-                By Regime
-              </TabsTrigger>
-              <TabsTrigger value="stops" className="text-xs uppercase tracking-wider font-data">
-                Stops
-              </TabsTrigger>
-              <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
-                Exits
-              </TabsTrigger>
-              <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
-                Options
-              </TabsTrigger>
+              {!isOptions && (
+                <>
+                  <TabsTrigger value="behavior" className="text-xs uppercase tracking-wider font-data">
+                    Behavior
+                  </TabsTrigger>
+                  <TabsTrigger value="regime" className="text-xs uppercase tracking-wider font-data">
+                    By Regime
+                  </TabsTrigger>
+                  <TabsTrigger value="stops" className="text-xs uppercase tracking-wider font-data">
+                    Stops
+                  </TabsTrigger>
+                  <TabsTrigger value="exits" className="text-xs uppercase tracking-wider font-data">
+                    Exits
+                  </TabsTrigger>
+                </>
+              )}
+              {isOptions && (
+                <TabsTrigger value="options" className="text-xs uppercase tracking-wider font-data">
+                  Options
+                </TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="stats" className="mt-0">
               <div className="space-y-3">
@@ -361,6 +368,8 @@ function TradeLogScreen() {
                 <TradeStats stats={stats} trades={trades} />
               </div>
             </TabsContent>
+            {!isOptions && (
+            <>
             <TabsContent value="behavior" className="mt-0">
               <div className="space-y-4">
                 <Tabs defaultValue="general" className="w-full">
@@ -400,6 +409,9 @@ function TradeLogScreen() {
                 tickValue={Number(settings?.tick_value ?? 5)}
               />
             </TabsContent>
+            </>
+            )}
+            {isOptions && (
             <TabsContent value="options" className="mt-0">
               <div className="space-y-3">
                 <ZeroDteModule />
@@ -420,39 +432,25 @@ function TradeLogScreen() {
                 </div>
               </div>
             </TabsContent>
+            )}
           </Tabs>
         </div>
 
-        <div className="mb-4">
-          <SetupPerformanceBreakdown trades={trades} />
-        </div>
-
-        <div className="mb-4">
-          <BenchmarksPanel trades={trades} />
-        </div>
+        {!isOptions && (
+          <>
+            <div className="mb-4">
+              <SetupPerformanceBreakdown trades={trades} />
+            </div>
+            <div className="mb-4">
+              <BenchmarksPanel trades={trades} />
+            </div>
+          </>
+        )}
 
         {/* Filter bar */}
-        {/* Market filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-2 -mx-4 px-4 scrollbar-none">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-data self-center pr-1">
-            Market
-          </span>
-          {(["All", "Futures", "Options", "Stocks", "Crypto"] as MarketKey[]).map((k) => (
-            <button
-              key={k}
-              onClick={() => setMarketFilter(k)}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-data uppercase tracking-wider border whitespace-nowrap transition-colors",
-                marketFilter === k
-                  ? "bg-primary/15 border-primary/50 text-primary"
-                  : "border-border text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {k}
-            </button>
-          ))}
-        </div>
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4 scrollbar-none">
+          {!isOptions && (
+          <>
           {(["All", "Wins", "Losses"] as FilterKey[]).map((k) => (
             <button
               key={k}
@@ -480,6 +478,8 @@ function TradeLogScreen() {
               ))}
             </SelectContent>
           </Select>
+          </>
+          )}
           <Input
             type="date"
             value={dateFilter}
@@ -497,7 +497,7 @@ function TradeLogScreen() {
         </div>
 
         {/* Sort (only relevant for futures list view) */}
-        {(marketFilter === "All" || marketFilter === "Futures") && (
+        {!isOptions && (
         <div className="flex items-center justify-between mb-4">
           <span className="text-xs font-data uppercase tracking-wider text-muted-foreground">
             Sort
@@ -517,13 +517,7 @@ function TradeLogScreen() {
         )}
 
         {/* Content */}
-        {marketFilter === "Stocks" || marketFilter === "Crypto" ? (
-          <EmptyState
-            icon={Search}
-            title={`${marketFilter} support coming soon`}
-            subtitle={`The trade log doesn't track ${marketFilter.toLowerCase()} trades yet. Use the Futures or Options view in the meantime.`}
-          />
-        ) : marketFilter === "Options" ? (
+        {isOptions ? (
           <div className="space-y-3">
             <p className="text-[11px] text-muted-foreground font-data">
               Showing options trades. Tap the Options tab above for analytics, open
@@ -579,7 +573,7 @@ function TradeLogScreen() {
         )}
 
         {/* Infinite scroll sentinel + load more */}
-        {!loading && !error && hasMore && (
+        {!isOptions && !loading && !error && hasMore && (
           <div ref={sentinelRef} className="py-6 flex justify-center">
             {loadingMore ? (
               <LoadingSpinner />
