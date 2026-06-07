@@ -587,6 +587,7 @@ function RegimeSection({
   trades: Trade[];
 }) {
   const guidance = regime ? REGIME_GUIDANCE[regime] : null;
+  // (no behavior change — anchor comment for surrounding patch)
   const wrInfo = regime ? winRateForRegime(trades, regime) : null;
   return (
     <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
