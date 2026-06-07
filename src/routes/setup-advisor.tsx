@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,14 @@ function SetupAdvisorPage() {
     <ProtectedRoute>
       <AppHeader balance={balance} />
       <main className="mx-auto max-w-3xl space-y-4 px-4 pb-28 pt-4">
+        <div className="flex justify-end">
+          <Link
+            to="/playbook"
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-[10px] font-data uppercase tracking-wider text-primary hover:bg-primary/20"
+          >
+            My Playbook
+          </Link>
+        </div>
         <SessionStatusCard />
         <SessionTimer />
         <OrbSetupBuilder />

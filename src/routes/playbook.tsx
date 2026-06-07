@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Save, BookOpen, Trash2, Filter } from "lucide-react";
+import { ArrowLeft, Save, BookOpen, Trash2, Filter, Activity } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
@@ -65,7 +65,78 @@ type PlaybookRow = {
   avg_r: number | null;
   net_pnl: number | null;
   created_at: string;
+  status: "Active" | "Testing" | "Retired";
+  baseline_win_rate: number | null;
+  baseline_avg_r: number | null;
+  baseline_trade_count: number | null;
 };
+
+const MAX_ENTRIES = 10;
+
+function confidenceLabel(n: number): "LOW" | "MEDIUM" | "HIGH" {
+  if (n >= 30) return "HIGH";
+  if (n >= 20) return "MEDIUM";
+  return "LOW";
+}
+
+function formatConditions(f: Filters): { label: string; value: string }[] {
+  const rows: { label: string; value: string }[] = [];
+  if (f.setups.length) rows.push({ label: "Setup", value: f.setups.join(", ") });
+  if (f.direction !== "Both") rows.push({ label: "Direction", value: `${f.direction} only` });
+  rows.push({
+    label: "Time",
+    value: `${String(f.hourRange[0]).padStart(2, "0")}:00 – ${String(f.hourRange[1]).padStart(2, "0")}:00 CT`,
+  });
+  if (f.regimes.length) rows.push({ label: "Regime", value: f.regimes.join(", ") });
+  rows.push({ label: "VIX", value: `${f.vixRange[0]} – ${f.vixRange[1]}` });
+  if (f.sessionNums.length) {
+    const label = f.sessionNums
+      .map((n) => (n === 1 ? "1st" : n === 2 ? "2nd" : "3rd+"))
+      .join(", ");
+    rows.push({ label: "Trade #", value: `${label} of day` });
+  }
+  if (f.checklistRange[0] > 0 || f.checklistRange[1] < 10) {
+    rows.push({ label: "Checklist", value: `${f.checklistRange[0]}–${f.checklistRange[1]}/10` });
+  }
+  if (f.instruments.length) rows.push({ label: "Instrument", value: f.instruments.join(", ") });
+  if (f.dows.length) {
+    rows.push({ label: "Day", value: f.dows.map((d) => DOW_LABELS[d - 1]).join(", ") });
+  }
+  if (f.consecWinsMin > 0) rows.push({ label: "After wins", value: `≥${f.consecWinsMin}` });
+  if (f.consecLossesMin > 0) rows.push({ label: "After losses", value: `≥${f.consecLossesMin}` });
+  return rows;
+}
+
+type EntryHealth = {
+  status: "healthy" | "softening" | "degrading" | "insufficient";
+  currentWinRate: number;
+  currentCount: number;
+  delta: number; // current - baseline
+};
+
+function computeEntryHealth(entry: PlaybookRow, currentTrades: Trade[]): EntryHealth {
+  const baseline = entry.baseline_win_rate ?? entry.win_rate ?? 0;
+  const wins = currentTrades.filter((t) => t.result === "Win").length;
+  const losses = currentTrades.filter((t) => t.result === "Loss").length;
+  const decided = wins + losses;
+  const cur = decided > 0 ? wins / decided : 0;
+  if (currentTrades.length < 10) {
+    return { status: "insufficient", currentWinRate: cur, currentCount: currentTrades.length, delta: cur - baseline };
+  }
+  const delta = cur - baseline;
+  if (cur < baseline * 0.8) return { status: "degrading", currentWinRate: cur, currentCount: currentTrades.length, delta };
+  if (cur < baseline * 0.9) return { status: "softening", currentWinRate: cur, currentCount: currentTrades.length, delta };
+  return { status: "healthy", currentWinRate: cur, currentCount: currentTrades.length, delta };
+}
+
+const HEALTH_META: Record<EntryHealth["status"], { dot: string; label: string; tone: string }> = {
+  healthy:      { dot: "bg-trade-green",       label: "HEALTHY",      tone: "text-trade-green" },
+  softening:    { dot: "bg-yellow-500",        label: "SOFTENING",    tone: "text-yellow-500" },
+  degrading:    { dot: "bg-trade-red",         label: "DEGRADING",    tone: "text-trade-red" },
+  insufficient: { dot: "bg-muted-foreground",  label: "INSUFFICIENT", tone: "text-muted-foreground" },
+};
+
+const STATUS_OPTIONS: Array<PlaybookRow["status"]> = ["Active", "Testing", "Retired"];
 
 function PlaybookPage() {
   const { user } = useAuth();
@@ -145,6 +216,10 @@ function PlaybookPage() {
       toast.error(`Need at least ${MIN_TRADES_FOR_RESULTS} matching trades`);
       return;
     }
+    if (entries.length >= MAX_ENTRIES) {
+      toast.error(`Maximum ${MAX_ENTRIES} playbook entries. Retire one first.`);
+      return;
+    }
     setSaving(true);
     const { data, error } = await supabase
       .from("playbook_entries")
@@ -156,6 +231,10 @@ function PlaybookPage() {
         win_rate: stats.winRate,
         avg_r: stats.avgR,
         net_pnl: stats.netPnl,
+        baseline_win_rate: stats.winRate,
+        baseline_avg_r: stats.avgR,
+        baseline_trade_count: stats.count,
+        status: "Testing",
       })
       .select()
       .single();
@@ -166,7 +245,20 @@ function PlaybookPage() {
     }
     setEntries((e) => [data as unknown as PlaybookRow, ...e]);
     setNewName("");
-    toast.success("Saved to playbook");
+    toast.success("Saved to playbook (status: Testing)");
+  }
+
+  async function handleStatusChange(id: string, status: PlaybookRow["status"]) {
+    const prev = entries;
+    setEntries((e) => e.map((x) => (x.id === id ? { ...x, status } : x)));
+    const { error } = await supabase
+      .from("playbook_entries")
+      .update({ status })
+      .eq("id", id);
+    if (error) {
+      setEntries(prev);
+      toast.error(error.message);
+    }
   }
 
   async function handleDelete(id: string) {
@@ -486,7 +578,7 @@ function PlaybookPage() {
           <div className="flex items-center gap-2">
             <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
             <h2 className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
-              Saved Playbook Entries ({entries.length})
+              My Playbook ({entries.length}/{MAX_ENTRIES})
             </h2>
           </div>
           {entries.length === 0 ? (
@@ -494,46 +586,16 @@ function PlaybookPage() {
               No entries saved yet. Build a filter that has an edge and save it above.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {entries.map((e) => (
-                <div
+                <EntryCard
                   key={e.id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5"
-                >
-                  <button
-                    onClick={() => loadEntry(e)}
-                    className="flex-1 text-left min-w-0"
-                  >
-                    <div className="text-xs font-semibold truncate">{e.name}</div>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {e.trade_count} trades
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {((e.win_rate ?? 0) * 100).toFixed(0)}% win
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] font-data">
-                        {(e.avg_r ?? 0).toFixed(2)}R
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[9px] font-data",
-                          Number(e.net_pnl ?? 0) >= 0 ? "text-trade-green" : "text-trade-red",
-                        )}
-                      >
-                        ${Number(e.net_pnl ?? 0).toFixed(0)}
-                      </Badge>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e.id)}
-                    className="rounded-md p-1.5 text-muted-foreground hover:text-trade-red hover:bg-trade-red/10"
-                    aria-label="Delete entry"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                  entry={e}
+                  allTrades={trades}
+                  onLoad={() => loadEntry(e)}
+                  onDelete={() => handleDelete(e.id)}
+                  onStatusChange={(s) => handleStatusChange(e.id, s)}
+                />
               ))}
             </div>
           )}
@@ -728,6 +790,166 @@ function NumRow({
         onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         className="text-xs h-8"
       />
+    </div>
+  );
+}
+
+function EntryCard({
+  entry,
+  allTrades,
+  onLoad,
+  onDelete,
+  onStatusChange,
+}: {
+  entry: PlaybookRow;
+  allTrades: Trade[];
+  onLoad: () => void;
+  onDelete: () => void;
+  onStatusChange: (s: PlaybookRow["status"]) => void;
+}) {
+  const currentMatches = useMemo(
+    () => applyFilters(allTrades, { ...DEFAULT_FILTERS, ...entry.filters }),
+    [allTrades, entry.filters],
+  );
+  const health = computeEntryHealth(entry, currentMatches);
+  const meta = HEALTH_META[health.status];
+  const conds = formatConditions({ ...DEFAULT_FILTERS, ...entry.filters });
+  const baselineWR = entry.baseline_win_rate ?? entry.win_rate ?? 0;
+  const baselineR = entry.baseline_avg_r ?? entry.avg_r ?? 0;
+  const baselineCount = entry.baseline_trade_count ?? entry.trade_count;
+  // EV per trade = avg_r normalized; show in $ using net_pnl / trades.
+  const evPerTrade =
+    (entry.trade_count ?? 0) > 0 ? Number(entry.net_pnl ?? 0) / entry.trade_count : 0;
+  const conf = confidenceLabel(baselineCount);
+  const isRetired = entry.status === "Retired";
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-3 space-y-3",
+        isRetired ? "border-border/50 bg-muted/30 opacity-70" : "border-border bg-background",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={cn("inline-block h-2 w-2 rounded-full", meta.dot)} />
+            <span className="text-xs font-semibold truncate">{entry.name}</span>
+            <span className={cn("text-[9px] font-data uppercase tracking-wider", meta.tone)}>
+              {meta.label}
+            </span>
+          </div>
+          {conds.length > 0 && (
+            <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] font-data">
+              {conds.map((c) => (
+                <div key={c.label} className="flex gap-1.5">
+                  <dt className="uppercase tracking-wider text-muted-foreground shrink-0">
+                    {c.label}:
+                  </dt>
+                  <dd className="text-foreground truncate">{c.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+        <button
+          onClick={onDelete}
+          className="rounded-md p-1.5 text-muted-foreground hover:text-trade-red hover:bg-trade-red/10 shrink-0"
+          aria-label="Delete entry"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <MiniStat label="Trades" value={String(baselineCount)} />
+        <MiniStat
+          label="Win Rate"
+          value={`${(baselineWR * 100).toFixed(0)}%`}
+          tone={baselineWR >= 0.5 ? "good" : undefined}
+        />
+        <MiniStat label="Avg R" value={baselineR.toFixed(2)} tone={baselineR >= 0 ? "good" : "bad"} />
+        <MiniStat
+          label="EV / Trade"
+          value={`$${evPerTrade.toFixed(2)}`}
+          tone={evPerTrade >= 0 ? "good" : "bad"}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className={cn(
+          "inline-flex items-center gap-1 text-[9px] font-data uppercase tracking-wider",
+          conf === "HIGH" ? "text-trade-green" : conf === "MEDIUM" ? "text-yellow-500" : "text-muted-foreground",
+        )}>
+          <Activity className="h-3 w-3" />
+          Confidence: {conf}
+        </span>
+        {health.status !== "insufficient" && (
+          <span className="text-[10px] font-data text-muted-foreground">
+            Now: {(health.currentWinRate * 100).toFixed(0)}% on {health.currentCount}{" "}
+            <span className={cn(health.delta >= 0 ? "text-trade-green" : "text-trade-red")}>
+              ({health.delta >= 0 ? "+" : ""}
+              {(health.delta * 100).toFixed(0)}pp)
+            </span>
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+        <div className="flex gap-1">
+          {STATUS_OPTIONS.map((s) => (
+            <button
+              key={s}
+              onClick={() => onStatusChange(s)}
+              className={cn(
+                "rounded-md border px-2 py-1 text-[9px] font-data uppercase tracking-wider transition-colors",
+                entry.status === s
+                  ? s === "Active"
+                    ? "border-trade-green bg-trade-green/15 text-trade-green"
+                    : s === "Testing"
+                      ? "border-yellow-500/50 bg-yellow-500/15 text-yellow-500"
+                      : "border-muted-foreground/40 bg-muted text-muted-foreground"
+                  : "border-border bg-card hover:bg-accent text-muted-foreground",
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onLoad}
+          className="text-[10px] font-data uppercase tracking-wider text-primary hover:underline"
+        >
+          Load filters →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "good" | "bad";
+}) {
+  return (
+    <div className="rounded-md bg-muted/40 p-2">
+      <div className="text-[9px] font-data uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "text-sm font-bold font-data",
+          tone === "good" && "text-trade-green",
+          tone === "bad" && "text-trade-red",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
