@@ -241,7 +241,7 @@ function ChartAnalyzer() {
         imageDataUrl: frames[slot]!.image.dataUrl,
       }));
       const __aiStart = performance.now();
-      const res = await analyze({ data: { frames: payloadFrames } });
+      const res = await analyze({ data: { frames: payloadFrames, marketType } });
       {
         const { logPerf } = await import("@/lib/perfLog");
         void logPerf(
