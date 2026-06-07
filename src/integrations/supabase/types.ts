@@ -583,7 +583,11 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      recalculate_all_behavioral_snapshots: { Args: never; Returns: undefined }
+      recalculate_behavioral_snapshot: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
