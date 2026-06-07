@@ -618,6 +618,39 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
                 placeholder="450.00"
               />
             </div>
+            {upcomingEarnings && (
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold uppercase tracking-wider">
+                  <AlertTriangle className="h-4 w-4" />
+                  Earnings play detected
+                </div>
+                <p className="text-xs text-foreground">
+                  <span className="font-mono font-semibold">{upcomingEarnings.ticker}</span>{" "}
+                  reports in{" "}
+                  <span className="font-mono">
+                    {daysUntil(upcomingEarnings.earnings_date)} day
+                    {daysUntil(upcomingEarnings.earnings_date) === 1 ? "" : "s"}
+                  </span>{" "}
+                  ({upcomingEarnings.earnings_date}). IV will likely collapse after
+                  earnings (IV crush).
+                </p>
+                <ul className="text-[11px] text-muted-foreground space-y-1 pl-4 list-disc">
+                  <li>
+                    <span className="text-foreground">Buying premium?</span> IV crush
+                    will hurt you even if direction is correct. Consider a debit spread
+                    to reduce vega exposure.
+                  </li>
+                  <li>
+                    <span className="text-foreground">Selling premium?</span> IV crush
+                    is your friend. Straddle/strangle sells and iron condors are popular
+                    earnings plays.
+                  </li>
+                </ul>
+                <div className="text-[10px] font-mono text-amber-300">
+                  This trade will be auto-tagged as EARNINGS PLAY.
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <Label>Strategy</Label>
               {(["Directional", "Neutral/Income", "Volatility", "Special"] as const).map(
