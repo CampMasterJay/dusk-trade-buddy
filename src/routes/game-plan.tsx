@@ -591,7 +591,7 @@ function RegimeSection({
                 {guidance.recommended.map((s) => (
                   <span
                     key={s}
-                    className="rounded-full border border-current/40 bg-background/30 px-2 py-0.5 text-[10px]"
+                    className="rounded-full border border-current bg-background/30 px-2 py-0.5 text-[10px]"
                   >
                     {s}
                   </span>
@@ -606,7 +606,7 @@ function RegimeSection({
                 {guidance.avoid.map((s) => (
                   <span
                     key={s}
-                    className="rounded-full border border-current/40 bg-background/30 px-2 py-0.5 text-[10px] line-through opacity-80"
+                    className="rounded-full border border-current bg-background/30 px-2 py-0.5 text-[10px] line-through opacity-80"
                   >
                     {s}
                   </span>
@@ -614,7 +614,7 @@ function RegimeSection({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-current/20 pt-2 text-[11px]">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-current opacity-60 pt-2 text-[11px]">
             <span>📉 Size: <span className="font-mono font-semibold">{guidance.sizePct}%</span> of normal</span>
             <span className="opacity-80">{guidance.sizeNote}</span>
           </div>
