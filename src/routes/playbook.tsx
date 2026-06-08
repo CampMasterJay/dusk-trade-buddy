@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { supabase } from "@/integrations/supabase/client";
 import { getAllTrades, type Trade } from "@/lib/tradeService";
 import { Slider } from "@/components/ui/slider";
@@ -144,7 +145,8 @@ const STATUS_OPTIONS: Array<PlaybookRow["status"]> = ["Active", "Testing", "Reti
 function PlaybookPage() {
   const { user } = useAuth();
   const { settings } = useUserSettings();
-  const balance = settings?.current_balance ?? 100;
+  const [mode] = useTradingMode();
+  const balance = getActiveBalance(settings, mode).current;
 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,19 +154,10 @@ function PlaybookPage() {
   const [entries, setEntries] = useState<PlaybookRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
-  const [market, setMarket] = useState<"futures" | "options">(() => {
-    if (typeof window === "undefined") return "futures";
-    try {
-      return localStorage.getItem("edgetrader.tradingMode.v1") === "options"
-        ? "options"
-        : "futures";
-    } catch {
-      return "futures";
-    }
-  });
 
   useEffect(() => {
-    if (!user) return;
+    // Only load futures trades + entries when in futures mode.
+    if (!user || mode !== "futures") return;
     let cancelled = false;
     (async () => {
       setLoading(true);
