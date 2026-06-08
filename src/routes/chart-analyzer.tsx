@@ -545,6 +545,53 @@ function ChartAnalyzer() {
           }}
         />
       )}
+
+      {buildPlayOpen && buildPlayFor && (
+        <BuildPlayModal
+          a={buildPlayFor}
+          balance={Number(settings?.current_balance ?? settings?.starting_balance ?? 0)}
+          riskPct={Number(settings?.risk_pct ?? 0)}
+          onClose={() => setBuildPlayOpen(false)}
+          onUseLevels={() => {
+            const dir = (buildPlayFor.biasDirection ?? buildPlayFor.setupIdea?.direction ?? "")
+              .toString()
+              .toLowerCase();
+            const direction =
+              dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+            sessionStorage.setItem(
+              "pendingTradePrefill",
+              JSON.stringify({
+                entry: buildPlayFor.setupIdea?.entry ?? "",
+                stop: buildPlayFor.setupIdea?.stop ?? "",
+                target: buildPlayFor.setupIdea?.target ?? "",
+                direction,
+                instrument: buildPlayFor.instrument ?? undefined,
+              }),
+            );
+            void navigate({ to: "/trade-log" });
+          }}
+          onOpenOptionsTrade={
+            buildPlayFor.optionsRecommendation?.primaryStrategy
+              ? () => {
+                  const r = buildPlayFor.optionsRecommendation!;
+                  sessionStorage.setItem(
+                    "pendingOptionsPrefill",
+                    JSON.stringify({
+                      strategy: r.primaryStrategy,
+                      underlying: buildPlayFor.instrument ?? undefined,
+                      idealDTE: r.idealDTE,
+                      idealDelta: r.idealDelta,
+                      ivRankNote: r.ivRankNote,
+                      reasoning: r.reasoning,
+                      keyRisk: r.keyRisk,
+                    }),
+                  );
+                  void navigate({ to: "/trade-log" });
+                }
+              : undefined
+          }
+        />
+      )}
     </ProtectedRoute>
   );
 }
