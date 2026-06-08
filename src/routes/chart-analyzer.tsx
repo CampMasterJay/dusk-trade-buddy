@@ -685,6 +685,7 @@ function AnalysisView({
   saved,
   saving,
   onBuildOptionsTrade,
+  onBuildPlay,
 }: {
   a: Analysis;
   balance?: number;
@@ -697,6 +698,7 @@ function AnalysisView({
   saved?: boolean;
   saving?: boolean;
   onBuildOptionsTrade?: () => void;
+  onBuildPlay?: () => void;
 }) {
   const _balance = balance ?? 0;
   const _riskPct = riskPct ?? 0;
