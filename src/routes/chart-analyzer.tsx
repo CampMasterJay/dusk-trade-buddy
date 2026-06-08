@@ -246,7 +246,12 @@ function ChartAnalyzer() {
         imageDataUrl: frames[slot]!.image.dataUrl,
       }));
       const __aiStart = performance.now();
-      const res = await analyze({ data: { frames: payloadFrames } });
+      const res = await analyze({
+        data: {
+          frames: payloadFrames,
+          marketType: isOptionsMode ? "options" : "standard",
+        },
+      });
       {
         const { logPerf } = await import("@/lib/perfLog");
         void logPerf(
@@ -291,7 +296,7 @@ function ChartAnalyzer() {
         <BehaviorAlertOverlay />
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold font-data uppercase tracking-[4px]">
-            CHART ANALYZER
+            {isOptionsMode ? "OPTIONS CHART ANALYZER" : "FUTURES CHART ANALYZER"}
           </h1>
           <div className="flex items-center gap-2">
             {(() => {
@@ -343,8 +348,6 @@ function ChartAnalyzer() {
             </button>
           ))}
         </div>
-
-        <ChartAnalyzerModeToggle />
 
         {tab === "scan" && <ScanMode />}
 
