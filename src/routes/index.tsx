@@ -1,18 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
-import { ProjectionModal } from "@/components/ProjectionModal";
-import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
-import { SentimentGauge } from "@/components/SentimentGauge";
-import { PatternOfTheDay } from "@/components/PatternOfTheDay";
-import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
-import { DrawdownTracker } from "@/components/DrawdownTracker";
-import { ConsistencyStreak } from "@/components/ConsistencyStreak";
-import { EdgeHealthSection } from "@/components/EdgeHealthSection";
-import { OptionsDashboard } from "@/components/dashboards/OptionsDashboard";
+
+// Lazy-loaded below-the-fold and on-demand panels — keeps the initial dashboard
+// bundle small so first paint is fast.
+const ProjectionModal = lazy(() =>
+  import("@/components/ProjectionModal").then((m) => ({ default: m.ProjectionModal })),
+);
+const HighImpactAlertCard = lazy(() =>
+  import("@/components/HighImpactAlertCard").then((m) => ({ default: m.HighImpactAlertCard })),
+);
+const SentimentGauge = lazy(() =>
+  import("@/components/SentimentGauge").then((m) => ({ default: m.SentimentGauge })),
+);
+const PatternOfTheDay = lazy(() =>
+  import("@/components/PatternOfTheDay").then((m) => ({ default: m.PatternOfTheDay })),
+);
+const TradeOfTheWeek = lazy(() =>
+  import("@/components/TradeOfTheWeek").then((m) => ({ default: m.TradeOfTheWeek })),
+);
+const DrawdownTracker = lazy(() =>
+  import("@/components/DrawdownTracker").then((m) => ({ default: m.DrawdownTracker })),
+);
+const ConsistencyStreak = lazy(() =>
+  import("@/components/ConsistencyStreak").then((m) => ({ default: m.ConsistencyStreak })),
+);
+const EdgeHealthSection = lazy(() =>
+  import("@/components/EdgeHealthSection").then((m) => ({ default: m.EdgeHealthSection })),
+);
+const OptionsDashboard = lazy(() =>
+  import("@/components/dashboards/OptionsDashboard").then((m) => ({ default: m.OptionsDashboard })),
+);
 import {
   getNotificationPermission,
   requestNotificationPermission,
