@@ -8,6 +8,7 @@ import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
 import { DailyThetaCard } from "@/components/DailyThetaCard";
 import { OptionsRollingPerformance } from "@/components/OptionsRollingPerformance";
 import { OptionsTradesList } from "@/components/OptionsTradesList";
+import { OptionsQuickLogFab } from "@/components/OptionsQuickLogFab";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
@@ -178,6 +179,7 @@ export function OptionsDashboard() {
           </span>
         </Link>
       </main>
+      <OptionsQuickLogFab onLogged={onLogged} />
     </div>
   );
 }

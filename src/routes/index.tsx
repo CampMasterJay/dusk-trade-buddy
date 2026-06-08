@@ -67,6 +67,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { QuickLogPhotoUpload } from "@/components/QuickLogPhotoUpload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
