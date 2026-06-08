@@ -640,7 +640,7 @@ export function OptionsPlaybookBuilder() {
             Need at least {MIN_TRADES_FOR_RESULTS} matching trades. Currently {stats.count}.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Stat label="Trades" value={String(stats.count)} />
             <Stat
               label="Win Rate"
@@ -648,14 +648,18 @@ export function OptionsPlaybookBuilder() {
               tone={stats.winRate >= 0.5 ? "good" : "bad"}
             />
             <Stat
-              label="Avg P&L"
-              value={`$${stats.avgPnl.toFixed(0)}`}
-              tone={stats.avgPnl >= 0 ? "good" : "bad"}
+              label="Net P&L"
+              value={`$${stats.netPnl.toFixed(0)}`}
+              tone={stats.netPnl >= 0 ? "good" : "bad"}
             />
             <Stat
               label="Avg % Max"
               value={`${(stats.avgPctMax * 100).toFixed(0)}%`}
               tone={stats.avgPctMax >= 0.4 ? "good" : "bad"}
+            />
+            <Stat
+              label="Avg Days Held"
+              value={stats.avgDte.toFixed(1)}
             />
           </div>
         )}
