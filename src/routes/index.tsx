@@ -312,17 +312,19 @@ function Dashboard() {
               <TradeOfTheWeek />
             </Suspense>
 
-            <SparklineCard
-              data={sparklineData}
-              color={sparkColor}
-              startingBalance={startingBalance}
-              currentBalance={sparkLast}
-              vixThresholds={{
-                low: settings?.vix_tier_low_max,
-                normal: settings?.vix_tier_normal_max,
-                elevated: settings?.vix_tier_elevated_max,
-              }}
-            />
+            <Suspense fallback={<PanelSkeleton h={180} />}>
+              <SparklineCard
+                data={sparklineData}
+                color={sparkColor}
+                startingBalance={startingBalance}
+                currentBalance={sparkLast}
+                vixThresholds={{
+                  low: settings?.vix_tier_low_max,
+                  normal: settings?.vix_tier_normal_max,
+                  elevated: settings?.vix_tier_elevated_max,
+                }}
+              />
+            </Suspense>
 
             <NextTradeCard
               currentBalance={currentBalance}
