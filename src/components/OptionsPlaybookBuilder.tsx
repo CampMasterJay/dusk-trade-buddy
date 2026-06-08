@@ -4,6 +4,7 @@ import {
   BookOpen,
   Filter,
   Loader2,
+  Layers,
   Save,
   Sparkles,
   Trash2,
@@ -21,12 +22,19 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   fetchOptionsStatRows,
   isClosed,
+  daysBetween,
   type OptionsStatRow,
 } from "@/lib/optionsStats";
 import {
   discoverOptionsSetup,
   type DiscoveredOptionsSetup,
 } from "@/lib/api/discoverOptionsSetup.functions";
+import {
+  OPTIONS_TEMPLATES,
+  TEMPLATE_BUCKET_LABEL,
+  type OptionsTemplate,
+  type OptionsTemplateFilters,
+} from "@/lib/optionsStrategyTemplates";
 import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
@@ -42,6 +50,18 @@ type OptionsFilters = {
   daysToAvoid: number[]; // 1=Mon..7=Sun
   checklistMin: number;
   direction: "Debit" | "Credit" | "Both";
+  /** Entry delta band — long stock-like = +0.5..+1, short stock-like = -1..-0.5. */
+  deltaBand: [number, number];
+  /** Max |theta|/day per contract (negative theta = long premium decay). 0 = no limit. */
+  maxThetaPerDay: number;
+  /** Max |vega| per contract. 0 = no limit. */
+  maxVega: number;
+  /** Profit capture as % of max profit at exit. */
+  pctMaxRange: [number, number];
+  /** Days held bucket: 0=any, 1=intraday (0-1d), 2=swing (2-7d), 3=position (8+d) */
+  daysHeldBuckets: Array<1 | 2 | 3>;
+  /** Earnings policy. */
+  earnings: "Hold" | "Avoid" | "Either";
 };
 
 const DEFAULT_OPT_FILTERS: OptionsFilters = {
@@ -55,6 +75,12 @@ const DEFAULT_OPT_FILTERS: OptionsFilters = {
   daysToAvoid: [],
   checklistMin: 0,
   direction: "Both",
+  deltaBand: [-1, 1],
+  maxThetaPerDay: 0,
+  maxVega: 0,
+  pctMaxRange: [-100, 100],
+  daysHeldBuckets: [],
+  earnings: "Either",
 };
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
