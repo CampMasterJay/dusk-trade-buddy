@@ -59,6 +59,7 @@ import {
 import { ScanMode } from "@/components/ScanMode";
 import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
 import { useLocalPrefs } from "@/lib/localPrefs";
+import { BuildPlayModal } from "@/components/BuildPlayModal";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
@@ -149,6 +150,8 @@ function ChartAnalyzer() {
   const [filterInstrument, setFilterInstrument] = useState<string>("all");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [linkSheetFor, setLinkSheetFor] = useState<SavedAnalysis | null>(null);
+  const [buildPlayOpen, setBuildPlayOpen] = useState(false);
+  const [buildPlayFor, setBuildPlayFor] = useState<Analysis | null>(null);
 
   async function refreshHistory() {
     if (!user) return;
@@ -510,6 +513,10 @@ function ChartAnalyzer() {
                     }
                   : undefined
               }
+              onBuildPlay={() => {
+                setBuildPlayFor(analysis);
+                setBuildPlayOpen(true);
+              }}
             />
           )}
 
@@ -523,7 +530,15 @@ function ChartAnalyzer() {
       </div>
 
       {selected && (
-        <DetailModal item={selected} onClose={() => setSelected(null)} />
+        <DetailModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          onBuildPlay={(a) => {
+            setBuildPlayFor(a);
+            setBuildPlayOpen(true);
+            setSelected(null);
+          }}
+        />
       )}
 
       {linkSheetFor && (
@@ -536,6 +551,53 @@ function ChartAnalyzer() {
             setLinkSheetFor(null);
             await refreshHistory();
           }}
+        />
+      )}
+
+      {buildPlayOpen && buildPlayFor && (
+        <BuildPlayModal
+          a={buildPlayFor}
+          balance={Number(settings?.current_balance ?? settings?.starting_balance ?? 0)}
+          riskPct={Number(settings?.risk_pct ?? 0)}
+          onClose={() => setBuildPlayOpen(false)}
+          onUseLevels={() => {
+            const dir = (buildPlayFor.biasDirection ?? buildPlayFor.setupIdea?.direction ?? "")
+              .toString()
+              .toLowerCase();
+            const direction =
+              dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+            sessionStorage.setItem(
+              "pendingTradePrefill",
+              JSON.stringify({
+                entry: buildPlayFor.setupIdea?.entry ?? "",
+                stop: buildPlayFor.setupIdea?.stop ?? "",
+                target: buildPlayFor.setupIdea?.target ?? "",
+                direction,
+                instrument: buildPlayFor.instrument ?? undefined,
+              }),
+            );
+            void navigate({ to: "/trade-log" });
+          }}
+          onOpenOptionsTrade={
+            buildPlayFor.optionsRecommendation?.primaryStrategy
+              ? () => {
+                  const r = buildPlayFor.optionsRecommendation!;
+                  sessionStorage.setItem(
+                    "pendingOptionsPrefill",
+                    JSON.stringify({
+                      strategy: r.primaryStrategy,
+                      underlying: buildPlayFor.instrument ?? undefined,
+                      idealDTE: r.idealDTE,
+                      idealDelta: r.idealDelta,
+                      ivRankNote: r.ivRankNote,
+                      reasoning: r.reasoning,
+                      keyRisk: r.keyRisk,
+                    }),
+                  );
+                  void navigate({ to: "/trade-log" });
+                }
+              : undefined
+          }
         />
       )}
     </ProtectedRoute>
@@ -682,6 +744,7 @@ function AnalysisView({
   saved,
   saving,
   onBuildOptionsTrade,
+  onBuildPlay,
 }: {
   a: Analysis;
   balance?: number;
@@ -694,6 +757,7 @@ function AnalysisView({
   saved?: boolean;
   saving?: boolean;
   onBuildOptionsTrade?: () => void;
+  onBuildPlay?: () => void;
 }) {
   const _balance = balance ?? 0;
   const _riskPct = riskPct ?? 0;
@@ -940,8 +1004,18 @@ function AnalysisView({
       )}
 
       {/* Section 7 — Action Buttons */}
-      {(onUseLevels || onSave) && (
-      <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
+      {(onUseLevels || onSave || onBuildPlay) && (
+      <div className={`grid grid-cols-1 gap-2 pt-2 ${onBuildPlay ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {onBuildPlay && (
+          <button
+            type="button"
+            onClick={onBuildPlay}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-trade-green to-trade-green/80 px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background shadow-lg shadow-trade-green/20 hover:from-trade-green/90 hover:to-trade-green/70 transition-colors"
+          >
+            <Sparkles className="h-4 w-4" />
+            Build Play
+          </button>
+        )}
         <button
           type="button"
           onClick={onUseLevels}
@@ -1157,9 +1231,11 @@ function HistoryView(props: {
 function DetailModal({
   item,
   onClose,
+  onBuildPlay,
 }: {
   item: SavedAnalysis;
   onClose: () => void;
+  onBuildPlay?: (a: Analysis) => void;
 }) {
   const a = (item.raw_analysis as unknown as Analysis | null) ?? null;
   return (
@@ -1186,7 +1262,11 @@ function DetailModal({
         </div>
         <div className="space-y-4 p-4">
           {a ? (
-            <AnalysisView a={a} chartImageUrl={item.chart_url ?? null} />
+            <AnalysisView
+              a={a}
+              chartImageUrl={item.chart_url ?? null}
+              onBuildPlay={onBuildPlay ? () => onBuildPlay(a) : undefined}
+            />
           ) : (
             <div className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
