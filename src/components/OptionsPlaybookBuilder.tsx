@@ -449,9 +449,18 @@ export function OptionsPlaybookBuilder() {
 
   if (closed.length === 0) {
     return (
-      <Card className="p-4 text-sm text-muted-foreground">
-        Log and close some options trades to build an options playbook.
-      </Card>
+      <div className="space-y-4">
+        <Card className="p-4 text-sm text-muted-foreground">
+          No closed options trades yet. Start with a curated strategy template
+          below — save any of them as a playbook entry and we'll backfill
+          health metrics as you log trades.
+        </Card>
+        <StrategyTemplatesCard
+          onLoad={loadTemplate}
+          onSave={saveTemplateAsEntry}
+          canSave={!!user && entries.length < MAX_ENTRIES}
+        />
+      </div>
     );
   }
 
@@ -465,6 +474,13 @@ export function OptionsPlaybookBuilder() {
           <Filter className="h-3 w-3" /> {closed.length} closed options trades
         </span>
       </div>
+
+      {/* STRATEGY TEMPLATES */}
+      <StrategyTemplatesCard
+        onLoad={loadTemplate}
+        onSave={saveTemplateAsEntry}
+        canSave={!!user && entries.length < MAX_ENTRIES}
+      />
 
       {/* AI DISCOVERY */}
       <div className="rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4 space-y-3">
