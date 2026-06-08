@@ -198,9 +198,21 @@ function RootComponent() {
         msg,
       );
     const key = "__edgetrader_chunk_reload";
+    // Clear the guard on a successful load so future stale-chunk errors
+    // (after a later deploy in the same session) can still trigger a reload.
+    const RELOAD_WINDOW_MS = 10_000;
+    try {
+      const last = Number(sessionStorage.getItem(key) ?? 0);
+      if (last && Date.now() - last > RELOAD_WINDOW_MS) {
+        sessionStorage.removeItem(key);
+      }
+    } catch {
+      // ignore
+    }
     const reloadOnce = () => {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
+      const last = Number(sessionStorage.getItem(key) ?? 0);
+      if (last && Date.now() - last < RELOAD_WINDOW_MS) return;
+      sessionStorage.setItem(key, String(Date.now()));
       window.location.reload();
     };
     const onError = (e: ErrorEvent) => {
