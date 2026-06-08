@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AuthShell, fieldClass, labelClass, primaryBtnClass } from "@/components/AuthShell";
 import { useAuth } from "@/components/AuthProvider";
+import { enterDemoMode } from "@/lib/demoMode";
+import { Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — EdgeTrader" }] }),
@@ -11,6 +13,10 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
+  const onTryDemo = () => {
+    enterDemoMode();
+    navigate({ to: "/", replace: true });
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +75,27 @@ function LoginPage() {
         <button type="submit" disabled={submitting} className={primaryBtnClass}>
           {submitting ? "Signing in..." : "Sign in"}
         </button>
+
+        <div className="relative my-1">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-card px-2 text-[10px] uppercase tracking-wider text-muted-foreground">or</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onTryDemo}
+          className="h-10 w-full rounded-md border border-trade-amber/40 bg-trade-amber/10 px-4 text-sm font-semibold text-trade-amber transition-colors hover:bg-trade-amber/20 inline-flex items-center justify-center gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Try Demo
+        </button>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Explore EdgeTrader instantly. No signup, nothing is saved.
+        </p>
       </form>
     </AuthShell>
   );
