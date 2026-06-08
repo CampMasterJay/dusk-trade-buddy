@@ -421,15 +421,19 @@ function ProjectionSection({
       >
         See Projection
       </Button>
-      <ProjectionModal
-        open={open}
-        onOpenChange={setOpen}
-        currentBalance={currentBalance}
-        targetBalance={targetBalance}
-        riskPct={riskPct}
-        rrRatio={rrRatio}
-        winRate={winRate}
-      />
+      {open && (
+        <Suspense fallback={null}>
+          <ProjectionModal
+            open={open}
+            onOpenChange={setOpen}
+            currentBalance={currentBalance}
+            targetBalance={targetBalance}
+            riskPct={riskPct}
+            rrRatio={rrRatio}
+            winRate={winRate}
+          />
+        </Suspense>
+      )}
     </section>
   );
 }
