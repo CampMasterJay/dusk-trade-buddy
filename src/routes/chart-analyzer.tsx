@@ -513,6 +513,10 @@ function ChartAnalyzer() {
                     }
                   : undefined
               }
+              onBuildPlay={() => {
+                setBuildPlayFor(analysis);
+                setBuildPlayOpen(true);
+              }}
             />
           )}
 
