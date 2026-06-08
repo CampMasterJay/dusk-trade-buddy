@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { analyzeChart } from "@/lib/api/chartAnalysis.functions";
 import { processImageFile, type ProcessedImage } from "@/lib/imageUpload";
+import { useTradingMode } from "@/lib/tradingMode";
 
 const MAX_IMAGES = 5;
 
@@ -49,6 +50,7 @@ function uid() {
 export function ScanMode() {
   const analyze = useServerFn(analyzeChart);
   const navigate = useNavigate();
+  const [tradingMode] = useTradingMode();
   const fileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<ScanItem[]>([]);
   const [running, setRunning] = useState(false);
@@ -102,7 +104,10 @@ export function ScanMode() {
         try {
           const __aiStart = performance.now();
           const res = await analyze({
-            data: { imageDataUrl: it.image.dataUrl },
+            data: {
+              imageDataUrl: it.image.dataUrl,
+              marketType: tradingMode === "options" ? "options" : "standard",
+            },
           });
           {
             const { logPerf } = await import("@/lib/perfLog");
