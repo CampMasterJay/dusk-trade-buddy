@@ -58,8 +58,8 @@ import {
 } from "@/components/AnalysisFeedbackPrompt";
 import { ScanMode } from "@/components/ScanMode";
 import { BehaviorAlertOverlay } from "@/components/BehaviorAlertOverlay";
-import { useLocalPrefs } from "@/lib/localPrefs";
 import { BuildPlayModal } from "@/components/BuildPlayModal";
+import { useTradingMode } from "@/lib/tradingMode";
 
 
 export const Route = createFileRoute("/chart-analyzer")({
@@ -138,6 +138,8 @@ function ChartAnalyzer() {
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const [tradingMode] = useTradingMode();
+  const isOptionsMode = tradingMode === "options";
   const navigate = useNavigate();
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -244,7 +246,12 @@ function ChartAnalyzer() {
         imageDataUrl: frames[slot]!.image.dataUrl,
       }));
       const __aiStart = performance.now();
-      const res = await analyze({ data: { frames: payloadFrames } });
+      const res = await analyze({
+        data: {
+          frames: payloadFrames,
+          marketType: isOptionsMode ? "options" : "standard",
+        },
+      });
       {
         const { logPerf } = await import("@/lib/perfLog");
         void logPerf(
@@ -289,7 +296,7 @@ function ChartAnalyzer() {
         <BehaviorAlertOverlay />
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-bold font-data uppercase tracking-[4px]">
-            CHART ANALYZER
+            {isOptionsMode ? "OPTIONS CHART ANALYZER" : "FUTURES CHART ANALYZER"}
           </h1>
           <div className="flex items-center gap-2">
             {(() => {
@@ -341,8 +348,6 @@ function ChartAnalyzer() {
             </button>
           ))}
         </div>
-
-        <ChartAnalyzerModeToggle />
 
         {tab === "scan" && <ScanMode />}
 
@@ -618,44 +623,6 @@ function AnalysisSkeleton() {
         <div className="h-16 animate-pulse rounded-lg bg-muted" />
         <div className="h-16 animate-pulse rounded-lg bg-muted" />
       </div>
-    </div>
-  );
-}
-
-function ChartAnalyzerModeToggle() {
-  const [prefs, setPrefs] = useLocalPrefs();
-  const mode = prefs.chartAnalyzerMode;
-  const opts: { key: typeof mode; label: string }[] = [
-    { key: "futures", label: "Futures" },
-    { key: "options", label: "Options" },
-    { key: "both", label: "Both" },
-  ];
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-data px-1">
-        Mode
-      </span>
-      <div className="grid grid-cols-3 gap-1 flex-1">
-        {opts.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => setPrefs({ chartAnalyzerMode: o.key })}
-            className={`rounded-md px-2 py-1.5 text-[11px] font-data uppercase tracking-wider transition-colors ${
-              mode === o.key
-                ? "bg-primary/15 text-primary border border-primary/40"
-                : "text-muted-foreground hover:bg-accent border border-transparent"
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-      {mode !== "futures" && (
-        <span className="text-[10px] text-muted-foreground hidden sm:inline">
-          Options analysis included
-        </span>
-      )}
     </div>
   );
 }

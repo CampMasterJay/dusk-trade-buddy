@@ -25,7 +25,6 @@ export type LocalPrefs = {
   zeroDteHardExitEt: string; // "HH:mm" ET
   ivrSource: "broker" | "tos" | "manual" | "thinkorswim";
   earningsPlayMode: "warn" | "ask" | "ignore";
-  chartAnalyzerMode: "futures" | "options" | "both";
   tradeLogMarketFilter: "all" | "futures" | "options" | "stocks" | "crypto";
 };
 
@@ -50,7 +49,6 @@ export const DEFAULT_PREFS: LocalPrefs = {
   zeroDteHardExitEt: "15:30",
   ivrSource: "broker",
   earningsPlayMode: "warn",
-  chartAnalyzerMode: "futures",
   tradeLogMarketFilter: "all",
 };
 
