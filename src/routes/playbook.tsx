@@ -378,39 +378,22 @@ function PlaybookPage() {
               Back
             </Link>
             <h1 className="text-sm font-bold font-data uppercase tracking-[4px]">
-              Playbook Builder
+              {mode === "options" ? "Options Playbook Builder" : "Futures Playbook Builder"}
             </h1>
           </div>
           <span className="inline-flex items-center gap-1 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
             <Filter className="h-3 w-3" />
-            {trades.length} total trades
+            {mode === "futures" ? `${trades.length} total trades` : "Options edition"}
           </span>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Filter your trade history by multiple conditions. Find your edge, then
-          save the combination as a playbook entry.
+          {mode === "options"
+            ? "Build options playbook entries from strategy templates, AI discovery, and your closed-trade history. Filter by IVR, DTE, Greeks, exit discipline, and more."
+            : "Filter your trade history by multiple conditions. Find your edge, then save the combination as a playbook entry."}
         </p>
 
-        {/* MARKET TOGGLE */}
-        <div className="inline-flex rounded-md border border-border bg-card p-0.5">
-          {(["futures", "options"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMarket(m)}
-              className={cn(
-                "px-3 py-1.5 text-[10px] font-data uppercase tracking-wider rounded-sm transition-colors",
-                market === m
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {m === "futures" ? "Futures Playbook" : "Options Playbook"}
-            </button>
-          ))}
-        </div>
-
-        {market === "options" ? (
+        {mode === "options" ? (
           <OptionsPlaybookBuilder />
         ) : (
         <>
