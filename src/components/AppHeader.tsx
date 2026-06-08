@@ -41,6 +41,7 @@ export function AppHeader({ balance }: AppHeaderProps) {
         <button
           type="button"
           onClick={onToggle}
+          data-tour="app-mode-toggle"
           aria-label={`Switch trading mode (currently ${mode}${other.hasSignal ? `, ${other.label} in ${otherModeLabel}` : ""})`}
           title={other.hasSignal ? `${other.label} — tap to switch to ${otherModeLabel}` : `Switch to ${otherModeLabel}`}
           className={`group relative flex items-baseline gap-2 text-sm font-bold font-data uppercase tracking-[4px] ${accent} transition hover:opacity-80`}

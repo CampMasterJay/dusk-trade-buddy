@@ -1,40 +1,74 @@
 ## Goal
-Add a **Try Demo** button to the login screen so visitors can explore EdgeTrader without signing up. In demo mode, no trades or settings are saved to the backend, but mode switching, Chart Analyzer, EdgeCoach, and walkthroughs all work normally.
+Split the walkthrough catalog into mode-aware sets so Futures and Options each get their own unique tours, and rebuild the "App Overview" tour into a detailed cross-mode walkthrough that programmatically switches modes mid-tour so users see both dashboards.
 
-## UX
-- On `/login`, add a secondary **Try Demo** button under the Sign in form (plus a small "no signup required, data is not saved" caption).
-- Entering demo navigates to `/` and shows a slim banner at the top of the app: "Demo Mode — nothing is saved. [Exit demo]". Exit clears the flag and returns to `/login`.
-- Header balance, dashboard widgets, and nav all behave as normal but use seeded sample data.
+## Architecture changes
 
-## Demo session model
-- New module `src/lib/demoMode.ts`:
-  - `isDemoMode()`, `enterDemoMode()`, `exitDemoMode()`, `useDemoMode()` hook (localStorage key `edgetrader.demo.v1` + custom event, same pattern as `tradingMode.ts`).
-  - Seeded `DEMO_USER` object (fake uuid + email) and `DEMO_SETTINGS` (starting balance, both futures + options balances, onboarding_completed=true, default risk %, etc.).
-  - Small in-memory store for demo trades/journals so users can "log" a trade and see it appear during the session — wiped on refresh or exit.
+### Step capability: programmatic mode switch
+`WalkthroughStep` (`src/lib/walkthroughs/types.ts`) gets one new optional field:
+- `setMode?: "futures" | "options"` — when present, the provider calls `setTradingMode(setMode)` before resolving the route/selector.
 
-## Auth + routing
-- `AuthProvider`: if `isDemoMode()` is true and no real Supabase session exists, expose the `DEMO_USER` as `user` and short-circuit `signOut` to call `exitDemoMode()`. Real sessions always win.
-- `ProtectedRoute`: treat demo user as authenticated and skip the onboarding redirect (demo settings already mark it complete).
-- `useUserSettings`: when in demo mode, return `DEMO_SETTINGS` and make `refresh`/updates no-ops (toast: "Not saved in demo mode").
+`WalkthroughProvider.resolveStep` runs `setMode` first (if defined), then handles `route` and `selector` as today. This lets a single walkthrough hop between the futures dashboard and the options dashboard without user interaction.
 
-## Data layer guards
-Make writes no-ops and reads return seeded/in-memory data when `isDemoMode()`:
-- `src/lib/tradeService.ts` — `getTrades`/`getTradeStats` read from the demo store seeded with ~15 sample futures trades and ~5 options positions; `createTrade`/`updateTrade`/`deleteTrade` mutate the in-memory store only and return success.
-- `src/lib/userSettingsService.ts` — updates no-op with a toast.
-- `src/lib/journalService.ts`, `src/lib/gamePlanService.ts`, `src/lib/priceAlerts.ts`, `src/lib/setupWatchlistStore.ts`, `src/lib/savedArticlesDb.ts`, `src/lib/backup.ts`, `src/lib/challengeArchive.ts` — guard writes; reads return empty arrays or in-memory.
-- `src/lib/imageUpload.ts` — return a data URL instead of uploading.
+### Mode-scoped catalog
+`src/lib/walkthroughs/catalog.ts` is restructured:
+- `WALKTHROUGHS_SHARED` — tours that exist in both modes (App Overview, Chart Analyzer, EdgeCoach).
+- `WALKTHROUGHS_FUTURES` — futures-only (Log a futures trade, Trade Log + setups, Setup Advisor / ORB & VWAP, Risk-of-Ruin & scaling).
+- `WALKTHROUGHS_OPTIONS` — options-only (Open a position, Options Playbook + AI scan, IVR & Greeks, 0DTE & Earnings, Credit-spread manager).
+- `getWalkthroughsForMode(mode)` returns `[...shared, ...modeSpecific]`.
+- `getWalkthrough(id)` still works by id across all sets.
 
-Server functions (Chart Analyzer, EdgeCoach, Setup Advisor, etc.) keep working because they don't require Supabase rows — they accept inputs from the client. They will be called with the demo user id, but since we never persist their output, RLS isn't hit.
+### Mode-aware Walkthroughs panel
+`WalkthroughsSection` reads `useTradingMode()` and renders `getWalkthroughsForMode(mode)`. The panel header shows the active mode label ("Walkthroughs · Futures" / "· Options") so it's obvious the list changes when you switch.
 
-## UI touches
-- `src/components/AppHeader.tsx` — when in demo mode, render a small "DEMO" pill next to the mode badge.
-- New `src/components/DemoBanner.tsx` mounted in `__root.tsx` (above the outlet) showing the dismiss/exit control. Hidden on `/login`, `/signup`, `/onboarding`.
-- Walkthroughs already work off DOM selectors — no changes needed.
+## Tour content
+
+### App Overview (shared, redesigned — ~12 steps, very detailed)
+1. Welcome + the mode pill in the header (selector: app-name button) — explains EdgeTrader has two distinct modes.
+2. Tap the header to switch modes — selector targets the header button; body teaches the gesture.
+3. `setMode: "futures"` → `/` Futures dashboard balance card.
+4. Futures stats strip (`dashboard-stats`).
+5. Futures Quick Log FAB (`new-trade-fab`) — "log a contract in seconds".
+6. `setMode: "options"` → `/` Options dashboard (Greeks/IV widgets).
+7. Options key panels (uses an `options-dashboard-summary` data-tour we'll add on the OptionsDashboard root card).
+8. EdgeCoach FAB (`edgecoach-fab`) — adapts persona per mode.
+9. Bottom-nav `nav-/trade-log` — explains it splits per mode.
+10. Bottom-nav `nav-/playbook` — explains per-mode playbook builders.
+11. Settings nav (`nav-/settings`) — replay walkthroughs, manage challenge.
+12. Reminder: tap the brand pill anytime to swap modes; finish.
+
+### Futures-only tours
+- **Log a futures trade** — `new-trade-fab`, instrument, long/short, entry/stop/target, outcome, then `/trade-log` review.
+- **Trade Log & Setup edge** — filter tabs, Edge Health, Setup Performance Breakdown, Benchmarks, Exit Analytics.
+- **Setup Advisor (ORB / VWAP)** — `/setup-advisor` ORB builder then VWAP reclaim builder.
+- **Risk & scaling** — `/risk-of-ruin` and `/scaling-plan` highlights.
+
+### Options-only tours
+- **Open your first position** — `OptionsTradeSheet` trigger (add `data-tour="new-options-fab"` on the CTA), strategy picker, legs, IVR snapshot, save.
+- **Options Playbook + AI scan** — `/playbook` options tab, AI discovery button, save to entries.
+- **IVR, Greeks & risk** — `/options-risk` page or IVR card on dashboard, daily theta, portfolio Greeks.
+- **0DTE, Earnings & spreads** — Zero-DTE module, Earnings calendar, Credit-spread manager on `/trade-log` options view.
+
+### Shared (besides overview)
+- **Chart Analyzer** — unchanged steps.
+- **EdgeCoach AI** — new short tour highlighting the FAB and that it reads the active mode's data.
+
+## DOM anchors to add
+Small additions in existing components so steps can target real elements (no logic change):
+- `OptionsDashboard` root section → `data-tour="options-dashboard-summary"`.
+- Options dashboard Greeks card → `data-tour="options-greeks"`.
+- Options "new position" CTA → `data-tour="new-options-fab"`.
+- `/playbook` options tab AI-scan button → `data-tour="options-ai-scan"`.
+- `/options-risk` summary card → `data-tour="options-risk-summary"`.
+- ZeroDteModule root → `data-tour="zero-dte"`.
+- CreditSpreadManager root → `data-tour="credit-spreads"`.
+- EarningsCalendarManager root → `data-tour="earnings-calendar"`.
+- Setup Advisor ORB/VWAP cards → `data-tour="orb-builder"` / `data-tour="vwap-builder"`.
 
 ## Files
-- New: `src/lib/demoMode.ts`, `src/lib/demoSeedData.ts`, `src/components/DemoBanner.tsx`.
-- Edited: `src/routes/login.tsx` (add button), `src/components/AuthProvider.tsx`, `src/components/ProtectedRoute.tsx`, `src/hooks/useUserSettings.ts`, `src/components/AppHeader.tsx`, `src/routes/__root.tsx`, plus the data-layer files listed above (single guard at the top of each write function).
+- Edited: `src/lib/walkthroughs/types.ts` (add `setMode`), `src/lib/walkthroughs/catalog.ts` (restructured + new tours), `src/components/walkthrough/WalkthroughProvider.tsx` (apply `setMode` before resolve), `src/components/walkthrough/WalkthroughsSection.tsx` (mode-aware list + header label), plus the data-tour anchor additions listed above.
+- No new files.
 
 ## Out of scope
-- Per-tab isolation (demo state is per-browser like the real session).
-- Persisting demo trades across refresh (intentional — keeps the "nothing saved" promise).
+- Visual redesign of the overlay/tooltip.
+- Persistence of "completed" state per tour.
+- Translating tour copy.

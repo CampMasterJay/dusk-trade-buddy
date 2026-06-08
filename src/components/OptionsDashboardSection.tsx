@@ -57,6 +57,7 @@ export function OptionsDashboardSection({ onLogged }: { onLogged?: () => void })
           trigger={
             <button
               type="button"
+              data-tour="new-options-fab"
               className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-data px-2.5 py-1 rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition"
             >
               <Plus className="h-3 w-3" />

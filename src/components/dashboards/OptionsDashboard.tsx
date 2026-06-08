@@ -73,6 +73,7 @@ export function OptionsDashboard() {
 
         {/* Hero — Options Desk */}
         <section
+          data-tour="options-dashboard-summary"
           className="rounded-2xl border border-trade-amber/30 bg-card p-5 mode-accent-ring"
           style={{
             background:

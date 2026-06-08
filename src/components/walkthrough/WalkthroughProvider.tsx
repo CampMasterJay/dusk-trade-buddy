@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { getWalkthrough } from "@/lib/walkthroughs/catalog";
 import type { Walkthrough, WalkthroughStep } from "@/lib/walkthroughs/types";
+import { setTradingMode, getTradingMode } from "@/lib/tradingMode";
 
 type WalkthroughCtx = {
   active: Walkthrough | null;
@@ -62,6 +63,15 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       const token = ++tokenRef.current;
       setResolving(true);
       setTargetEl(null);
+      if (s.setMode && getTradingMode() !== s.setMode) {
+        try {
+          setTradingMode(s.setMode);
+          // Allow dashboard switcher to remount before resolving anchors.
+          await new Promise((r) => setTimeout(r, 120));
+        } catch {
+          // ignore
+        }
+      }
       if (s.route && s.route !== pathname) {
         try {
           await navigate({ to: s.route });
