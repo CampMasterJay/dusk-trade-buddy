@@ -530,7 +530,15 @@ function ChartAnalyzer() {
       </div>
 
       {selected && (
-        <DetailModal item={selected} onClose={() => setSelected(null)} />
+        <DetailModal
+          item={selected}
+          onClose={() => setSelected(null)}
+          onBuildPlay={(a) => {
+            setBuildPlayFor(a);
+            setBuildPlayOpen(true);
+            setSelected(null);
+          }}
+        />
       )}
 
       {linkSheetFor && (
