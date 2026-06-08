@@ -945,8 +945,18 @@ function AnalysisView({
       )}
 
       {/* Section 7 — Action Buttons */}
-      {(onUseLevels || onSave) && (
-      <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
+      {(onUseLevels || onSave || onBuildPlay) && (
+      <div className={`grid grid-cols-1 gap-2 pt-2 ${onBuildPlay ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {onBuildPlay && (
+          <button
+            type="button"
+            onClick={onBuildPlay}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-trade-green to-trade-green/80 px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background shadow-lg shadow-trade-green/20 hover:from-trade-green/90 hover:to-trade-green/70 transition-colors"
+          >
+            <Sparkles className="h-4 w-4" />
+            Build Play
+          </button>
+        )}
         <button
           type="button"
           onClick={onUseLevels}
