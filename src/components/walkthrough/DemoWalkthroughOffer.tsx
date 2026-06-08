@@ -32,8 +32,8 @@ export function DemoWalkthroughOffer() {
     const t = window.setTimeout(() => {
       if (cancelled) return;
 
-      toast(
-        (tId) => (
+      toast.custom(
+        (tId: string | number) => (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Compass className="h-4 w-4 text-primary" />
@@ -85,3 +85,4 @@ export function DemoWalkthroughOffer() {
 
   return null;
 }
+
