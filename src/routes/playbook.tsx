@@ -183,6 +183,30 @@ function PlaybookPage() {
     };
   }, [user]);
 
+  // Seed filters from Chart Analyzer "Build Play" → "Save to Playbook".
+  useEffect(() => {
+    if (typeof window === "undefined" || mode !== "futures") return;
+    const raw = sessionStorage.getItem("pendingPlaybookSeed");
+    if (!raw) return;
+    sessionStorage.removeItem("pendingPlaybookSeed");
+    try {
+      const seed = JSON.parse(raw) as {
+        setups?: string[];
+        instruments?: string[];
+        direction?: "Long" | "Short" | "Both";
+      };
+      setFilters((f) => ({
+        ...f,
+        setups: seed.setups?.length ? seed.setups : f.setups,
+        instruments: seed.instruments?.length ? seed.instruments : f.instruments,
+        direction: seed.direction ?? f.direction,
+      }));
+      toast.success("Filters seeded from chart analysis");
+    } catch {
+      /* ignore */
+    }
+  }, [mode]);
+
   // Unique option pools derived from trade history
   const opts = useMemo(() => {
     const setups = new Set<string>();
