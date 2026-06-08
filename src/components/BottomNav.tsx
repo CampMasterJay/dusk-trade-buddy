@@ -166,8 +166,12 @@ export function BottomNav() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open navigation"
-          className={`fixed left-0 top-1/2 -translate-y-1/2 z-50 h-16 w-1.5 rounded-r-full md:hidden ${edgeHandle}`}
-        />
+          className={`fixed left-0 top-1/2 -translate-y-1/2 z-50 h-20 w-10 rounded-r-xl md:hidden flex items-center justify-center ${edgeHandle}`}
+        >
+          <span className="text-[9px] font-bold tracking-[1px] text-white/90 rotate-90 whitespace-nowrap">
+            MENU
+          </span>
+        </button>
       )}
     </>
   );
