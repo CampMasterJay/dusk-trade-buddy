@@ -149,7 +149,6 @@ function ChartAnalyzer() {
   const [filterInstrument, setFilterInstrument] = useState<string>("all");
   const [trades, setTrades] = useState<Trade[]>([]);
   const [linkSheetFor, setLinkSheetFor] = useState<SavedAnalysis | null>(null);
-  const [marketType, setMarketType] = useState<"standard" | "options">("standard");
 
   async function refreshHistory() {
     if (!user) return;
