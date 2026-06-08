@@ -285,6 +285,7 @@ function RootComponent() {
             <LiveRegion />
             <SplashScreen />
             <WalkthroughOverlay />
+            <DemoWalkthroughOffer />
           </WalkthroughProvider>
         </AuthProvider>
       </ThemeProvider>
