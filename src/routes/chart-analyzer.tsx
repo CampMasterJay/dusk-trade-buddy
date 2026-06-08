@@ -138,6 +138,8 @@ function ChartAnalyzer() {
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const [tradingMode] = useTradingMode();
+  const isOptionsMode = tradingMode === "options";
   const navigate = useNavigate();
   const [savedId, setSavedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
