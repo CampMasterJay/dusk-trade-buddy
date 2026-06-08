@@ -778,6 +778,30 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, ivrRange: v }))}
           format={(v) => `${v}`}
         />
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            IVR Bucket
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { label: "Low (<30)", range: [0, 30] as [number, number] },
+              { label: "Moderate (30–60)", range: [30, 60] as [number, number] },
+              { label: "High (>60)", range: [60, 100] as [number, number] },
+            ]).map((b) => {
+              const on =
+                filters.ivrRange[0] === b.range[0] && filters.ivrRange[1] === b.range[1];
+              return (
+                <Chip
+                  key={b.label}
+                  label={b.label}
+                  on={on}
+                  onClick={() => setFilters((f) => ({ ...f, ivrRange: b.range }))}
+                />
+              );
+            })}
+          </div>
+        </div>
+
         <RangeRow
           label="DTE at Entry"
           min={0}
@@ -787,6 +811,31 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, dteRange: v }))}
           format={(v) => `${v}d`}
         />
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            DTE Bucket
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { label: "0DTE", range: [0, 1] as [number, number] },
+              { label: "Weekly (1–7)", range: [1, 7] as [number, number] },
+              { label: "Monthly (8–45)", range: [8, 45] as [number, number] },
+              { label: "LEAPS (>45)", range: [45, 90] as [number, number] },
+            ]).map((b) => {
+              const on =
+                filters.dteRange[0] === b.range[0] && filters.dteRange[1] === b.range[1];
+              return (
+                <Chip
+                  key={b.label}
+                  label={b.label}
+                  on={on}
+                  onClick={() => setFilters((f) => ({ ...f, dteRange: b.range }))}
+                />
+              );
+            })}
+          </div>
+        </div>
+
         <RangeRow
           label="VIX Range"
           min={5}
@@ -796,6 +845,99 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, vixRange: v }))}
           format={(v) => v.toFixed(0)}
         />
+
+        {/* GREEKS TARGETS */}
+        <div className="rounded-md border border-border/60 bg-background/40 p-3 space-y-4">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            Greeks Targets
+          </div>
+          <RangeRow
+            label="Entry Delta Band"
+            min={-1}
+            max={1}
+            step={0.05}
+            value={filters.deltaBand}
+            onChange={(v) => setFilters((f) => ({ ...f, deltaBand: v }))}
+            format={(v) => v.toFixed(2)}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <NumRow
+              label="Max |Θ|/day ($)"
+              value={filters.maxThetaPerDay}
+              onChange={(v) => setFilters((f) => ({ ...f, maxThetaPerDay: v }))}
+            />
+            <NumRow
+              label="Max |Vega| ($)"
+              value={filters.maxVega}
+              onChange={(v) => setFilters((f) => ({ ...f, maxVega: v }))}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            0 = no cap. Filters rows by recorded Greeks at entry.
+          </p>
+        </div>
+
+        {/* EXIT DISCIPLINE */}
+        <div className="rounded-md border border-border/60 bg-background/40 p-3 space-y-4">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            Exit Discipline
+          </div>
+          <RangeRow
+            label="% of Max Profit Captured"
+            min={-100}
+            max={100}
+            step={5}
+            value={filters.pctMaxRange}
+            onChange={(v) => setFilters((f) => ({ ...f, pctMaxRange: v }))}
+            format={(v) => `${v}%`}
+          />
+          <div>
+            <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+              Days Held
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { v: 1 as const, l: "Intraday (≤1d)" },
+                { v: 2 as const, l: "Swing (2–7d)" },
+                { v: 3 as const, l: "Position (8d+)" },
+              ]).map(({ v, l }) => {
+                const on = filters.daysHeldBuckets.includes(v);
+                return (
+                  <Chip
+                    key={v}
+                    label={l}
+                    on={on}
+                    onClick={() =>
+                      setFilters((f) => ({
+                        ...f,
+                        daysHeldBuckets: on
+                          ? f.daysHeldBuckets.filter((x) => x !== v)
+                          : [...f.daysHeldBuckets, v],
+                      }))
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* EARNINGS */}
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            Earnings Window
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["Either", "Hold", "Avoid"] as const).map((e) => (
+              <Chip
+                key={e}
+                label={e === "Hold" ? "Hold Through" : e === "Avoid" ? "Avoid" : "Either"}
+                on={filters.earnings === e}
+                onClick={() => setFilters((f) => ({ ...f, earnings: e }))}
+              />
+            ))}
+          </div>
+        </div>
 
         <div>
           <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
