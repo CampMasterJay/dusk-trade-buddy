@@ -50,6 +50,7 @@ export function enterDemoMode(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(KEY, "1");
+    sessionStorage.setItem("edgetrader:demoWalkthroughOffer", "1");
   } catch {
     /* ignore */
   }
@@ -60,6 +61,7 @@ export function exitDemoMode(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(KEY);
+    sessionStorage.removeItem("edgetrader:demoWalkthroughOffer");
   } catch {
     /* ignore */
   }
