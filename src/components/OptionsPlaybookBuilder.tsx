@@ -4,6 +4,7 @@ import {
   BookOpen,
   Filter,
   Loader2,
+  Layers,
   Save,
   Sparkles,
   Trash2,
@@ -21,12 +22,18 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   fetchOptionsStatRows,
   isClosed,
+  daysBetween,
   type OptionsStatRow,
 } from "@/lib/optionsStats";
 import {
   discoverOptionsSetup,
   type DiscoveredOptionsSetup,
 } from "@/lib/api/discoverOptionsSetup.functions";
+import {
+  OPTIONS_TEMPLATES,
+  TEMPLATE_BUCKET_LABEL,
+  type OptionsTemplate,
+} from "@/lib/optionsStrategyTemplates";
 import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
@@ -42,6 +49,18 @@ type OptionsFilters = {
   daysToAvoid: number[]; // 1=Mon..7=Sun
   checklistMin: number;
   direction: "Debit" | "Credit" | "Both";
+  /** Entry delta band — long stock-like = +0.5..+1, short stock-like = -1..-0.5. */
+  deltaBand: [number, number];
+  /** Max |theta|/day per contract (negative theta = long premium decay). 0 = no limit. */
+  maxThetaPerDay: number;
+  /** Max |vega| per contract. 0 = no limit. */
+  maxVega: number;
+  /** Profit capture as % of max profit at exit. */
+  pctMaxRange: [number, number];
+  /** Days held bucket: 0=any, 1=intraday (0-1d), 2=swing (2-7d), 3=position (8+d) */
+  daysHeldBuckets: Array<1 | 2 | 3>;
+  /** Earnings policy. */
+  earnings: "Hold" | "Avoid" | "Either";
 };
 
 const DEFAULT_OPT_FILTERS: OptionsFilters = {
@@ -55,6 +74,12 @@ const DEFAULT_OPT_FILTERS: OptionsFilters = {
   daysToAvoid: [],
   checklistMin: 0,
   direction: "Both",
+  deltaBand: [-1, 1],
+  maxThetaPerDay: 0,
+  maxVega: 0,
+  pctMaxRange: [-100, 100],
+  daysHeldBuckets: [],
+  earnings: "Either",
 };
 
 const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -226,7 +251,9 @@ export function OptionsPlaybookBuilder() {
       })
       .filter((v): v is number => v != null);
     const avgPctMax = pctMax.length > 0 ? pctMax.reduce((s, v) => s + v, 0) / pctMax.length : 0;
-    return { count: filtered.length, wins, losses, winRate, avgPnl, netPnl, avgPctMax };
+    const heldDays = filtered.map((r) => daysBetween(r.trade_date, r.updated_at));
+    const avgDte = heldDays.length > 0 ? heldDays.reduce((s, n) => s + n, 0) / heldDays.length : 0;
+    return { count: filtered.length, wins, losses, winRate, avgPnl, netPnl, avgPctMax, avgDte };
   }, [filtered]);
 
   const enough = stats.count >= MIN_TRADES_FOR_RESULTS;
@@ -275,6 +302,49 @@ export function OptionsPlaybookBuilder() {
   function loadEntry(e: OptEntry) {
     setFilters({ ...DEFAULT_OPT_FILTERS, ...e.filters, market: "options" });
     toast.success(`Loaded "${e.name}"`);
+  }
+
+  function loadTemplate(t: OptionsTemplate) {
+    setFilters({
+      ...DEFAULT_OPT_FILTERS,
+      ...(t.filters as Partial<OptionsFilters>),
+      market: "options",
+    });
+    setNewName(t.name);
+    toast.success(`Loaded template "${t.name}"`);
+  }
+
+  async function saveTemplateAsEntry(t: OptionsTemplate) {
+    if (!user) return;
+    if (entries.length >= MAX_ENTRIES) {
+      return toast.error(`Maximum ${MAX_ENTRIES} options entries. Retire one first.`);
+    }
+    const filt: OptionsFilters = {
+      ...DEFAULT_OPT_FILTERS,
+      ...(t.filters as Partial<OptionsFilters>),
+      market: "options",
+    };
+    const { data, error } = await supabase
+      .from("playbook_entries")
+      .insert({
+        user_id: user.id,
+        name: t.name,
+        notes: t.notes,
+        filters: filt as never,
+        trade_count: 0,
+        win_rate: null,
+        avg_r: null,
+        net_pnl: null,
+        baseline_win_rate: null,
+        baseline_avg_r: null,
+        baseline_trade_count: 0,
+        status: "Testing",
+      })
+      .select()
+      .single();
+    if (error) return toast.error(error.message);
+    setEntries((e) => [data as unknown as OptEntry, ...e]);
+    toast.success(`Saved "${t.name}" to playbook`);
   }
 
   async function handleStatusChange(id: string, status: OptEntry["status"]) {
@@ -378,9 +448,18 @@ export function OptionsPlaybookBuilder() {
 
   if (closed.length === 0) {
     return (
-      <Card className="p-4 text-sm text-muted-foreground">
-        Log and close some options trades to build an options playbook.
-      </Card>
+      <div className="space-y-4">
+        <Card className="p-4 text-sm text-muted-foreground">
+          No closed options trades yet. Start with a curated strategy template
+          below — save any of them as a playbook entry and we'll backfill
+          health metrics as you log trades.
+        </Card>
+        <StrategyTemplatesCard
+          onLoad={loadTemplate}
+          onSave={saveTemplateAsEntry}
+          canSave={!!user && entries.length < MAX_ENTRIES}
+        />
+      </div>
     );
   }
 
@@ -394,6 +473,13 @@ export function OptionsPlaybookBuilder() {
           <Filter className="h-3 w-3" /> {closed.length} closed options trades
         </span>
       </div>
+
+      {/* STRATEGY TEMPLATES */}
+      <StrategyTemplatesCard
+        onLoad={loadTemplate}
+        onSave={saveTemplateAsEntry}
+        canSave={!!user && entries.length < MAX_ENTRIES}
+      />
 
       {/* AI DISCOVERY */}
       <div className="rounded-xl border border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4 space-y-3">
@@ -553,7 +639,7 @@ export function OptionsPlaybookBuilder() {
             Need at least {MIN_TRADES_FOR_RESULTS} matching trades. Currently {stats.count}.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Stat label="Trades" value={String(stats.count)} />
             <Stat
               label="Win Rate"
@@ -561,14 +647,18 @@ export function OptionsPlaybookBuilder() {
               tone={stats.winRate >= 0.5 ? "good" : "bad"}
             />
             <Stat
-              label="Avg P&L"
-              value={`$${stats.avgPnl.toFixed(0)}`}
-              tone={stats.avgPnl >= 0 ? "good" : "bad"}
+              label="Net P&L"
+              value={`$${stats.netPnl.toFixed(0)}`}
+              tone={stats.netPnl >= 0 ? "good" : "bad"}
             />
             <Stat
               label="Avg % Max"
               value={`${(stats.avgPctMax * 100).toFixed(0)}%`}
               tone={stats.avgPctMax >= 0.4 ? "good" : "bad"}
+            />
+            <Stat
+              label="Avg Days Held"
+              value={stats.avgDte.toFixed(1)}
             />
           </div>
         )}
@@ -687,6 +777,30 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, ivrRange: v }))}
           format={(v) => `${v}`}
         />
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            IVR Bucket
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { label: "Low (<30)", range: [0, 30] as [number, number] },
+              { label: "Moderate (30–60)", range: [30, 60] as [number, number] },
+              { label: "High (>60)", range: [60, 100] as [number, number] },
+            ]).map((b) => {
+              const on =
+                filters.ivrRange[0] === b.range[0] && filters.ivrRange[1] === b.range[1];
+              return (
+                <Chip
+                  key={b.label}
+                  label={b.label}
+                  on={on}
+                  onClick={() => setFilters((f) => ({ ...f, ivrRange: b.range }))}
+                />
+              );
+            })}
+          </div>
+        </div>
+
         <RangeRow
           label="DTE at Entry"
           min={0}
@@ -696,6 +810,31 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, dteRange: v }))}
           format={(v) => `${v}d`}
         />
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            DTE Bucket
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { label: "0DTE", range: [0, 1] as [number, number] },
+              { label: "Weekly (1–7)", range: [1, 7] as [number, number] },
+              { label: "Monthly (8–45)", range: [8, 45] as [number, number] },
+              { label: "LEAPS (>45)", range: [45, 90] as [number, number] },
+            ]).map((b) => {
+              const on =
+                filters.dteRange[0] === b.range[0] && filters.dteRange[1] === b.range[1];
+              return (
+                <Chip
+                  key={b.label}
+                  label={b.label}
+                  on={on}
+                  onClick={() => setFilters((f) => ({ ...f, dteRange: b.range }))}
+                />
+              );
+            })}
+          </div>
+        </div>
+
         <RangeRow
           label="VIX Range"
           min={5}
@@ -705,6 +844,99 @@ export function OptionsPlaybookBuilder() {
           onChange={(v) => setFilters((f) => ({ ...f, vixRange: v }))}
           format={(v) => v.toFixed(0)}
         />
+
+        {/* GREEKS TARGETS */}
+        <div className="rounded-md border border-border/60 bg-background/40 p-3 space-y-4">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            Greeks Targets
+          </div>
+          <RangeRow
+            label="Entry Delta Band"
+            min={-1}
+            max={1}
+            step={0.05}
+            value={filters.deltaBand}
+            onChange={(v) => setFilters((f) => ({ ...f, deltaBand: v }))}
+            format={(v) => v.toFixed(2)}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <NumRow
+              label="Max |Θ|/day ($)"
+              value={filters.maxThetaPerDay}
+              onChange={(v) => setFilters((f) => ({ ...f, maxThetaPerDay: v }))}
+            />
+            <NumRow
+              label="Max |Vega| ($)"
+              value={filters.maxVega}
+              onChange={(v) => setFilters((f) => ({ ...f, maxVega: v }))}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            0 = no cap. Filters rows by recorded Greeks at entry.
+          </p>
+        </div>
+
+        {/* EXIT DISCIPLINE */}
+        <div className="rounded-md border border-border/60 bg-background/40 p-3 space-y-4">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            Exit Discipline
+          </div>
+          <RangeRow
+            label="% of Max Profit Captured"
+            min={-100}
+            max={100}
+            step={5}
+            value={filters.pctMaxRange}
+            onChange={(v) => setFilters((f) => ({ ...f, pctMaxRange: v }))}
+            format={(v) => `${v}%`}
+          />
+          <div>
+            <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+              Days Held
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { v: 1 as const, l: "Intraday (≤1d)" },
+                { v: 2 as const, l: "Swing (2–7d)" },
+                { v: 3 as const, l: "Position (8d+)" },
+              ]).map(({ v, l }) => {
+                const on = filters.daysHeldBuckets.includes(v);
+                return (
+                  <Chip
+                    key={v}
+                    label={l}
+                    on={on}
+                    onClick={() =>
+                      setFilters((f) => ({
+                        ...f,
+                        daysHeldBuckets: on
+                          ? f.daysHeldBuckets.filter((x) => x !== v)
+                          : [...f.daysHeldBuckets, v],
+                      }))
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* EARNINGS */}
+        <div>
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
+            Earnings Window
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["Either", "Hold", "Avoid"] as const).map((e) => (
+              <Chip
+                key={e}
+                label={e === "Hold" ? "Hold Through" : e === "Avoid" ? "Avoid" : "Either"}
+                on={filters.earnings === e}
+                onClick={() => setFilters((f) => ({ ...f, earnings: e }))}
+              />
+            ))}
+          </div>
+        </div>
 
         <div>
           <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-2">
@@ -831,6 +1063,38 @@ function applyOptionsFilters(
       const dow = dowFromDate(r.trade_date);
       if (f.daysToAvoid.includes(dow)) return false;
     }
+    // Greeks band — only filter when row has data and the band is narrower than default.
+    const delta = r.entry_delta != null ? Number(r.entry_delta) : null;
+    if (delta != null && isFinite(delta) && (f.deltaBand[0] > -1 || f.deltaBand[1] < 1)) {
+      if (delta < f.deltaBand[0] || delta > f.deltaBand[1]) return false;
+    }
+    if (f.maxThetaPerDay > 0 && r.entry_theta != null) {
+      if (Math.abs(Number(r.entry_theta)) > f.maxThetaPerDay) return false;
+    }
+    if (f.maxVega > 0 && r.entry_vega != null) {
+      if (Math.abs(Number(r.entry_vega)) > f.maxVega) return false;
+    }
+    // % of max profit captured at close (only for closed wins/losses with max_profit > 0)
+    if (f.pctMaxRange[0] > -100 || f.pctMaxRange[1] < 100) {
+      const mp = Number(r.max_profit);
+      const np = Number(r.net_pnl);
+      if (isFinite(mp) && mp > 0 && isFinite(np)) {
+        const pct = (np / mp) * 100;
+        if (pct < f.pctMaxRange[0] || pct > f.pctMaxRange[1]) return false;
+      }
+    }
+    // Days held buckets
+    if (f.daysHeldBuckets.length) {
+      const held = daysBetween(r.trade_date, r.updated_at);
+      const bucket: 1 | 2 | 3 = held <= 1 ? 1 : held <= 7 ? 2 : 3;
+      if (!f.daysHeldBuckets.includes(bucket)) return false;
+    }
+    // Earnings policy
+    if (f.earnings !== "Either") {
+      const isEP = r.is_earnings_play === true;
+      if (f.earnings === "Hold" && !isEP) return false;
+      if (f.earnings === "Avoid" && isEP) return false;
+    }
     return true;
   });
 }
@@ -851,6 +1115,25 @@ function formatOptionConditions(f: OptionsFilters) {
   if (f.checklistMin > 0)
     out.push({ label: "Checklist", value: `≥${f.checklistMin}/10` });
   if (f.direction !== "Both") out.push({ label: "Type", value: `${f.direction} only` });
+  if (f.deltaBand[0] > -1 || f.deltaBand[1] < 1)
+    out.push({ label: "Δ band", value: `${f.deltaBand[0].toFixed(2)} → ${f.deltaBand[1].toFixed(2)}` });
+  if (f.maxThetaPerDay > 0)
+    out.push({ label: "Max |Θ|/day", value: `$${f.maxThetaPerDay}` });
+  if (f.maxVega > 0) out.push({ label: "Max |Vega|", value: `$${f.maxVega}` });
+  if (f.pctMaxRange[0] > -100 || f.pctMaxRange[1] < 100)
+    out.push({
+      label: "Capture",
+      value: `${f.pctMaxRange[0]}%–${f.pctMaxRange[1]}% of max`,
+    });
+  if (f.daysHeldBuckets.length)
+    out.push({
+      label: "Hold",
+      value: f.daysHeldBuckets
+        .map((b) => (b === 1 ? "Intraday" : b === 2 ? "Swing" : "Position"))
+        .join(", "),
+    });
+  if (f.earnings !== "Either")
+    out.push({ label: "Earnings", value: f.earnings === "Hold" ? "Hold through" : "Avoid" });
   return out;
 }
 
@@ -1211,4 +1494,115 @@ function filtersFromOptionConditions(
   }
 
   return out;
+}
+
+function NumRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-1">
+        {label}
+      </div>
+      <Input
+        type="number"
+        min={0}
+        step={1}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(isFinite(n) && n >= 0 ? n : 0);
+        }}
+        className="text-xs h-8"
+      />
+    </div>
+  );
+}
+
+function StrategyTemplatesCard({
+  onLoad,
+  onSave,
+  canSave,
+}: {
+  onLoad: (t: OptionsTemplate) => void;
+  onSave: (t: OptionsTemplate) => void;
+  canSave: boolean;
+}) {
+  const grouped = useMemo(() => {
+    const out: Record<string, OptionsTemplate[]> = {
+      "high-ivr": [],
+      "low-ivr": [],
+      neutral: [],
+    };
+    for (const t of OPTIONS_TEMPLATES) out[t.bucket].push(t);
+    return out;
+  }, []);
+
+  return (
+    <Card className="p-4 space-y-4 border-primary/30">
+      <div className="flex items-center gap-2">
+        <Layers className="h-3.5 w-3.5 text-primary" />
+        <h2 className="text-xs font-bold font-data uppercase tracking-wider">
+          Strategy Templates
+        </h2>
+        <span className="text-[10px] text-muted-foreground">
+          Curated starters — load into filters or save as playbook entry
+        </span>
+      </div>
+
+      {(["high-ivr", "low-ivr", "neutral"] as const).map((bucket) => (
+        <div key={bucket} className="space-y-2">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            {TEMPLATE_BUCKET_LABEL[bucket]}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {grouped[bucket].map((t) => {
+              const Icon = t.icon;
+              return (
+                <div
+                  key={t.id}
+                  className="rounded-md border border-border bg-background/60 p-2.5 space-y-1.5"
+                >
+                  <div className="flex items-start gap-2">
+                    <Icon className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold leading-tight">{t.name}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{t.blurb}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      onClick={() => onLoad(t)}
+                      className="flex-1 rounded border border-border bg-card px-2 py-1 text-[9px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Load filters
+                    </button>
+                    <button
+                      onClick={() => onSave(t)}
+                      disabled={!canSave}
+                      className={cn(
+                        "flex-1 rounded px-2 py-1 text-[9px] font-data uppercase tracking-wider",
+                        canSave
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border border-border bg-muted text-muted-foreground cursor-not-allowed",
+                      )}
+                    >
+                      <Save className="inline h-3 w-3 mr-1" />
+                      Save
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
 }

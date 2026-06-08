@@ -23,6 +23,7 @@ export type OptionsStatRow = {
   max_profit: number | null;
   net_pnl: number | null;
   premium_paid_or_received: number | null;
+  is_earnings_play?: boolean | null;
 };
 
 export type PnLAttribution = {
@@ -220,7 +221,7 @@ export async function fetchOptionsStatRows(userId: string): Promise<OptionsStatR
   const { data, error } = await (supabase as any)
     .from("options_trades")
     .select(
-      "id, trade_date, updated_at, status, underlying, strategy_type, is_debit, direction_bias, leg1_contracts, underlying_price_at_entry, underlying_price_at_exit, iv_rank_at_entry, entry_delta, entry_gamma, entry_theta, entry_vega, dte_at_entry, planned_exit_dte, max_risk, max_profit, net_pnl, premium_paid_or_received",
+      "id, trade_date, updated_at, status, underlying, strategy_type, is_debit, direction_bias, leg1_contracts, underlying_price_at_entry, underlying_price_at_exit, iv_rank_at_entry, entry_delta, entry_gamma, entry_theta, entry_vega, dte_at_entry, planned_exit_dte, max_risk, max_profit, net_pnl, premium_paid_or_received, is_earnings_play",
     )
     .eq("user_id", userId)
     .is("deleted_at", null);

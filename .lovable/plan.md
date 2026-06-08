@@ -1,74 +1,73 @@
 ## Goal
-Split the walkthrough catalog into mode-aware sets so Futures and Options each get their own unique tours, and rebuild the "App Overview" tour into a detailed cross-mode walkthrough that programmatically switches modes mid-tour so users see both dashboards.
 
-## Architecture changes
+The `/playbook` route currently shows a "Futures Playbook / Options Playbook" market toggle and renders a thin OptionsPlaybookBuilder when the second tab is picked. The Options side is shallow compared to Futures and the toggle itself bleeds futures terminology into options mode.
 
-### Step capability: programmatic mode switch
-`WalkthroughStep` (`src/lib/walkthroughs/types.ts`) gets one new optional field:
-- `setMode?: "futures" | "options"` — when present, the provider calls `setTradingMode(setMode)` before resolving the route/selector.
+This plan makes the page mode-aware and rebuilds the options builder to match (and in places exceed) the futures builder's depth, using options-native dimensions.
 
-`WalkthroughProvider.resolveStep` runs `setMode` first (if defined), then handles `route` and `selector` as today. This lets a single walkthrough hop between the futures dashboard and the options dashboard without user interaction.
+## What changes
 
-### Mode-scoped catalog
-`src/lib/walkthroughs/catalog.ts` is restructured:
-- `WALKTHROUGHS_SHARED` — tours that exist in both modes (App Overview, Chart Analyzer, EdgeCoach).
-- `WALKTHROUGHS_FUTURES` — futures-only (Log a futures trade, Trade Log + setups, Setup Advisor / ORB & VWAP, Risk-of-Ruin & scaling).
-- `WALKTHROUGHS_OPTIONS` — options-only (Open a position, Options Playbook + AI scan, IVR & Greeks, 0DTE & Earnings, Credit-spread manager).
-- `getWalkthroughsForMode(mode)` returns `[...shared, ...modeSpecific]`.
-- `getWalkthrough(id)` still works by id across all sets.
+### 1. `src/routes/playbook.tsx` — mode-aware shell, no toggle
+- Read active mode from `useTradingMode()` instead of a local toggle.
+- In **futures mode**: render the existing futures playbook flow unchanged (no "Options Playbook" tab visible, no options copy).
+- In **options mode**: render only the new `OptionsPlaybookBuilder` (no futures discovery, no futures filters, no "Futures Playbook" label, no shared toggle).
+- Header title flips: "Futures Playbook Builder" vs "Options Playbook Builder".
+- Drop the `market` state, the toggle UI, and the conditional `<>` futures fragment guard from the options branch.
 
-### Mode-aware Walkthroughs panel
-`WalkthroughsSection` reads `useTradingMode()` and renders `getWalkthroughsForMode(mode)`. The panel header shows the active mode label ("Walkthroughs · Futures" / "· Options") so it's obvious the list changes when you switch.
+### 2. `src/components/OptionsPlaybookBuilder.tsx` — full rebuild
+Rebuild as a comprehensive, options-first builder. Sections, top to bottom:
 
-## Tour content
+1. **Header strip** — closed-trade count, IVR snapshot of last entry, AI confidence chip.
+2. **Strategy Templates (new)** — curated starter entries the user can clone into their playbook in one tap. Templates are derived from `ivrGuidance` + common options strategies:
+   - High-IVR credit: Iron Condor 45 DTE, Bull Put Spread 30-45 DTE, Bear Call Spread 30-45 DTE, Covered Call, Cash-Secured Put.
+   - Low-IVR debit: Long Call / Long Put, Bull Call Debit Spread, Bear Put Debit Spread, Long Straddle / Strangle.
+   - Neutral/Tactical: 0DTE Iron Fly, Calendar, Diagonal, Earnings Strangle.
+   Each template seeds the filter panel and a suggested name/notes block.
+3. **AI Discovery card** — unchanged shape but wired to options-native conditions (strategy, IVR bucket, DTE bucket, regime, day-of-week, underlying sector). Already in `discoverOptionsSetup.functions`.
+4. **Live Results card** — adds Net P&L tile (currently missing), Avg DTE held, Avg % of max profit, win rate, trade count, confidence bar.
+5. **Filters card (expanded)**:
+   - Underlying, Strategy, Market Regime (existing).
+   - IVR bucket chips: Low (<30) / Moderate (30-60) / High (>60), plus the slider.
+   - DTE bucket chips: 0DTE / Weekly (1-7) / Monthly (8-45) / LEAPS (>45), plus slider.
+   - VIX range (existing).
+   - **Greeks targets (new)**: entry-delta band slider (-0.5 to +0.5), max |theta|/day, max |vega| per position. Filters historical trades by `entry_delta/theta/vega` columns on `options_trades`.
+   - **Exit discipline (new)**: profit-take % bucket (25/50/75/100), stop loss % bucket (50/100/200), days held bucket.
+   - Day-of-week, Days-to-Avoid (existing).
+   - Earnings flag (Hold through / Avoid / Either) when `is_earnings_play` is present.
+   - Direction (Debit / Credit / Both), Checklist score (existing).
+   - Reset button.
+6. **Sample Trades** — keep, add % max-profit and DTE columns.
+7. **My Options Playbook** — keep `OptionsEntryCard` with health monitoring (HEALTHY / SOFTENING / DEGRADING / INSUFFICIENT), status switch (Active / Testing / Retired), delete, load-back-into-filters, baseline vs current win-rate delta.
+8. **Empty state** — when no closed options trades exist, still show Strategy Templates so a brand-new user can save a curated starter playbook without trade history.
 
-### App Overview (shared, redesigned — ~12 steps, very detailed)
-1. Welcome + the mode pill in the header (selector: app-name button) — explains EdgeTrader has two distinct modes.
-2. Tap the header to switch modes — selector targets the header button; body teaches the gesture.
-3. `setMode: "futures"` → `/` Futures dashboard balance card.
-4. Futures stats strip (`dashboard-stats`).
-5. Futures Quick Log FAB (`new-trade-fab`) — "log a contract in seconds".
-6. `setMode: "options"` → `/` Options dashboard (Greeks/IV widgets).
-7. Options key panels (uses an `options-dashboard-summary` data-tour we'll add on the OptionsDashboard root card).
-8. EdgeCoach FAB (`edgecoach-fab`) — adapts persona per mode.
-9. Bottom-nav `nav-/trade-log` — explains it splits per mode.
-10. Bottom-nav `nav-/playbook` — explains per-mode playbook builders.
-11. Settings nav (`nav-/settings`) — replay walkthroughs, manage challenge.
-12. Reminder: tap the brand pill anytime to swap modes; finish.
+### 3. Shared helpers (small)
+- Extend `applyOptionsFilters` to honor new dimensions (greeks band, exit %, DTE buckets, earnings flag). Each new filter is a guarded pass — missing data ⇒ row not excluded by that filter.
+- Add a small `optionsStrategyTemplates.ts` next to `OptionsPlaybookBuilder.tsx` listing the curated templates above as `{ name, notes, filters: Partial<OptionsFilters> }`.
 
-### Futures-only tours
-- **Log a futures trade** — `new-trade-fab`, instrument, long/short, entry/stop/target, outcome, then `/trade-log` review.
-- **Trade Log & Setup edge** — filter tabs, Edge Health, Setup Performance Breakdown, Benchmarks, Exit Analytics.
-- **Setup Advisor (ORB / VWAP)** — `/setup-advisor` ORB builder then VWAP reclaim builder.
-- **Risk & scaling** — `/risk-of-ruin` and `/scaling-plan` highlights.
+### 4. Out of scope
+- No changes to `setup-library`, dashboards, walkthroughs, navigation, or the futures playbook logic itself.
+- No DB migrations — all new filters read existing `options_trades` columns and `daily_game_plans` for regime/VIX.
+- No edit to `src/components/dashboards/OptionsDashboard.tsx`, only the `/playbook` route and builder.
 
-### Options-only tours
-- **Open your first position** — `OptionsTradeSheet` trigger (add `data-tour="new-options-fab"` on the CTA), strategy picker, legs, IVR snapshot, save.
-- **Options Playbook + AI scan** — `/playbook` options tab, AI discovery button, save to entries.
-- **IVR, Greeks & risk** — `/options-risk` page or IVR card on dashboard, daily theta, portfolio Greeks.
-- **0DTE, Earnings & spreads** — Zero-DTE module, Earnings calendar, Credit-spread manager on `/trade-log` options view.
+## Technical notes
 
-### Shared (besides overview)
-- **Chart Analyzer** — unchanged steps.
-- **EdgeCoach AI** — new short tour highlighting the FAB and that it reads the active mode's data.
+```text
+/playbook (route)
+ ├─ mode === 'futures' → existing futures builder (unchanged)
+ └─ mode === 'options' → <OptionsPlaybookBuilder/> (rebuilt)
+        ├─ <StrategyTemplates/>      (new)
+        ├─ <AIDiscoveryCard/>        (kept, options-native)
+        ├─ <LiveResultsCard/>        (expanded tiles)
+        ├─ <FiltersCard/>            (expanded dimensions)
+        ├─ <SampleTradesCard/>       (kept)
+        └─ <MyOptionsPlaybookCard/>  (kept, health-aware)
+```
 
-## DOM anchors to add
-Small additions in existing components so steps can target real elements (no logic change):
-- `OptionsDashboard` root section → `data-tour="options-dashboard-summary"`.
-- Options dashboard Greeks card → `data-tour="options-greeks"`.
-- Options "new position" CTA → `data-tour="new-options-fab"`.
-- `/playbook` options tab AI-scan button → `data-tour="options-ai-scan"`.
-- `/options-risk` summary card → `data-tour="options-risk-summary"`.
-- ZeroDteModule root → `data-tour="zero-dte"`.
-- CreditSpreadManager root → `data-tour="credit-spreads"`.
-- EarningsCalendarManager root → `data-tour="earnings-calendar"`.
-- Setup Advisor ORB/VWAP cards → `data-tour="orb-builder"` / `data-tour="vwap-builder"`.
+Filter persistence: stored in `playbook_entries.filters` with `market: "options"` marker, same as today, so existing saved options entries still load.
 
-## Files
-- Edited: `src/lib/walkthroughs/types.ts` (add `setMode`), `src/lib/walkthroughs/catalog.ts` (restructured + new tours), `src/components/walkthrough/WalkthroughProvider.tsx` (apply `setMode` before resolve), `src/components/walkthrough/WalkthroughsSection.tsx` (mode-aware list + header label), plus the data-tour anchor additions listed above.
-- No new files.
+## Acceptance criteria
 
-## Out of scope
-- Visual redesign of the overlay/tooltip.
-- Persistence of "completed" state per tour.
-- Translating tour copy.
+- In options mode, `/playbook` shows zero references to "Futures Playbook", "Futures" tab, or futures-only filters (setup_tag, hour-of-day CT, session_trade_number).
+- In futures mode, `/playbook` shows zero "Options Playbook" tab/copy.
+- New options builder includes Strategy Templates, IVR buckets, DTE buckets, Greeks targets, exit-discipline filters, earnings flag, and existing underlying/strategy/regime/VIX/DOW/checklist/direction filters.
+- Saved entries continue to load, health-monitor, and restore filters correctly.
+- Build passes.
