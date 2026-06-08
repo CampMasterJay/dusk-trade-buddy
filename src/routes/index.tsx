@@ -266,7 +266,9 @@ function Dashboard() {
     <div className="min-h-screen bg-background text-foreground pb-24">
       <AppHeader balance={currentBalance} />
       <main className="mx-auto max-w-3xl space-y-4 p-4">
-        <HighImpactAlertCard />
+        <Suspense fallback={null}>
+          <HighImpactAlertCard />
+        </Suspense>
         {loading && !stats ? (
           <div className="flex justify-center py-16">
             <LoadingSpinner label="Loading dashboard…" />
@@ -284,18 +286,30 @@ function Dashboard() {
 
             <StatsRow stats={stats} streak={streak} />
 
-            <EdgeHealthSection trades={trades} />
+            <Suspense fallback={<PanelSkeleton h={140} />}>
+              <EdgeHealthSection trades={trades} />
+            </Suspense>
 
-            <DrawdownTracker trades={trades} startingBalance={startingBalance} />
+            <Suspense fallback={<PanelSkeleton h={140} />}>
+              <DrawdownTracker trades={trades} startingBalance={startingBalance} />
+            </Suspense>
 
-            <ConsistencyStreak />
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <ConsistencyStreak />
+            </Suspense>
 
             <WeekendDebriefCard />
 
-            <SentimentGauge />
+            <Suspense fallback={<PanelSkeleton h={160} />}>
+              <SentimentGauge />
+            </Suspense>
 
-            <PatternOfTheDay />
-            <TradeOfTheWeek />
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <PatternOfTheDay />
+            </Suspense>
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <TradeOfTheWeek />
+            </Suspense>
 
             <SparklineCard
               data={sparklineData}
