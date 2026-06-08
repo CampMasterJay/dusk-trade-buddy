@@ -105,7 +105,10 @@ export const extractTradeFromPhoto = createServerFn({ method: "POST" })
       if (!parsed || typeof parsed !== "object") {
         return { ok: false as const, error: "Couldn't read the trade. Try a clearer screenshot." };
       }
-      return { ok: true as const, fields: parsed as Record<string, unknown> };
+      return {
+        ok: true as const,
+        fields: parsed as Record<string, string | number | boolean | null>,
+      };
     } catch (err) {
       if (err instanceof TimeoutError) {
         return { ok: false as const, error: "Extraction timed out (>15s)." };
