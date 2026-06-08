@@ -211,8 +211,8 @@ export function CoachChat() {
         className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#c9a84c] text-background shadow-[0_10px_30px_-10px_rgba(201,168,76,0.6)] ring-1 ring-[#c9a84c]/40 transition hover:scale-105 hover:bg-[#c9a84c]/90 md:bottom-6"
       >
         <MessageCircle className="h-6 w-6" />
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-background ring-1 ring-trade-green">
-          <Sparkles className="h-2.5 w-2.5 text-trade-green" />
+        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-background ring-1 ring-[#c9a84c]">
+          <Sparkles className="h-2.5 w-2.5 text-[#c9a84c]" />
         </span>
       </button>
 
