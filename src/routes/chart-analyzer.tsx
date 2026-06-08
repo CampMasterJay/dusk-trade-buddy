@@ -1223,9 +1223,11 @@ function HistoryView(props: {
 function DetailModal({
   item,
   onClose,
+  onBuildPlay,
 }: {
   item: SavedAnalysis;
   onClose: () => void;
+  onBuildPlay?: (a: Analysis) => void;
 }) {
   const a = (item.raw_analysis as unknown as Analysis | null) ?? null;
   return (
@@ -1252,7 +1254,11 @@ function DetailModal({
         </div>
         <div className="space-y-4 p-4">
           {a ? (
-            <AnalysisView a={a} chartImageUrl={item.chart_url ?? null} />
+            <AnalysisView
+              a={a}
+              chartImageUrl={item.chart_url ?? null}
+              onBuildPlay={onBuildPlay ? () => onBuildPlay(a) : undefined}
+            />
           ) : (
             <div className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">Setup:</span> {item.setup_detected ?? "—"}</p>
