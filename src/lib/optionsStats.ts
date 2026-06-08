@@ -23,6 +23,7 @@ export type OptionsStatRow = {
   max_profit: number | null;
   net_pnl: number | null;
   premium_paid_or_received: number | null;
+  is_earnings_play?: boolean | null;
 };
 
 export type PnLAttribution = {
