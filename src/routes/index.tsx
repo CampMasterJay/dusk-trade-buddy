@@ -1,18 +1,39 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Plus, CalendarRange, Brain } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
-import { ProjectionModal } from "@/components/ProjectionModal";
-import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
-import { SentimentGauge } from "@/components/SentimentGauge";
-import { PatternOfTheDay } from "@/components/PatternOfTheDay";
-import { TradeOfTheWeek } from "@/components/TradeOfTheWeek";
-import { DrawdownTracker } from "@/components/DrawdownTracker";
-import { ConsistencyStreak } from "@/components/ConsistencyStreak";
-import { EdgeHealthSection } from "@/components/EdgeHealthSection";
-import { OptionsDashboard } from "@/components/dashboards/OptionsDashboard";
+
+// Lazy-loaded below-the-fold and on-demand panels — keeps the initial dashboard
+// bundle small so first paint is fast.
+const ProjectionModal = lazy(() =>
+  import("@/components/ProjectionModal").then((m) => ({ default: m.ProjectionModal })),
+);
+const HighImpactAlertCard = lazy(() =>
+  import("@/components/HighImpactAlertCard").then((m) => ({ default: m.HighImpactAlertCard })),
+);
+const SentimentGauge = lazy(() =>
+  import("@/components/SentimentGauge").then((m) => ({ default: m.SentimentGauge })),
+);
+const PatternOfTheDay = lazy(() =>
+  import("@/components/PatternOfTheDay").then((m) => ({ default: m.PatternOfTheDay })),
+);
+const TradeOfTheWeek = lazy(() =>
+  import("@/components/TradeOfTheWeek").then((m) => ({ default: m.TradeOfTheWeek })),
+);
+const DrawdownTracker = lazy(() =>
+  import("@/components/DrawdownTracker").then((m) => ({ default: m.DrawdownTracker })),
+);
+const ConsistencyStreak = lazy(() =>
+  import("@/components/ConsistencyStreak").then((m) => ({ default: m.ConsistencyStreak })),
+);
+const EdgeHealthSection = lazy(() =>
+  import("@/components/EdgeHealthSection").then((m) => ({ default: m.EdgeHealthSection })),
+);
+const OptionsDashboard = lazy(() =>
+  import("@/components/dashboards/OptionsDashboard").then((m) => ({ default: m.OptionsDashboard })),
+);
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -70,8 +91,30 @@ function Index() {
 
 function DashboardSwitcher() {
   const [mode] = useTradingMode();
-  if (mode === "options") return <OptionsDashboard />;
+  if (mode === "options")
+    return (
+      <Suspense fallback={<DashboardFallback />}>
+        <OptionsDashboard />
+      </Suspense>
+    );
   return <Dashboard />;
+}
+
+function DashboardFallback() {
+  return (
+    <div className="flex justify-center py-16">
+      <LoadingSpinner label="Loading dashboard…" />
+    </div>
+  );
+}
+
+function PanelSkeleton({ h = 120 }: { h?: number }) {
+  return (
+    <div
+      className="animate-pulse rounded-2xl border border-border bg-card"
+      style={{ height: h }}
+    />
+  );
 }
 
 function Dashboard() {
@@ -223,7 +266,9 @@ function Dashboard() {
     <div className="min-h-screen bg-background text-foreground pb-24">
       <AppHeader balance={currentBalance} />
       <main className="mx-auto max-w-3xl space-y-4 p-4">
-        <HighImpactAlertCard />
+        <Suspense fallback={null}>
+          <HighImpactAlertCard />
+        </Suspense>
         {loading && !stats ? (
           <div className="flex justify-center py-16">
             <LoadingSpinner label="Loading dashboard…" />
@@ -241,18 +286,30 @@ function Dashboard() {
 
             <StatsRow stats={stats} streak={streak} />
 
-            <EdgeHealthSection trades={trades} />
+            <Suspense fallback={<PanelSkeleton h={140} />}>
+              <EdgeHealthSection trades={trades} />
+            </Suspense>
 
-            <DrawdownTracker trades={trades} startingBalance={startingBalance} />
+            <Suspense fallback={<PanelSkeleton h={140} />}>
+              <DrawdownTracker trades={trades} startingBalance={startingBalance} />
+            </Suspense>
 
-            <ConsistencyStreak />
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <ConsistencyStreak />
+            </Suspense>
 
             <WeekendDebriefCard />
 
-            <SentimentGauge />
+            <Suspense fallback={<PanelSkeleton h={160} />}>
+              <SentimentGauge />
+            </Suspense>
 
-            <PatternOfTheDay />
-            <TradeOfTheWeek />
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <PatternOfTheDay />
+            </Suspense>
+            <Suspense fallback={<PanelSkeleton h={120} />}>
+              <TradeOfTheWeek />
+            </Suspense>
 
             <SparklineCard
               data={sparklineData}
@@ -364,15 +421,19 @@ function ProjectionSection({
       >
         See Projection
       </Button>
-      <ProjectionModal
-        open={open}
-        onOpenChange={setOpen}
-        currentBalance={currentBalance}
-        targetBalance={targetBalance}
-        riskPct={riskPct}
-        rrRatio={rrRatio}
-        winRate={winRate}
-      />
+      {open && (
+        <Suspense fallback={null}>
+          <ProjectionModal
+            open={open}
+            onOpenChange={setOpen}
+            currentBalance={currentBalance}
+            targetBalance={targetBalance}
+            riskPct={riskPct}
+            rrRatio={rrRatio}
+            winRate={winRate}
+          />
+        </Suspense>
+      )}
     </section>
   );
 }
