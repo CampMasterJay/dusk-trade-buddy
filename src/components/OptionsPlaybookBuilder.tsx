@@ -172,6 +172,35 @@ export function OptionsPlaybookBuilder() {
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Seed filters from Chart Analyzer "Build Play" → "Save to Playbook".
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem("pendingOptionsPlaybookSeed");
+    if (!raw) return;
+    sessionStorage.removeItem("pendingOptionsPlaybookSeed");
+    try {
+      const seed = JSON.parse(raw) as {
+        strategies?: string[];
+        underlyings?: string[];
+        dteRange?: [number, number];
+        ivrRange?: [number, number];
+        direction?: "Debit" | "Credit" | "Both";
+        earnings?: "Hold" | "Avoid" | "Either";
+      };
+      setFilters((f) => ({
+        ...f,
+        strategies: seed.strategies?.length ? seed.strategies : f.strategies,
+        underlyings: seed.underlyings?.length ? seed.underlyings : f.underlyings,
+        dteRange: seed.dteRange ?? f.dteRange,
+        ivrRange: seed.ivrRange ?? f.ivrRange,
+        direction: seed.direction ?? f.direction,
+        earnings: seed.earnings ?? f.earnings,
+      }));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
