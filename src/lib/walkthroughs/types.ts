@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { TradingMode } from "@/lib/tradingMode";
 
 export type WalkthroughStep = {
   /** CSS selector for the element to highlight. Use `[data-tour="..."]`. */
@@ -9,6 +10,8 @@ export type WalkthroughStep = {
   route?: string;
   /** Tooltip placement preference. */
   placement?: "auto" | "top" | "bottom";
+  /** If set, switch the app trading mode before resolving the step. */
+  setMode?: TradingMode;
 };
 
 export type Walkthrough = {
@@ -17,4 +20,6 @@ export type Walkthrough = {
   description: string;
   icon: LucideIcon;
   steps: WalkthroughStep[];
+  /** Restrict this tour to a specific mode. Omit for shared tours. */
+  mode?: TradingMode;
 };
