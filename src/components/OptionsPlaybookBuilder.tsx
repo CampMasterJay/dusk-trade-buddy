@@ -857,6 +857,38 @@ function applyOptionsFilters(
       const dow = dowFromDate(r.trade_date);
       if (f.daysToAvoid.includes(dow)) return false;
     }
+    // Greeks band — only filter when row has data and the band is narrower than default.
+    const delta = r.entry_delta != null ? Number(r.entry_delta) : null;
+    if (delta != null && isFinite(delta) && (f.deltaBand[0] > -1 || f.deltaBand[1] < 1)) {
+      if (delta < f.deltaBand[0] || delta > f.deltaBand[1]) return false;
+    }
+    if (f.maxThetaPerDay > 0 && r.entry_theta != null) {
+      if (Math.abs(Number(r.entry_theta)) > f.maxThetaPerDay) return false;
+    }
+    if (f.maxVega > 0 && r.entry_vega != null) {
+      if (Math.abs(Number(r.entry_vega)) > f.maxVega) return false;
+    }
+    // % of max profit captured at close (only for closed wins/losses with max_profit > 0)
+    if (f.pctMaxRange[0] > -100 || f.pctMaxRange[1] < 100) {
+      const mp = Number(r.max_profit);
+      const np = Number(r.net_pnl);
+      if (isFinite(mp) && mp > 0 && isFinite(np)) {
+        const pct = (np / mp) * 100;
+        if (pct < f.pctMaxRange[0] || pct > f.pctMaxRange[1]) return false;
+      }
+    }
+    // Days held buckets
+    if (f.daysHeldBuckets.length) {
+      const held = daysBetween(r.trade_date, r.updated_at);
+      const bucket: 1 | 2 | 3 = held <= 1 ? 1 : held <= 7 ? 2 : 3;
+      if (!f.daysHeldBuckets.includes(bucket)) return false;
+    }
+    // Earnings policy
+    if (f.earnings !== "Either") {
+      const isEP = r.is_earnings_play === true;
+      if (f.earnings === "Hold" && !isEP) return false;
+      if (f.earnings === "Avoid" && isEP) return false;
+    }
     return true;
   });
 }
@@ -877,6 +909,25 @@ function formatOptionConditions(f: OptionsFilters) {
   if (f.checklistMin > 0)
     out.push({ label: "Checklist", value: `≥${f.checklistMin}/10` });
   if (f.direction !== "Both") out.push({ label: "Type", value: `${f.direction} only` });
+  if (f.deltaBand[0] > -1 || f.deltaBand[1] < 1)
+    out.push({ label: "Δ band", value: `${f.deltaBand[0].toFixed(2)} → ${f.deltaBand[1].toFixed(2)}` });
+  if (f.maxThetaPerDay > 0)
+    out.push({ label: "Max |Θ|/day", value: `$${f.maxThetaPerDay}` });
+  if (f.maxVega > 0) out.push({ label: "Max |Vega|", value: `$${f.maxVega}` });
+  if (f.pctMaxRange[0] > -100 || f.pctMaxRange[1] < 100)
+    out.push({
+      label: "Capture",
+      value: `${f.pctMaxRange[0]}%–${f.pctMaxRange[1]}% of max`,
+    });
+  if (f.daysHeldBuckets.length)
+    out.push({
+      label: "Hold",
+      value: f.daysHeldBuckets
+        .map((b) => (b === 1 ? "Intraday" : b === 2 ? "Swing" : "Position"))
+        .join(", "),
+    });
+  if (f.earnings !== "Either")
+    out.push({ label: "Earnings", value: f.earnings === "Hold" ? "Hold through" : "Avoid" });
   return out;
 }
 
