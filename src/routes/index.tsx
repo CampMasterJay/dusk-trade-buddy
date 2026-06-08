@@ -91,8 +91,30 @@ function Index() {
 
 function DashboardSwitcher() {
   const [mode] = useTradingMode();
-  if (mode === "options") return <OptionsDashboard />;
+  if (mode === "options")
+    return (
+      <Suspense fallback={<DashboardFallback />}>
+        <OptionsDashboard />
+      </Suspense>
+    );
   return <Dashboard />;
+}
+
+function DashboardFallback() {
+  return (
+    <div className="flex justify-center py-16">
+      <LoadingSpinner label="Loading dashboard…" />
+    </div>
+  );
+}
+
+function PanelSkeleton({ h = 120 }: { h?: number }) {
+  return (
+    <div
+      className="animate-pulse rounded-2xl border border-border bg-card"
+      style={{ height: h }}
+    />
+  );
 }
 
 function Dashboard() {
