@@ -793,6 +793,22 @@ function QuickLogFab({
           <SheetTitle>Quick Log Trade</SheetTitle>
           <SheetDescription>Record a trade in seconds.</SheetDescription>
         </SheetHeader>
+        <div className="mt-4">
+          <QuickLogPhotoUpload
+            mode="futures"
+            onExtracted={(f) => {
+              if (f.instrument) setInstrument(String(f.instrument).toUpperCase());
+              if (f.direction === "Long" || f.direction === "Short") setDirection(f.direction);
+              if (f.result === "Win" || f.result === "Loss" || f.result === "Scratch") setResult(f.result);
+              if (f.entry != null) setEntry(String(f.entry));
+              if (f.stop != null) setStop(String(f.stop));
+              if (f.target != null) setTarget(String(f.target));
+              if (f.pnl != null) setPnl(String(f.pnl));
+              if (f.r_multiple != null) setRMultiple(String(f.r_multiple));
+              if (f.notes) setNotes(String(f.notes));
+            }}
+          />
+        </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="ql-inst">Instrument</Label>
