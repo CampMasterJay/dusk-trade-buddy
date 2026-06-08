@@ -305,6 +305,49 @@ export function OptionsPlaybookBuilder() {
     toast.success(`Loaded "${e.name}"`);
   }
 
+  function loadTemplate(t: OptionsTemplate) {
+    setFilters({
+      ...DEFAULT_OPT_FILTERS,
+      ...(t.filters as Partial<OptionsFilters>),
+      market: "options",
+    });
+    setNewName(t.name);
+    toast.success(`Loaded template "${t.name}"`);
+  }
+
+  async function saveTemplateAsEntry(t: OptionsTemplate) {
+    if (!user) return;
+    if (entries.length >= MAX_ENTRIES) {
+      return toast.error(`Maximum ${MAX_ENTRIES} options entries. Retire one first.`);
+    }
+    const filt: OptionsFilters = {
+      ...DEFAULT_OPT_FILTERS,
+      ...(t.filters as Partial<OptionsFilters>),
+      market: "options",
+    };
+    const { data, error } = await supabase
+      .from("playbook_entries")
+      .insert({
+        user_id: user.id,
+        name: t.name,
+        notes: t.notes,
+        filters: filt as never,
+        trade_count: 0,
+        win_rate: null,
+        avg_r: null,
+        net_pnl: null,
+        baseline_win_rate: null,
+        baseline_avg_r: null,
+        baseline_trade_count: 0,
+        status: "Testing",
+      })
+      .select()
+      .single();
+    if (error) return toast.error(error.message);
+    setEntries((e) => [data as unknown as OptEntry, ...e]);
+    toast.success(`Saved "${t.name}" to playbook`);
+  }
+
   async function handleStatusChange(id: string, status: OptEntry["status"]) {
     const prev = entries;
     setEntries((e) => e.map((x) => (x.id === id ? { ...x, status } : x)));
