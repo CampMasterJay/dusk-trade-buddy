@@ -627,44 +627,6 @@ function AnalysisSkeleton() {
   );
 }
 
-function ChartAnalyzerModeToggle() {
-  const [prefs, setPrefs] = useLocalPrefs();
-  const mode = prefs.chartAnalyzerMode;
-  const opts: { key: typeof mode; label: string }[] = [
-    { key: "futures", label: "Futures" },
-    { key: "options", label: "Options" },
-    { key: "both", label: "Both" },
-  ];
-  return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2">
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-data px-1">
-        Mode
-      </span>
-      <div className="grid grid-cols-3 gap-1 flex-1">
-        {opts.map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => setPrefs({ chartAnalyzerMode: o.key })}
-            className={`rounded-md px-2 py-1.5 text-[11px] font-data uppercase tracking-wider transition-colors ${
-              mode === o.key
-                ? "bg-primary/15 text-primary border border-primary/40"
-                : "text-muted-foreground hover:bg-accent border border-transparent"
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-      {mode !== "futures" && (
-        <span className="text-[10px] text-muted-foreground hidden sm:inline">
-          Options analysis included
-        </span>
-      )}
-    </div>
-  );
-}
-
 function TrendBadge({ trend }: { trend?: string }) {
   const t = trend ?? "sideways";
   const map: Record<string, { cls: string; Icon: typeof TrendingUp; label: string }> = {
