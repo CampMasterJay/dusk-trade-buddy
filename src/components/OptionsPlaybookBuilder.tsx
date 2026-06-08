@@ -252,7 +252,9 @@ export function OptionsPlaybookBuilder() {
       })
       .filter((v): v is number => v != null);
     const avgPctMax = pctMax.length > 0 ? pctMax.reduce((s, v) => s + v, 0) / pctMax.length : 0;
-    return { count: filtered.length, wins, losses, winRate, avgPnl, netPnl, avgPctMax };
+    const heldDays = filtered.map((r) => daysBetween(r.trade_date, r.updated_at));
+    const avgDte = heldDays.length > 0 ? heldDays.reduce((s, n) => s + n, 0) / heldDays.length : 0;
+    return { count: filtered.length, wins, losses, winRate, avgPnl, netPnl, avgPctMax, avgDte };
   }, [filtered]);
 
   const enough = stats.count >= MIN_TRADES_FOR_RESULTS;
