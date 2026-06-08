@@ -33,7 +33,6 @@ import {
   OPTIONS_TEMPLATES,
   TEMPLATE_BUCKET_LABEL,
   type OptionsTemplate,
-  type OptionsTemplateFilters,
 } from "@/lib/optionsStrategyTemplates";
 import { cn } from "@/lib/utils";
 
