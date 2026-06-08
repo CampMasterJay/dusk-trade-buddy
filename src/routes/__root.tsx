@@ -24,6 +24,7 @@ import { LiveRegion } from "../hooks/useAnnouncer";
 import { SplashScreen } from "../components/SplashScreen";
 import { WalkthroughProvider } from "../components/walkthrough/WalkthroughProvider";
 import { WalkthroughOverlay } from "../components/walkthrough/WalkthroughOverlay";
+import { DemoWalkthroughOffer } from "../components/walkthrough/DemoWalkthroughOffer";
 import { DemoBanner } from "../components/DemoBanner";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
