@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
+import { isDemoMode, exitDemoMode, useDemoMode, DEMO_USER } from "@/lib/demoMode";
 
 interface AuthResult {
   error: AuthError | null;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const demo = useDemoMode();
 
   useEffect(() => {
     // Listener first to avoid missing events
@@ -61,6 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (isDemoMode()) {
+      exitDemoMode();
+      return;
+    }
     await supabase.auth.signOut();
   };
 
@@ -73,8 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const effectiveUser = user ?? (demo ? DEMO_USER : null);
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user: effectiveUser, session, loading, signIn, signUp, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,6 +24,7 @@ import { LiveRegion } from "../hooks/useAnnouncer";
 import { SplashScreen } from "../components/SplashScreen";
 import { WalkthroughProvider } from "../components/walkthrough/WalkthroughProvider";
 import { WalkthroughOverlay } from "../components/walkthrough/WalkthroughOverlay";
+import { DemoBanner } from "../components/DemoBanner";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 import { startPriceAlertPolling } from "../lib/priceAlerts";
@@ -254,6 +255,7 @@ function RootComponent() {
           <WalkthroughProvider>
             <OfflineBanner />
             <HighImpactBanner />
+            <DemoBanner />
             <div
               className="md:!pl-0 transition-[padding] duration-300 ease-out"
               style={{ paddingLeft: "var(--sidenav-w, 4rem)" }}

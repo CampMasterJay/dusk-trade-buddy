@@ -2,6 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { computeTradeStats } from "@/lib/tradeStats";
 import {
+  isDemoMode,
+  demoTradesStore,
+  demoCreateTrade,
+  demoUpdateTrade,
+  demoDeleteTrade,
+} from "@/lib/demoMode";
+import {
   cacheTrades,
   readCachedTrades,
   cacheStats,
@@ -80,6 +87,10 @@ export async function getTrades(
   limit = 50,
   offset = 0,
 ): Promise<ServiceResult<Trade[]>> {
+  if (isDemoMode()) {
+    const rows = (demoTradesStore as unknown as Trade[]).slice(offset, offset + limit);
+    return { data: rows, error: null };
+  }
   const __perfStart = performance.now();
   try {
     const { data, error } = await supabase
@@ -115,6 +126,9 @@ export async function getTrades(
 }
 
 export async function getAllTrades(userId: string): Promise<ServiceResult<Trade[]>> {
+  if (isDemoMode()) {
+    return { data: demoTradesStore as unknown as Trade[], error: null };
+  }
   try {
     const all: Trade[] = [];
     const chunk = 1000;
@@ -184,6 +198,10 @@ export async function createTradeRemote(
 export async function createTrade(
   trade: TradeInsert,
 ): Promise<ServiceResult<Trade>> {
+  if (isDemoMode()) {
+    const row = demoCreateTrade(trade as unknown as Record<string, unknown>) as unknown as Trade;
+    return { data: row, error: null };
+  }
   // Offline path — queue the trade and return a synthetic row so the UI
   // can render it immediately. It will be flushed on reconnect.
   if (isOffline() && trade.user_id) {
@@ -216,6 +234,10 @@ export async function updateTrade(
   id: string,
   updates: TradeUpdate,
 ): Promise<ServiceResult<Trade>> {
+  if (isDemoMode()) {
+    const row = demoUpdateTrade(id, updates as unknown as Record<string, unknown>) as unknown as Trade | null;
+    return { data: row, error: row ? null : toError(new Error("Not found")) };
+  }
   try {
     const { data, error } = await supabase
       .from("trades")
@@ -234,6 +256,10 @@ export async function updateTrade(
 export async function deleteTrade(
   id: string,
 ): Promise<ServiceResult<Trade>> {
+  if (isDemoMode()) {
+    const row = demoDeleteTrade(id) as unknown as Trade | null;
+    return { data: row, error: row ? null : toError(new Error("Not found")) };
+  }
   try {
     const { data, error } = await supabase
       .from("trades")
@@ -252,6 +278,10 @@ export async function deleteTrade(
 export async function getTradeStats(
   userId: string,
 ): Promise<ServiceResult<TradeStats>> {
+  if (isDemoMode()) {
+    const trades = demoTradesStore as unknown as Array<{ result: string | null; pnl: number | null; r_multiple: number | null }>;
+    return { data: computeTradeStats(trades as never), error: null };
+  }
   const __perfStart = performance.now();
   try {
     const { data, error } = await supabase

@@ -1,6 +1,7 @@
 import { useCountUp } from "@/hooks/useCountUp";
 import { useTradingMode, toggleTradingMode } from "@/lib/tradingMode";
 import { useOtherModeSignals } from "@/lib/otherModeSignals";
+import { useDemoMode } from "@/lib/demoMode";
 import { toast } from "sonner";
 
 export interface AppHeaderProps {
@@ -16,6 +17,7 @@ export function AppHeader({ balance }: AppHeaderProps) {
   }).format(animated);
   const [mode] = useTradingMode();
   const other = useOtherModeSignals();
+  const demo = useDemoMode();
   const isOptions = mode === "options";
   const accent = isOptions ? "text-trade-amber" : "text-trade-green";
   const badgeBorder = isOptions
@@ -56,6 +58,12 @@ export function AppHeader({ balance }: AppHeaderProps) {
             )}
           </span>
         </button>
+
+        {demo && (
+          <span className="hidden sm:inline-flex items-center rounded border border-trade-amber/40 bg-trade-amber/10 px-1.5 py-0.5 text-[9px] font-bold tracking-[2px] text-trade-amber">
+            DEMO
+          </span>
+        )}
 
         {/* Balance Badge */}
         <div
