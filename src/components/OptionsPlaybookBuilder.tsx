@@ -1496,3 +1496,114 @@ function filtersFromOptionConditions(
 
   return out;
 }
+
+function NumRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground mb-1">
+        {label}
+      </div>
+      <Input
+        type="number"
+        min={0}
+        step={1}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          onChange(isFinite(n) && n >= 0 ? n : 0);
+        }}
+        className="text-xs h-8"
+      />
+    </div>
+  );
+}
+
+function StrategyTemplatesCard({
+  onLoad,
+  onSave,
+  canSave,
+}: {
+  onLoad: (t: OptionsTemplate) => void;
+  onSave: (t: OptionsTemplate) => void;
+  canSave: boolean;
+}) {
+  const grouped = useMemo(() => {
+    const out: Record<string, OptionsTemplate[]> = {
+      "high-ivr": [],
+      "low-ivr": [],
+      neutral: [],
+    };
+    for (const t of OPTIONS_TEMPLATES) out[t.bucket].push(t);
+    return out;
+  }, []);
+
+  return (
+    <Card className="p-4 space-y-4 border-primary/30">
+      <div className="flex items-center gap-2">
+        <Layers className="h-3.5 w-3.5 text-primary" />
+        <h2 className="text-xs font-bold font-data uppercase tracking-wider">
+          Strategy Templates
+        </h2>
+        <span className="text-[10px] text-muted-foreground">
+          Curated starters — load into filters or save as playbook entry
+        </span>
+      </div>
+
+      {(["high-ivr", "low-ivr", "neutral"] as const).map((bucket) => (
+        <div key={bucket} className="space-y-2">
+          <div className="text-[10px] font-data uppercase tracking-wider text-muted-foreground">
+            {TEMPLATE_BUCKET_LABEL[bucket]}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {grouped[bucket].map((t) => {
+              const Icon = t.icon;
+              return (
+                <div
+                  key={t.id}
+                  className="rounded-md border border-border bg-background/60 p-2.5 space-y-1.5"
+                >
+                  <div className="flex items-start gap-2">
+                    <Icon className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[11px] font-semibold leading-tight">{t.name}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{t.blurb}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <button
+                      onClick={() => onLoad(t)}
+                      className="flex-1 rounded border border-border bg-card px-2 py-1 text-[9px] font-data uppercase tracking-wider hover:bg-accent"
+                    >
+                      Load filters
+                    </button>
+                    <button
+                      onClick={() => onSave(t)}
+                      disabled={!canSave}
+                      className={cn(
+                        "flex-1 rounded px-2 py-1 text-[9px] font-data uppercase tracking-wider",
+                        canSave
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "border border-border bg-muted text-muted-foreground cursor-not-allowed",
+                      )}
+                    >
+                      <Save className="inline h-3 w-3 mr-1" />
+                      Save
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
