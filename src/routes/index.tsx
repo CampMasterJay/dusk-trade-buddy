@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Plus, CalendarRange, Brain } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, YAxis, ReferenceArea } from "recharts";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
 
@@ -34,6 +33,9 @@ const EdgeHealthSection = lazy(() =>
 const OptionsDashboard = lazy(() =>
   import("@/components/dashboards/OptionsDashboard").then((m) => ({ default: m.OptionsDashboard })),
 );
+const SparklineCard = lazy(() =>
+  import("@/components/SparklineCard").then((m) => ({ default: m.SparklineCard })),
+);
 import {
   getNotificationPermission,
   requestNotificationPermission,
@@ -44,7 +46,6 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { adjustRiskPct } from "@/lib/vixRisk";
-import { buildVixTiers, classifyVix } from "@/lib/vixTiers";
 import { getTrades, getTradeStats, createTrade, type Trade, type TradeStats } from "@/lib/tradeService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
