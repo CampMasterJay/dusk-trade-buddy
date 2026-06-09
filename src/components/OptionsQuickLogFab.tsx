@@ -23,6 +23,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { QuickLogPhotoUpload } from "@/components/QuickLogPhotoUpload";
+import { calcOptionsPnl } from "@/lib/pnlCalc";
 
 const STRATEGIES = [
   "Long Call",
@@ -88,6 +89,22 @@ export function OptionsQuickLogFab({ onLogged }: { onLogged: () => void }) {
     if (f.net_pnl != null) setNetPnl(asStr(f.net_pnl));
     if (f.status === "Open" || f.status === "Closed") setStatus(f.status);
     if (f.notes) setNotes(String(f.notes));
+
+    // Auto-calculate P/L when broker screenshot shows entry + exit premium
+    // but no dollar P/L number.
+    const entryP = f.leg1_premium != null ? Number(f.leg1_premium) : NaN;
+    const exitP = f.exit_premium != null ? Number(f.exit_premium) : NaN;
+    const qty = f.leg1_contracts != null ? Number(f.leg1_contracts) : 1;
+    const action = f.leg1_action === "Sell" ? "Sell" : "Buy";
+    if (f.net_pnl == null && Number.isFinite(entryP) && Number.isFinite(exitP)) {
+      const computed = calcOptionsPnl({
+        action,
+        entryPremium: entryP,
+        exitPremium: exitP,
+        contracts: qty,
+      });
+      if (computed != null) setNetPnl(computed.toFixed(2));
+    }
   };
 
   const submit = async () => {
