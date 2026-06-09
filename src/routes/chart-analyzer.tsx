@@ -1340,13 +1340,16 @@ function FrameSlot({
   onTimeframeChange: (tf: string) => void;
   onClear: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [tf, setTf] = useState<string>(
     frame?.timeframe ?? timeframeOptions[0],
   );
   useEffect(() => {
     if (frame?.timeframe) setTf(frame.timeframe);
   }, [frame?.timeframe]);
+
+  const handleFile = (file: File) => onFile(file, tf);
 
   return (
     <div className="rounded-lg border border-border bg-background p-3">
@@ -1391,7 +1394,7 @@ function FrameSlot({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => fileRef.current?.click()}
+                onClick={() => galleryRef.current?.click()}
                 className="inline-flex items-center gap-1 rounded border border-border bg-card px-2 py-1 text-[10px] font-medium hover:bg-accent"
               >
                 <Upload className="h-3 w-3" />
@@ -1408,26 +1411,51 @@ function FrameSlot({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border text-muted-foreground transition-colors hover:border-trade-green/50 hover:bg-trade-green/5 hover:text-trade-green"
-        >
-          <Camera className="h-5 w-5" />
-          <span className="text-[10px] font-data uppercase tracking-wider">
-            Upload
+        <div className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border p-2 text-muted-foreground transition-colors hover:border-trade-green/50 hover:bg-trade-green/5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              className="inline-flex items-center gap-1 rounded border border-border bg-card px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              Take photo
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryRef.current?.click()}
+              className="inline-flex items-center gap-1 rounded border border-border bg-card px-2.5 py-1.5 text-[10px] font-medium hover:bg-accent"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              Upload
+            </button>
+          </div>
+          <span className="text-[9px] font-data uppercase tracking-wider">
+            {slot} chart
           </span>
-        </button>
+        </div>
       )}
 
       <input
-        ref={fileRef}
+        ref={cameraRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={galleryRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) onFile(f, tf);
+          if (f) handleFile(f);
           e.target.value = "";
         }}
       />

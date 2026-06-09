@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, Loader2, Sparkles, X } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Sparkles, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ interface Props {
  * back to the parent form to prefill.
  */
 export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const extract = useServerFn(extractTradeFromPhoto);
@@ -75,7 +76,7 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
         Snap your broker fill or P&L — AI extracts the fields.
       </p>
       <input
-        ref={fileRef}
+        ref={cameraRef}
         type="file"
         accept="image/png,image/jpeg,image/webp"
         capture="environment"
@@ -86,12 +87,23 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
           e.target.value = "";
         }}
       />
-      <div className="mt-2 flex items-center gap-2">
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => fileRef.current?.click()}
+          onClick={() => cameraRef.current?.click()}
           disabled={busy}
           className="font-data text-xs"
         >
@@ -100,7 +112,18 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
           ) : (
             <Camera className="mr-1 h-3.5 w-3.5" />
           )}
-          {busy ? "Reading…" : preview ? "Replace photo" : "Upload photo"}
+          {busy ? "Reading…" : "Take photo"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => galleryRef.current?.click()}
+          disabled={busy}
+          className="font-data text-xs"
+        >
+          <ImagePlus className="mr-1 h-3.5 w-3.5" />
+          Upload from device
         </Button>
         {preview && !busy && (
           <img
