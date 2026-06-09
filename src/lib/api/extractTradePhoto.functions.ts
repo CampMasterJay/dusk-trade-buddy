@@ -34,8 +34,8 @@ export const extractTradeFromPhoto = createServerFn({ method: "POST" })
     const shape = data.mode === "options" ? OPTIONS_SHAPE : FUTURES_SHAPE;
     const modeHint =
       data.mode === "options"
-        ? "This is a screenshot of an OPTIONS trade (order ticket, position summary, or P&L screen from a broker). Extract the underlying symbol, strategy if visible, the first leg, expiration in YYYY-MM-DD, status (Open or Closed), and realized net P&L if shown."
-        : "This is a screenshot of a FUTURES or stock trade (order ticket or P&L). Extract instrument symbol, direction, entry/stop/target/exit prices, realized P&L in dollars, R-multiple if visible, and overall result.";
+        ? "This is a screenshot of an OPTIONS trade (order ticket, position summary, or P&L screen from a broker). Extract the underlying symbol, strategy if visible, the first leg (type/action/strike/premium/contracts/expiration in YYYY-MM-DD), status (Open or Closed). IMPORTANT: always extract BOTH leg1_premium (entry/fill price per share) and exit_premium (closing fill price per share) when both are visible — they are needed to compute P/L. Also extract realized net_pnl in dollars if explicitly shown."
+        : "This is a screenshot of a FUTURES or stock trade (order ticket or P&L). Extract instrument symbol, direction (Long/Short), and ALL prices visible: entry, stop, target, and exit fill price. These prices let us compute P/L even when the broker doesn't print a dollar amount. Also extract realized P&L in dollars and R-multiple if shown, and overall result.";
 
     const system =
       "You extract trade data from broker screenshots. Respond ONLY with compact JSON matching this shape — use null for any field you can't read confidently. No markdown, no commentary outside JSON: " +
