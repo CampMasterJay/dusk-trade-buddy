@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/sheet";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { QuickLogPhotoUpload } from "@/components/QuickLogPhotoUpload";
+import { calcFuturesPnl } from "@/lib/pnlCalc";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
