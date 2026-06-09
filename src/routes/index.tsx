@@ -807,6 +807,28 @@ function QuickLogFab({
               if (f.pnl != null) setPnl(String(f.pnl));
               if (f.r_multiple != null) setRMultiple(String(f.r_multiple));
               if (f.notes) setNotes(String(f.notes));
+
+              // Auto-calculate $ P/L from entry + exit when broker image
+              // shows prices but no dollar amount.
+              const entryN = f.entry != null ? Number(f.entry) : NaN;
+              const exitN = f.exit != null ? Number(f.exit) : NaN;
+              const sym = f.instrument ? String(f.instrument) : instrument;
+              const dir =
+                f.direction === "Short" ? "Short" : f.direction === "Long" ? "Long" : direction;
+              if (f.pnl == null && Number.isFinite(entryN) && Number.isFinite(exitN) && sym) {
+                const computed = calcFuturesPnl({
+                  symbol: sym,
+                  direction: dir as "Long" | "Short",
+                  entry: entryN,
+                  exit: exitN,
+                });
+                if (computed != null) {
+                  setPnl(computed.toFixed(2));
+                  if (f.result == null) {
+                    setResult(computed > 0 ? "Win" : computed < 0 ? "Loss" : "Scratch");
+                  }
+                }
+              }
             }}
           />
         </div>
