@@ -99,6 +99,18 @@ export function useUserSettings() {
           recalcBalance();
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "options_trades",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          recalcBalance();
+        },
+      )
       .subscribe();
 
     return () => {
