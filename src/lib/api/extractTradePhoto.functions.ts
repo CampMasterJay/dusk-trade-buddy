@@ -38,7 +38,7 @@ export const extractTradeFromPhoto = createServerFn({ method: "POST" })
         : "This is a screenshot of a FUTURES or stock trade (order ticket or P&L). Extract instrument symbol, direction (Long/Short), and ALL prices visible: entry, stop, target, and exit fill price. These prices let us compute P/L even when the broker doesn't print a dollar amount. Also extract realized P&L in dollars and R-multiple if shown, and overall result.";
 
     const system =
-      "You extract trade data from broker screenshots. Respond ONLY with compact JSON matching this shape — use null for any field you can't read confidently. No markdown, no commentary outside JSON: " +
+      "You extract trade data from broker screenshots. The screenshot may contain MULTIPLE distinct trades (e.g. a positions list, fills blotter, or P&L statement with several rows). Respond ONLY with compact JSON of the form {\"trades\":[T,...]} where each T matches this shape — one object per distinct trade visible. If only one trade is visible, return a single-item array. Use null for any field you can't read confidently. No markdown, no commentary outside JSON. T = " +
       shape;
 
     try {
@@ -105,10 +105,25 @@ export const extractTradeFromPhoto = createServerFn({ method: "POST" })
       if (!parsed || typeof parsed !== "object") {
         return { ok: false as const, error: "Couldn't read the trade. Try a clearer screenshot." };
       }
-      return {
-        ok: true as const,
-        fields: parsed as Record<string, string | number | boolean | null>,
-      };
+      type Fields = Record<string, string | number | boolean | null>;
+      const obj = parsed as { trades?: unknown } & Fields;
+      let trades: Fields[] = [];
+      if (Array.isArray(obj.trades)) {
+        trades = (obj.trades as unknown[]).filter(
+          (t): t is Fields => !!t && typeof t === "object",
+        );
+      } else {
+        // Backwards-compat: model returned a single flat object.
+        trades = [obj as Fields];
+      }
+      // Drop empty rows (every field null/empty).
+      trades = trades.filter((t) =>
+        Object.values(t).some((v) => v != null && v !== ""),
+      );
+      if (trades.length === 0) {
+        return { ok: false as const, error: "Couldn't read any trades. Try a clearer screenshot." };
+      }
+      return { ok: true as const, trades };
     } catch (err) {
       if (err instanceof TimeoutError) {
         return { ok: false as const, error: "Extraction timed out (>15s)." };

@@ -3,6 +3,14 @@ import { Camera, ImagePlus, Loader2, Sparkles, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { processImageFile, validateImageFile } from "@/lib/imageUpload";
 import { extractTradeFromPhoto } from "@/lib/api/extractTradePhoto.functions";
 
@@ -11,6 +19,25 @@ type ExtractedFields = Record<string, string | number | boolean | null>;
 interface Props {
   mode: "futures" | "options";
   onExtracted: (fields: ExtractedFields) => void;
+}
+
+function summarize(mode: "futures" | "options", t: ExtractedFields, i: number): string {
+  if (mode === "options") {
+    const u = t.underlying ? String(t.underlying).toUpperCase() : "?";
+    const act = t.leg1_action ? String(t.leg1_action) : "";
+    const k = t.leg1_strike != null ? String(t.leg1_strike) : "";
+    const ty = t.leg1_type ? String(t.leg1_type)[0] : "";
+    const exp = t.leg1_expiration ? ` ${t.leg1_expiration}` : "";
+    const qty = t.leg1_contracts != null ? ` ×${t.leg1_contracts}` : "";
+    const core = `${u} ${act} ${k}${ty}${exp}${qty}`.replace(/\s+/g, " ").trim();
+    return core || `Trade ${i + 1}`;
+  }
+  const sym = t.instrument ? String(t.instrument).toUpperCase() : "?";
+  const dir = t.direction ? String(t.direction) : "";
+  const e = t.entry != null ? ` @${t.entry}` : "";
+  const pnl = t.pnl != null ? ` (P/L ${t.pnl})` : "";
+  const core = `${sym} ${dir}${e}${pnl}`.replace(/\s+/g, " ").trim();
+  return core || `Trade ${i + 1}`;
 }
 
 /**
@@ -23,7 +50,18 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
   const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [choices, setChoices] = useState<ExtractedFields[] | null>(null);
   const extract = useServerFn(extractTradeFromPhoto);
+
+  const apply = (fields: ExtractedFields) => {
+    const filled = Object.values(fields).filter((v) => v != null && v !== "").length;
+    if (filled === 0) {
+      toast.warning("Couldn't read any fields. Try a clearer screenshot.");
+      return;
+    }
+    onExtracted(fields);
+    toast.success(`Prefilled ${filled} field${filled === 1 ? "" : "s"} from photo`);
+  };
 
   const handleFile = async (file: File) => {
     const err = validateImageFile(file);
@@ -40,13 +78,12 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
         toast.error(res.error);
         return;
       }
-      const filled = Object.values(res.fields).filter((v) => v != null).length;
-      if (filled === 0) {
-        toast.warning("Couldn't read any fields. Try a clearer screenshot.");
+      if (res.trades.length > 1) {
+        setChoices(res.trades);
+        toast.message(`Found ${res.trades.length} trades — pick one to log`);
         return;
       }
-      onExtracted(res.fields);
-      toast.success(`Prefilled ${filled} field${filled === 1 ? "" : "s"} from photo`);
+      apply(res.trades[0]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to read image");
     } finally {
@@ -133,6 +170,39 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
           />
         )}
       </div>
+      <Dialog open={!!choices} onOpenChange={(o) => !o && setChoices(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Multiple trades detected</DialogTitle>
+            <DialogDescription>
+              Pick which trade to log. Only one trade is logged per Quick Log entry.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[50vh] space-y-2 overflow-y-auto">
+            {choices?.map((t, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  apply(t);
+                  setChoices(null);
+                }}
+                className="w-full rounded-md border border-border bg-background/60 p-3 text-left text-sm hover:border-trade-amber hover:bg-background/80"
+              >
+                <div className="font-data uppercase tracking-wider text-trade-amber text-[11px]">
+                  Trade {i + 1}
+                </div>
+                <div className="mt-0.5 truncate">{summarize(mode, t, i)}</div>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setChoices(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
