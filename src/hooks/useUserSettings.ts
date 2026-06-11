@@ -77,8 +77,17 @@ export function useUserSettings() {
   );
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      await load();
+      if (!cancelled) {
+        await recalcBalance();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [load, recalcBalance]);
 
   // Recalculate balance whenever trades change for this user.
   useEffect(() => {
