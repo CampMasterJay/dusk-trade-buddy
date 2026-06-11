@@ -123,7 +123,7 @@ function PanelSkeleton({ h = 120 }: { h?: number }) {
 function Dashboard() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { settings, refresh: refreshSettings } = useUserSettings();
+  const { settings, refresh: refreshSettings, recalcBalance } = useUserSettings();
   const [mode] = useTradingMode();
 
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -263,6 +263,7 @@ function Dashboard() {
   const onTradeLogged = () => {
     setReloadKey((k) => k + 1);
     refreshSettings();
+    recalcBalance();
   };
 
   return (

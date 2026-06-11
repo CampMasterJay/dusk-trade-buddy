@@ -26,7 +26,7 @@ function fmtUSD(n: number, decimals = 0) {
 
 export function OptionsDashboard() {
   const { user } = useAuth();
-  const { settings, refresh } = useUserSettings();
+  const { settings, refresh, recalcBalance } = useUserSettings();
   const [mode] = useTradingMode();
   const copy = useModeCopy();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -64,6 +64,7 @@ export function OptionsDashboard() {
   const onLogged = () => {
     setReloadKey((k) => k + 1);
     refresh();
+    recalcBalance();
   };
 
   return (
