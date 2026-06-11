@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { isDemoMode, DEMO_SETTINGS } from "@/lib/demoMode";
+import { isDemoMode, DEMO_SETTINGS, demoTradesStore } from "@/lib/demoMode";
 import { toast } from "sonner";
 import {
   calculateCurrentBalance,
@@ -44,7 +44,18 @@ export function useUserSettings() {
 
   const recalcBalance = useCallback(async () => {
     if (!userId) return;
-    if (isDemoMode()) return;
+    if (isDemoMode()) {
+      const total = demoTradesStore.reduce((acc, t) => {
+        const pnl = Number((t as any).pnl) || 0;
+        const net = Number((t as any).net_pnl) || 0;
+        return acc + pnl + net;
+      }, 0);
+      const balance = Number(DEMO_SETTINGS.starting_balance) + total;
+      setSettings((prev) =>
+        prev ? { ...prev, current_balance: balance } : prev,
+      );
+      return;
+    }
     try {
       const balance = await calculateCurrentBalance(userId);
       setSettings((prev) =>
@@ -87,6 +98,18 @@ export function useUserSettings() {
     return () => {
       cancelled = true;
     };
+  }, [load, recalcBalance]);
+
+  // Listen for global refresh events (e.g. pull-to-refresh).
+  useEffect(() => {
+    const onRefresh = () => {
+      void (async () => {
+        await load();
+        await recalcBalance();
+      })();
+    };
+    window.addEventListener("edgetrader:refresh", onRefresh);
+    return () => window.removeEventListener("edgetrader:refresh", onRefresh);
   }, [load, recalcBalance]);
 
   // Recalculate balance whenever trades change for this user.

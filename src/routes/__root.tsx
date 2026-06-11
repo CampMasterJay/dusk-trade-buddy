@@ -26,6 +26,7 @@ import { WalkthroughProvider } from "../components/walkthrough/WalkthroughProvid
 import { WalkthroughOverlay } from "../components/walkthrough/WalkthroughOverlay";
 import { DemoWalkthroughOffer } from "../components/walkthrough/DemoWalkthroughOffer";
 import { DemoBanner } from "../components/DemoBanner";
+import { PullToRefresh } from "../components/PullToRefresh";
 import { initServiceWorker } from "../lib/registerSW";
 import { startNotificationTriggers } from "../lib/notifications";
 import { startPriceAlertPolling } from "../lib/priceAlerts";
@@ -286,6 +287,7 @@ function RootComponent() {
             <SplashScreen />
             <WalkthroughOverlay />
             <DemoWalkthroughOffer />
+            <PullToRefresh />
           </WalkthroughProvider>
         </AuthProvider>
       </ThemeProvider>
