@@ -57,12 +57,25 @@ export async function calculateCurrentBalance(userId: string): Promise<number> {
 
   if (error) throw error;
 
-  const pnlSum = (trades ?? []).reduce(
+  const futuresPnl = (trades ?? []).reduce(
     (acc, t) => acc + (Number(t.pnl) || 0),
     0,
   );
 
-  const currentBalance = Number(settings.starting_balance) + pnlSum;
+  const { data: optTrades, error: optErr } = await supabase
+    .from("options_trades" as any)
+    .select("net_pnl")
+    .eq("user_id", userId);
+
+  if (optErr) throw optErr;
+
+  const optionsPnl = (optTrades ?? []).reduce(
+    (acc: number, t: any) => acc + (Number(t.net_pnl) || 0),
+    0,
+  );
+
+  const currentBalance =
+    Number(settings.starting_balance) + futuresPnl + optionsPnl;
 
   if (Number(settings.current_balance) !== currentBalance) {
     await updateUserSettings(userId, { current_balance: currentBalance });
