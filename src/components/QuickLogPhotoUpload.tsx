@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { processImageFile, validateImageFile } from "@/lib/imageUpload";
 import { extractTradeFromPhoto } from "@/lib/api/extractTradePhoto.functions";
+import { calcFuturesPnl, calcOptionsPnl } from "@/lib/pnlCalc";
 
 type ExtractedFields = Record<string, string | number | boolean | null>;
 
@@ -35,9 +36,49 @@ function summarize(mode: "futures" | "options", t: ExtractedFields, i: number): 
   const sym = t.instrument ? String(t.instrument).toUpperCase() : "?";
   const dir = t.direction ? String(t.direction) : "";
   const e = t.entry != null ? ` @${t.entry}` : "";
-  const pnl = t.pnl != null ? ` (P/L ${t.pnl})` : "";
-  const core = `${sym} ${dir}${e}${pnl}`.replace(/\s+/g, " ").trim();
+  const core = `${sym} ${dir}${e}`.replace(/\s+/g, " ").trim();
   return core || `Trade ${i + 1}`;
+}
+
+function num(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function fmtUSD(n: number): string {
+  const sign = n >= 0 ? "+" : "−";
+  return `${sign}$${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
+function tradePnl(
+  mode: "futures" | "options",
+  t: ExtractedFields,
+): { value: number; predicted: boolean } | null {
+  if (mode === "options") {
+    const realized = num(t.net_pnl);
+    if (realized != null) return { value: realized, predicted: false };
+    const entry = num(t.leg1_premium);
+    const exit = num(t.exit_premium);
+    const contracts = num(t.leg1_contracts) ?? 1;
+    const action = t.leg1_action === "Buy" || t.leg1_action === "Sell" ? t.leg1_action : null;
+    if (entry != null && exit != null && action) {
+      const v = calcOptionsPnl({ action, entryPremium: entry, exitPremium: exit, contracts });
+      if (v != null) return { value: v, predicted: true };
+    }
+    return null;
+  }
+  const realized = num(t.pnl);
+  if (realized != null) return { value: realized, predicted: false };
+  const entry = num(t.entry);
+  const exit = num(t.exit);
+  const dir = t.direction === "Long" || t.direction === "Short" ? t.direction : null;
+  const sym = t.instrument ? String(t.instrument) : "";
+  if (entry != null && exit != null && dir && sym) {
+    const v = calcFuturesPnl({ symbol: sym, direction: dir, entry, exit, contracts: num(t.contracts) ?? 1 });
+    if (v != null) return { value: v, predicted: true };
+  }
+  return null;
 }
 
 /**
@@ -189,10 +230,33 @@ export function QuickLogPhotoUpload({ mode, onExtracted }: Props) {
                 }}
                 className="w-full rounded-md border border-border bg-background/60 p-3 text-left text-sm hover:border-trade-amber hover:bg-background/80"
               >
-                <div className="font-data uppercase tracking-wider text-trade-amber text-[11px]">
-                  Trade {i + 1}
-                </div>
-                <div className="mt-0.5 truncate">{summarize(mode, t, i)}</div>
+                {(() => {
+                  const pnl = tradePnl(mode, t);
+                  return (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-data uppercase tracking-wider text-trade-amber text-[11px]">
+                          Trade {i + 1}
+                        </div>
+                        {pnl && (
+                          <div
+                            className={`font-data text-xs tabular-nums ${
+                              pnl.value >= 0 ? "text-trade-green" : "text-trade-red"
+                            }`}
+                          >
+                            {pnl.predicted && (
+                              <span className="mr-1 rounded bg-muted px-1 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+                                est
+                              </span>
+                            )}
+                            {fmtUSD(pnl.value)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-0.5 truncate">{summarize(mode, t, i)}</div>
+                    </>
+                  );
+                })()}
               </button>
             ))}
           </div>
