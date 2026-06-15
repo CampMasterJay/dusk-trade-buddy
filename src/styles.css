@@ -197,6 +197,16 @@
   animation: route-slide-in 260ms ease-out;
 }
 
+/* Route fade — 150ms, no horizontal movement so tab switches feel instant
+   without a flash of unstyled content. */
+@keyframes route-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.animate-route-fade {
+  animation: route-fade-in 150ms ease-out both;
+}
+
 @keyframes card-rise {
   0% { opacity: 0; transform: translateY(8px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -210,20 +220,38 @@
   animation: card-rise 280ms ease-out both;
 }
 .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
-.stagger-children > *:nth-child(2) { animation-delay: 40ms; }
-.stagger-children > *:nth-child(3) { animation-delay: 80ms; }
-.stagger-children > *:nth-child(4) { animation-delay: 120ms; }
-.stagger-children > *:nth-child(5) { animation-delay: 160ms; }
-.stagger-children > *:nth-child(6) { animation-delay: 200ms; }
-.stagger-children > *:nth-child(7) { animation-delay: 240ms; }
-.stagger-children > *:nth-child(n+8) { animation-delay: 280ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(n+8) { animation-delay: 350ms; }
+
+/* Trade list stagger — tighter 30ms cadence for long lists. */
+.stagger-trades > * {
+  animation: card-rise 240ms ease-out both;
+}
+.stagger-trades > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-trades > *:nth-child(2)  { animation-delay: 30ms; }
+.stagger-trades > *:nth-child(3)  { animation-delay: 60ms; }
+.stagger-trades > *:nth-child(4)  { animation-delay: 90ms; }
+.stagger-trades > *:nth-child(5)  { animation-delay: 120ms; }
+.stagger-trades > *:nth-child(6)  { animation-delay: 150ms; }
+.stagger-trades > *:nth-child(7)  { animation-delay: 180ms; }
+.stagger-trades > *:nth-child(8)  { animation-delay: 210ms; }
+.stagger-trades > *:nth-child(9)  { animation-delay: 240ms; }
+.stagger-trades > *:nth-child(10) { animation-delay: 270ms; }
+.stagger-trades > *:nth-child(n+11) { animation-delay: 300ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer,
   .animate-toast-in,
   .animate-route-slide,
+  .animate-route-fade,
   .animate-card-rise,
-  .stagger-children > * {
+  .stagger-children > *,
+  .stagger-trades > * {
     animation: none !important;
   }
 }
