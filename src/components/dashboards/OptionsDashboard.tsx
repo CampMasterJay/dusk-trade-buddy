@@ -52,6 +52,7 @@ export function OptionsDashboard() {
   const startingBalance = bal.starting;
   const currentBalance = bal.current;
   const targetBalance = bal.target;
+  const animatedBalance = useCountUp(currentBalance, 600);
 
   const progressPct = useMemo(() => {
     const denom = targetBalance - startingBalance;
@@ -100,7 +101,7 @@ export function OptionsDashboard() {
             className="mt-3 font-data text-4xl font-bold tracking-tight text-trade-amber sm:text-5xl"
             style={{ textShadow: "0 0 18px color-mix(in oklab, var(--trade-amber) 50%, transparent)" }}
           >
-            {fmtUSD(currentBalance, 2)}
+            {fmtUSD(animatedBalance, 2)}
           </div>
           <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
             <div
