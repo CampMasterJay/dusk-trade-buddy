@@ -30,6 +30,8 @@ import {
   EyeOff,
   BookOpen,
   Lightbulb,
+  Info,
+  Clock,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -135,6 +137,8 @@ function ChartAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
+  const [analysisAt, setAnalysisAt] = useState<number | null>(null);
+  const [cachedChartUrl, setCachedChartUrl] = useState<string | null>(null);
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -206,6 +210,28 @@ function ChartAnalyzer() {
   const firstFrame = frames.HTF ?? frames.MTF ?? frames.LTF;
   const filledSlots = (["HTF", "MTF", "LTF"] as const).filter((s) => frames[s]);
   const canAnalyze = filledSlots.length > 0 && !loading;
+
+  // Restore last analysis from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("chartAnalyzer:last");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        analysis?: Analysis | null;
+        raw?: string | null;
+        timestamp?: number;
+        chartImageUrl?: string | null;
+      };
+      if (parsed?.analysis) {
+        setAnalysis(parsed.analysis);
+        setRaw(parsed.raw ?? null);
+        setAnalysisAt(parsed.timestamp ?? null);
+        setCachedChartUrl(parsed.chartImageUrl ?? null);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function handleSlotFile(slot: Slot, file: File, timeframe: string) {
     setError(null);
@@ -283,6 +309,23 @@ function ChartAnalyzer() {
         );
         setAnalysis(a);
         setRaw(res.raw ?? null);
+        const ts = Date.now();
+        setAnalysisAt(ts);
+        const chartUrl = firstFrame?.image.dataUrl ?? null;
+        setCachedChartUrl(chartUrl);
+        try {
+          localStorage.setItem(
+            "chartAnalyzer:last",
+            JSON.stringify({
+              analysis: a,
+              raw: res.raw ?? null,
+              timestamp: ts,
+              chartImageUrl: chartUrl,
+            }),
+          );
+        } catch {
+          /* quota — ignore */
+        }
         const { announce } = await import("@/hooks/useAnnouncer");
         announce("Chart analysis complete.");
       }
@@ -303,6 +346,13 @@ function ChartAnalyzer() {
     setError(null);
     setRaw(null);
     setSavedId(null);
+    setAnalysisAt(null);
+    setCachedChartUrl(null);
+    try {
+      localStorage.removeItem("chartAnalyzer:last");
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
