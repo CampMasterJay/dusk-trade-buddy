@@ -781,8 +781,26 @@ function AnalysisView({
   const confluence = a.confluenceFactors ?? [];
   const risks = a.riskFactors ?? a.risks ?? [];
 
+  const missingFields: string[] = [];
+  if (!a.instrument) missingFields.push("Instrument");
+  if (!a.timeframe && !a.frames) missingFields.push("Timeframe");
+  if (!a.setupDetected && !a.patterns?.length) missingFields.push("Setup");
+  if (entry == null) missingFields.push("Entry");
+  if (stop == null) missingFields.push("Stop");
+  if (target == null) missingFields.push("Target");
+
   return (
     <div className="space-y-5">
+      {missingFields.length > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-500">
+          <div className="font-data uppercase tracking-wider text-[10px] mb-1">
+            Partial analysis
+          </div>
+          <div>
+            {missingFields.join(", ")}: Not detected — try a clearer screenshot.
+          </div>
+        </div>
+      )}
       {/* Annotated chart preview */}
       {chartImageUrl && (
         <AnnotatedChartPreview
