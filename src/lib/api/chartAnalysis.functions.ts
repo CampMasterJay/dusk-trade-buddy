@@ -74,7 +74,7 @@ export const analyzeChart = createServerFn({ method: "POST" })
       singleShape.slice(1);
 
     const systemBase =
-      "You are a professional futures day trader and technical analysis expert. setupDetected is the named setup in TITLE CASE (e.g. \"Opening Range Breakout\"). setupQuality is an integer 1-5. confluenceFactors lists reasons to take the trade; riskFactors lists reasons for caution. Keep arrays short (max 5). No markdown, no commentary outside JSON.";
+      "You are a professional futures and options day trader with 15 years of experience analyzing price action, volume, and market structure. You specialize in Opening Range Breakout (ORB), VWAP-based setups, trend continuation, and mean reversion strategies on micro futures (MES, MNQ, MBT) and index options (SPY, QQQ, SPX).\n\nWhen analyzing a chart image, you examine:\n- Overall trend direction and market structure\n- Key support and resistance levels\n- VWAP position and relationship to price\n- Volume patterns and anomalies\n- Candlestick patterns and price action signals\n- Opening range if visible (first 15-minute candle)\n- Distance from key moving averages if visible\n\nYou return ONLY a valid JSON object with zero markdown, zero explanation text, zero code fences. Raw JSON only. If you cannot analyze the chart clearly, return JSON with null values and a reason in the summary field.";
 
     const systemMulti =
       systemBase +
@@ -83,12 +83,10 @@ export const analyzeChart = createServerFn({ method: "POST" })
       '. In mtfAlignment: "aligned" is how many frames agree directionally (count out of total provided), "total" is the number of frames provided, "verdict" is one short sentence (e.g. "Full alignment — strongest setup type"), and htfTrend/mtfStructure/ltfSignal are short labels like "Bullish", "At Support", "Breakout forming".' +
       optionsInstruction;
 
-    const systemSingle =
-      systemBase +
-      " Analyze the chart screenshot and respond ONLY with compact JSON matching this shape: " +
-      singleShape +
-      "." +
-      optionsInstruction;
+    const systemSingle = systemBase + optionsInstruction;
+
+    const singleUserPrompt =
+      "Analyze this trading chart in detail. Examine the price action, structure, key levels, and any visible indicators. Return this exact JSON:\n{\n  instrument: string or null,\n  timeframe: string or null,\n  currentPrice: number or null,\n  trend: 'Strong Uptrend' | 'Uptrend' | 'Ranging' | 'Downtrend' | 'Strong Downtrend' | null,\n  marketStructure: string,\n  vwapPosition: 'Above VWAP' | 'Below VWAP' | 'At VWAP' | 'VWAP not visible' | null,\n  keySupport: number[],\n  keyResistance: number[],\n  setupDetected: string,\n  setupQuality: 1 | 2 | 3 | 4 | 5,\n  setupQualityReason: string,\n  biasDirection: 'Long' | 'Short' | 'Neutral',\n  suggestedEntry: number or null,\n  suggestedStop: number or null,\n  suggestedTarget: number or null,\n  rrRatio: number or null,\n  riskRewardJustification: string,\n  confluenceFactors: string[],\n  riskFactors: string[],\n  optionsPlay: string or null,\n  keyLevelToWatch: number or null,\n  summary: string\n}";
 
     const userContent: Array<
       { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
@@ -113,7 +111,7 @@ export const analyzeChart = createServerFn({ method: "POST" })
     } else {
       userContent.push({
         type: "text",
-        text: noteText + "Analyze this chart and return the JSON.",
+        text: noteText + singleUserPrompt,
       });
       userContent.push({ type: "image_url", image_url: { url: frames[0].imageDataUrl } });
     }
