@@ -148,6 +148,9 @@ export function OptionsQuickLogFab({ onLogged }: { onLogged: () => void }) {
     reset();
     setOpen(false);
     onLogged();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("edgetrader:refresh"));
+    }
   };
 
   return (
