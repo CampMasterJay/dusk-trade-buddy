@@ -808,6 +808,8 @@ function AnalysisView({
   saving,
   onBuildOptionsTrade,
   onBuildPlay,
+  analyzedAt,
+  onReanalyze,
 }: {
   a: Analysis;
   balance?: number;
@@ -821,6 +823,8 @@ function AnalysisView({
   saving?: boolean;
   onBuildOptionsTrade?: () => void;
   onBuildPlay?: () => void;
+  analyzedAt?: number | null;
+  onReanalyze?: () => void;
 }) {
   const _balance = balance ?? 0;
   const _riskPct = riskPct ?? 0;
@@ -856,6 +860,13 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* Confidence + timestamp header */}
+      <AnalysisHeader
+        quality={quality}
+        analyzedAt={analyzedAt ?? null}
+        onReanalyze={onReanalyze}
+      />
+
       {missingFields.length > 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-500">
           <div className="font-data uppercase tracking-wider text-[10px] mb-1">
