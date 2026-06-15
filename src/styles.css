@@ -192,13 +192,6 @@
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
   }
-
-  /* Ensure tap targets are never smaller than 44×44px */
-  button, a, [role="button"], input, select, textarea, label,
-  .min-tap-target, [class*="min-tap-target"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
 }
 
 /* Shimmer animation for skeleton loaders */
