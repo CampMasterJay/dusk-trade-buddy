@@ -1168,6 +1168,114 @@ function QualityStars({ q }: { q: number | null | undefined }) {
   );
 }
 
+function AnalysisHeader({
+  quality,
+  analyzedAt,
+  onReanalyze,
+}: {
+  quality: number;
+  analyzedAt: number | null;
+  onReanalyze?: () => void;
+}) {
+  const tier =
+    quality >= 4
+      ? {
+          label: "HIGH CONFIDENCE",
+          cls: "border-trade-green/40 bg-trade-green/10 text-trade-green",
+        }
+      : quality === 3
+        ? {
+            label: "MODERATE",
+            cls: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+          }
+        : {
+            label: "LOW CONFIDENCE — consider skipping",
+            cls: "border-trade-red/40 bg-trade-red/10 text-trade-red",
+          };
+
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!analyzedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [analyzedAt]);
+
+  const ageMin = analyzedAt ? Math.floor((now - analyzedAt) / 60_000) : 0;
+  const stale = ageMin >= 15;
+  const timeStr = analyzedAt
+    ? new Date(analyzedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <div className="space-y-2">
+      <div
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-data font-bold uppercase tracking-[2px] ${tier.cls}`}
+      >
+        <Sparkles className="h-3 w-3" />
+        {tier.label}
+      </div>
+      {timeStr && (
+        <div
+          className={`flex flex-wrap items-center gap-2 text-[11px] font-data ${
+            stale ? "text-amber-500" : "text-muted-foreground"
+          }`}
+        >
+          <Clock className="h-3 w-3" />
+          <span>
+            Analysis generated at {timeStr}
+            {stale
+              ? " — re-analyze if more than 15 minutes have passed"
+              : ageMin > 0
+                ? ` · ${ageMin}m ago`
+                : ""}
+          </span>
+          {stale && onReanalyze && (
+            <button
+              type="button"
+              onClick={onReanalyze}
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-500 hover:bg-amber-500/20"
+            >
+              <Sparkles className="h-3 w-3" />
+              Re-analyze
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExplainTip({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`What does "${label}" mean?`}
+        aria-expanded={open}
+        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute left-1/2 top-full z-20 mt-1 w-56 -translate-x-1/2 rounded-md border border-border bg-popover p-2 text-[11px] leading-snug text-popover-foreground shadow-lg"
+        >
+          <span className="block font-data uppercase tracking-wider text-[9px] text-muted-foreground mb-0.5">
+            What this means
+          </span>
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function HistoryView(props: {
   items: SavedAnalysis[];
   loading: boolean;
