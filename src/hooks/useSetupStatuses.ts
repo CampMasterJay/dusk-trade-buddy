@@ -23,6 +23,7 @@ export function useSetupStatuses() {
   const { user } = useAuth();
   const [rows, setRows] = useState<SetupStatusRow[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const reload = useCallback(async () => {
     if (!user) {
@@ -30,19 +31,27 @@ export function useSetupStatuses() {
       setLoaded(true);
       return;
     }
-    const { data } = await supabase
-      .from("setup_status")
-      .select("*")
-      .eq("user_id", user.id);
-    setRows((data ?? []) as SetupStatusRow[]);
-    setLoaded(true);
+    setLoaded(false);
+    setError(null);
+    try {
+      const { data, error: e } = await supabase
+        .from("setup_status")
+        .select("*")
+        .eq("user_id", user.id);
+      if (e) throw e;
+      setRows((data ?? []) as SetupStatusRow[]);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoaded(true);
+    }
   }, [user?.id]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
-  return { rows, loaded, reload };
+  return { rows, loaded, error, reload };
 }
 
 export function statusFor(rows: SetupStatusRow[], tag: string): SetupStatusRow | undefined {
