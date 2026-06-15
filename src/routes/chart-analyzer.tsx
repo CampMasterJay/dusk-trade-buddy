@@ -545,13 +545,26 @@ function ChartAnalyzer() {
               riskPct={Number(settings?.risk_pct ?? 0)}
               minRr={Number(settings?.rr_ratio ?? 1.5)}
               session={settings?.session ?? null}
-                chartImageUrl={firstFrame?.image.dataUrl ?? null}
+                chartImageUrl={firstFrame?.image.dataUrl ?? cachedChartUrl ?? null}
+              analyzedAt={analysisAt}
+              onReanalyze={canAnalyze ? () => void runAnalysis() : undefined}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
                   .toLowerCase();
                 const direction =
                   dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+                const bal = Number(settings?.current_balance ?? settings?.starting_balance ?? 0);
+                const rp = Number(settings?.risk_pct ?? 0);
+                const entryN = toNum(analysis.setupIdea?.entry);
+                const stopN = toNum(analysis.setupIdea?.stop);
+                const riskPerUnit =
+                  entryN != null && stopN != null ? Math.abs(entryN - stopN) : 0;
+                const riskDollars = bal > 0 && rp > 0 ? (bal * rp) / 100 : 0;
+                const positionSize =
+                  riskPerUnit > 0 && riskDollars > 0
+                    ? Math.max(1, Math.floor(riskDollars / riskPerUnit))
+                    : undefined;
                 sessionStorage.setItem(
                   "pendingTradePrefill",
                   JSON.stringify({
@@ -560,6 +573,8 @@ function ChartAnalyzer() {
                     target: analysis.setupIdea?.target ?? "",
                     direction,
                     instrument: analysis.instrument ?? undefined,
+                    positionSize,
+                    riskDollars: riskDollars > 0 ? riskDollars : undefined,
                   }),
                 );
                 void navigate({ to: "/trade-log" });
