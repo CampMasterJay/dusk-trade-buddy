@@ -663,7 +663,7 @@ function NextTradeCard({
           </span>
         </div>
       )}
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-3 grid grid-cols-2 gap-3 stagger-children">
         <Tile
           label={vixActive ? "Risk (VIX-adj)" : "Risk"}
           value={fmtUSD(effectiveRisk)}
