@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, Loader2 } from "lucide-react";
+import { Activity, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -7,6 +6,9 @@ import {
   type PortfolioGreeks,
 } from "@/lib/portfolioGreeks";
 import { cn } from "@/lib/utils";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { StatsTileSkeleton } from "@/components/ui/SkeletonVariants";
+import { ErrorCard } from "@/components/ui/ErrorCard";
 
 function fmt$(n: number): string {
   const sign = n >= 0 ? "+" : "-";
@@ -15,30 +17,22 @@ function fmt$(n: number): string {
 
 export function OptionsSummaryCard() {
   const { user } = useAuth();
-  const [greeks, setGreeks] = useState<PortfolioGreeks | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: greeks, loading, error, refresh } = useAsyncData<PortfolioGreeks>(
+    () => fetchOpenOptionsGreeks(user!.id),
+    [user?.id],
+    { enabled: !!user?.id },
+  );
 
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    setLoading(true);
-    fetchOpenOptionsGreeks(user.id)
-      .then((g) => !cancelled && setGreeks(g))
-      .catch(() => !cancelled && setGreeks(null))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
-
-  if (loading) {
+  if (loading) return <StatsTileSkeleton tiles={4} label />;
+  if (error) {
     return (
-      <Card className="p-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading options portfolio…
-      </Card>
+      <ErrorCard
+        title="Couldn't load options portfolio"
+        message={error.message}
+        onRetry={refresh}
+      />
     );
   }
-
   if (!greeks || greeks.positions === 0) return null;
 
   const biasColor =
