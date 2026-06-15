@@ -119,7 +119,7 @@ export function BottomNav() {
               to={item.to}
               data-tour={`nav-${item.to}`}
               onClick={() => setOpen(false)}
-              className="relative flex flex-col items-center justify-center gap-0.5 w-full py-2 transition-colors duration-200"
+              className="relative flex flex-col items-center justify-center gap-0.5 w-full min-h-[44px] py-2 transition-colors duration-200 select-none tap-highlight-transparent"
             >
               <span
                 className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full ${activeBar} transition-all duration-300 ease-out ${
@@ -153,7 +153,7 @@ export function BottomNav() {
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Collapse navigation"
-          className="mt-auto mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="mt-auto mb-2 inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>

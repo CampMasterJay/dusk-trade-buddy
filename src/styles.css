@@ -148,6 +148,56 @@
   .font-heading {
     font-family: "Sora", sans-serif;
   }
+
+  /* ===== Android native feel ===== */
+
+  /* 1. Remove tap flash on all interactive elements */
+  button, a, [role="button"], input, select, textarea, label, summary,
+  [class*="cursor-pointer"], [class*="tap-highlight-transparent"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 2. Remove 300ms tap delay on buttons & links */
+  button, a, [role="button"], input[type="submit"], input[type="button"],
+  .cursor-pointer, [class*="cursor-pointer"] {
+    touch-action: manipulation;
+  }
+
+  /* 6. Active press states (scale 0.97, 80ms) — exclude text inputs/textarea */
+  button:active, [role="button"]:active, a:active, summary:active,
+  .cursor-pointer:active, [class*="cursor-pointer"]:active {
+    transform: scale(0.97);
+    transition: transform 80ms ease;
+  }
+
+  input:active, textarea:active, select:active {
+    transform: none;
+  }
+
+  /* 5. Remove text selection on UI chrome */
+  button, [role="button"], label, [role="tab"], [role="listitem"], summary,
+  .no-select, [class*="no-select"] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Keep form inputs/selectable */
+  input, textarea, select, [contenteditable] {
+    user-select: auto;
+    -webkit-user-select: auto;
+  }
+
+  /* 4. Overscroll-behavior: contain on all scrollable lists (prevents page bounce) */
+  [class*="overflow-y-auto"], [class*="overflow-x-auto"], [class*="overflow-auto"] {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Utility for explicit opt-in */
+  .overscroll-contain {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Shimmer animation for skeleton loaders */
