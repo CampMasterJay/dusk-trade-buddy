@@ -153,7 +153,7 @@ export function BottomNav() {
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Collapse navigation"
-          className="mt-auto mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="mt-auto mb-2 inline-flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
