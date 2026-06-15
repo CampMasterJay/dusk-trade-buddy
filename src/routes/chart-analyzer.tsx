@@ -264,17 +264,33 @@ function ChartAnalyzer() {
         );
       }
       if (!res.ok) {
+        console.log(
+          `[chartAnalyzer ${new Date().toISOString()}] analyze FAIL`,
+          res.error,
+        );
         setError(res.error);
         const { announce } = await import("@/hooks/useAnnouncer");
         announce(`Analysis failed. ${res.error}`, { assertive: true });
       } else {
         const a = (res.analysis as Analysis) ?? null;
+        console.log(
+          `[chartAnalyzer ${new Date().toISOString()}] analyze OK`,
+          {
+            tokensUsed: (res as { tokensUsed?: number | null }).tokensUsed ?? null,
+            durationMs: (res as { durationMs?: number }).durationMs ?? null,
+            keys: a ? Object.keys(a) : [],
+          },
+        );
         setAnalysis(a);
         setRaw(res.raw ?? null);
         const { announce } = await import("@/hooks/useAnnouncer");
         announce("Chart analysis complete.");
       }
     } catch (e) {
+      console.log(
+        `[chartAnalyzer ${new Date().toISOString()}] analyze EXCEPTION`,
+        e,
+      );
       setError(e instanceof Error ? e.message : "Analysis failed.");
     } finally {
       setLoading(false);
@@ -441,9 +457,24 @@ function ChartAnalyzer() {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 rounded-lg border border-trade-red/40 bg-trade-red/5 p-3 text-sm text-trade-red">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
+            <div className="rounded-lg border border-trade-red/40 bg-trade-red/5 p-3 text-sm text-trade-red">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+              {filledSlots.length > 0 && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void runAnalysis()}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-trade-red/40 bg-trade-red/10 px-3 py-1.5 text-xs font-bold font-data uppercase tracking-wider text-trade-red hover:bg-trade-red/20 disabled:opacity-50"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {loading ? "Retrying…" : "Retry analysis"}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
