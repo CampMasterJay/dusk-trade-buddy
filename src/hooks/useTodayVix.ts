@@ -5,10 +5,18 @@ import { useAuth } from "@/components/AuthProvider";
 /**
  * Reads the user's `vix` value from today's daily_game_plan (America/Chicago day).
  */
-export function useTodayVix(): { vix: number | null; loading: boolean } {
+export function useTodayVix(): {
+  vix: number | null;
+  loading: boolean;
+  error: Error | null;
+  refresh: () => void;
+} {
   const { user } = useAuth();
   const [vix, setVix] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [tick, setTick] = useState(0);
+  const refresh = () => setTick((t) => t + 1);
 
   useEffect(() => {
     if (!user) {
@@ -17,28 +25,36 @@ export function useTodayVix(): { vix: number | null; loading: boolean } {
       return;
     }
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     const ctToday = new Date().toLocaleDateString("en-CA", {
       timeZone: "America/Chicago",
     });
     (async () => {
-      const { data } = await supabase
-        .from("daily_game_plans")
-        .select("vix")
-        .eq("user_id", user.id)
-        .eq("plan_date", ctToday)
-        .maybeSingle();
-      if (cancelled) return;
-      const v =
-        data && data.vix != null && Number.isFinite(Number(data.vix))
-          ? Number(data.vix)
-          : null;
-      setVix(v);
-      setLoading(false);
+      try {
+        const { data, error: e } = await supabase
+          .from("daily_game_plans")
+          .select("vix")
+          .eq("user_id", user.id)
+          .eq("plan_date", ctToday)
+          .maybeSingle();
+        if (cancelled) return;
+        if (e) throw e;
+        const v =
+          data && data.vix != null && Number.isFinite(Number(data.vix))
+            ? Number(data.vix)
+            : null;
+        setVix(v);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [user?.id, tick]);
 
-  return { vix, loading };
+  return { vix, loading, error, refresh };
 }
