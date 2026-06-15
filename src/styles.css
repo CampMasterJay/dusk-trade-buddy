@@ -187,7 +187,13 @@
     -webkit-user-select: auto;
   }
 
-  /* 4. Overscroll-behavior utility for scrollable lists */
+  /* 4. Overscroll-behavior: contain on all scrollable lists (prevents page bounce) */
+  [class*="overflow-y-auto"], [class*="overflow-x-auto"], [class*="overflow-auto"] {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Utility for explicit opt-in */
   .overscroll-contain {
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
