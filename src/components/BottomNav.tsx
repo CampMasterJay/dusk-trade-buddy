@@ -119,7 +119,7 @@ export function BottomNav() {
               to={item.to}
               data-tour={`nav-${item.to}`}
               onClick={() => setOpen(false)}
-              className="relative flex flex-col items-center justify-center gap-0.5 w-full py-2 transition-colors duration-200"
+              className="relative flex flex-col items-center justify-center gap-0.5 w-full min-h-[44px] py-2 transition-colors duration-200 select-none tap-highlight-transparent"
             >
               <span
                 className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 w-0.5 rounded-full ${activeBar} transition-all duration-300 ease-out ${
