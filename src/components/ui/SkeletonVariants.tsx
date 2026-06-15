@@ -8,7 +8,7 @@ export function StatsTileSkeleton({
   className,
 }: {
   tiles?: number;
-  label?: string;
+  label?: boolean | string;
   className?: string;
 }) {
   return (
