@@ -274,7 +274,7 @@ function RootComponent() {
               className="md:!pl-0 transition-[padding] duration-300 ease-out"
               style={{ paddingLeft: "var(--sidenav-w, 4rem)" }}
             >
-              <div key={pathname} className="animate-route-slide">
+              <div key={pathname} className="animate-route-fade">
                 <ErrorBoundary screen={pathname}>
                   <Outlet />
                 </ErrorBoundary>

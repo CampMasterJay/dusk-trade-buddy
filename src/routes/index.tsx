@@ -43,6 +43,7 @@ import {
 } from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useCountUp } from "@/hooks/useCountUp";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { adjustRiskPct } from "@/lib/vixRisk";
@@ -468,6 +469,8 @@ function ChallengeCard({
   daysRemaining: number;
   dailyGainNeeded: number;
 }) {
+  // Animate balance changes — 600ms count-up that respects reduced-motion.
+  const animatedBalance = useCountUp(currentBalance, 600);
   return (
     <section
       data-tour="dashboard-balance"
@@ -489,7 +492,7 @@ function ChallengeCard({
         className="mt-2 font-data text-4xl font-bold tracking-tight text-trade-green sm:text-5xl"
         style={{ textShadow: "0 0 18px rgba(0, 255, 170, 0.55)" }}
       >
-        {fmtUSD(currentBalance)}
+        {fmtUSD(animatedBalance)}
       </div>
 
       <div className="mt-5">
@@ -509,7 +512,7 @@ function ChallengeCard({
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3 stagger-children">
         <MiniStat label="Days Remaining" value={String(daysRemaining)} />
         <MiniStat
           label="% / day needed"
@@ -660,7 +663,7 @@ function NextTradeCard({
           </span>
         </div>
       )}
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-3 grid grid-cols-2 gap-3 stagger-children">
         <Tile
           label={vixActive ? "Risk (VIX-adj)" : "Risk"}
           value={fmtUSD(effectiveRisk)}
