@@ -914,6 +914,16 @@ function AnalysisView({
             <span className="ml-1.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
               Quality {quality}/5
             </span>
+            <ExplainTip
+              label={`Setup Quality ${quality}/5`}
+              text={
+                quality >= 4
+                  ? `Strong setup — ${quality} out of 5 conditions met. The AI sees high-quality alignment.`
+                  : quality === 3
+                    ? `Moderate setup — ${quality} out of 5 conditions met. Some confluence but not ideal.`
+                    : `Weak setup — only ${quality || 0} out of 5 conditions met. Consider skipping.`
+              }
+            />
           </div>
           <TrendBadge trend={a.trend} />
           {a.instrument && (
