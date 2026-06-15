@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Brain, Layers, Shield, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { useCountUp } from "@/hooks/useCountUp";
 import { HighImpactAlertCard } from "@/components/HighImpactAlertCard";
 import { OptionsDashboardSection } from "@/components/OptionsDashboardSection";
 import { OptionsSummaryCard } from "@/components/OptionsSummaryCard";
