@@ -490,6 +490,9 @@ export function OptionsTradeSheet({ onLogged, trigger }: Props) {
       toast.success(`Logged ${contracts}x ${strategy.type} on ${payload.underlying}`);
       setOpen(false);
       onLogged?.();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("edgetrader:refresh"));
+      }
       // Reset
       setStrategy(null);
       setLegs([emptyLeg()]);
