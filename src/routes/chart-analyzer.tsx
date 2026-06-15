@@ -1123,7 +1123,7 @@ function AnalysisView({
           onClick={onUseLevels}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-trade-green px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background hover:bg-trade-green/90 transition-colors"
         >
-          Use These Levels
+          Trade This Setup
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
