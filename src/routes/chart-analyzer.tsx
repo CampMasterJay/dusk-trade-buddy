@@ -30,6 +30,8 @@ import {
   EyeOff,
   BookOpen,
   Lightbulb,
+  Info,
+  Clock,
 } from "lucide-react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppHeader } from "@/components/AppHeader";
@@ -135,6 +137,8 @@ function ChartAnalyzer() {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [raw, setRaw] = useState<string | null>(null);
+  const [analysisAt, setAnalysisAt] = useState<number | null>(null);
+  const [cachedChartUrl, setCachedChartUrl] = useState<string | null>(null);
   const analyze = useServerFn(analyzeChart);
   const { user } = useAuth();
   const { settings } = useUserSettings();
@@ -206,6 +210,28 @@ function ChartAnalyzer() {
   const firstFrame = frames.HTF ?? frames.MTF ?? frames.LTF;
   const filledSlots = (["HTF", "MTF", "LTF"] as const).filter((s) => frames[s]);
   const canAnalyze = filledSlots.length > 0 && !loading;
+
+  // Restore last analysis from localStorage on mount.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("chartAnalyzer:last");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        analysis?: Analysis | null;
+        raw?: string | null;
+        timestamp?: number;
+        chartImageUrl?: string | null;
+      };
+      if (parsed?.analysis) {
+        setAnalysis(parsed.analysis);
+        setRaw(parsed.raw ?? null);
+        setAnalysisAt(parsed.timestamp ?? null);
+        setCachedChartUrl(parsed.chartImageUrl ?? null);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function handleSlotFile(slot: Slot, file: File, timeframe: string) {
     setError(null);
@@ -283,6 +309,23 @@ function ChartAnalyzer() {
         );
         setAnalysis(a);
         setRaw(res.raw ?? null);
+        const ts = Date.now();
+        setAnalysisAt(ts);
+        const chartUrl = firstFrame?.image.dataUrl ?? null;
+        setCachedChartUrl(chartUrl);
+        try {
+          localStorage.setItem(
+            "chartAnalyzer:last",
+            JSON.stringify({
+              analysis: a,
+              raw: res.raw ?? null,
+              timestamp: ts,
+              chartImageUrl: chartUrl,
+            }),
+          );
+        } catch {
+          /* quota — ignore */
+        }
         const { announce } = await import("@/hooks/useAnnouncer");
         announce("Chart analysis complete.");
       }
@@ -303,6 +346,13 @@ function ChartAnalyzer() {
     setError(null);
     setRaw(null);
     setSavedId(null);
+    setAnalysisAt(null);
+    setCachedChartUrl(null);
+    try {
+      localStorage.removeItem("chartAnalyzer:last");
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
@@ -495,13 +545,26 @@ function ChartAnalyzer() {
               riskPct={Number(settings?.risk_pct ?? 0)}
               minRr={Number(settings?.rr_ratio ?? 1.5)}
               session={settings?.session ?? null}
-                chartImageUrl={firstFrame?.image.dataUrl ?? null}
+                chartImageUrl={firstFrame?.image.dataUrl ?? cachedChartUrl ?? null}
+              analyzedAt={analysisAt}
+              onReanalyze={canAnalyze ? () => void runAnalysis() : undefined}
               onUseLevels={() => {
                 const dir = (analysis.biasDirection ?? analysis.setupIdea?.direction ?? "")
                   .toString()
                   .toLowerCase();
                 const direction =
                   dir === "long" ? "Long" : dir === "short" ? "Short" : undefined;
+                const bal = Number(settings?.current_balance ?? settings?.starting_balance ?? 0);
+                const rp = Number(settings?.risk_pct ?? 0);
+                const entryN = toNum(analysis.setupIdea?.entry);
+                const stopN = toNum(analysis.setupIdea?.stop);
+                const riskPerUnit =
+                  entryN != null && stopN != null ? Math.abs(entryN - stopN) : 0;
+                const riskDollars = bal > 0 && rp > 0 ? (bal * rp) / 100 : 0;
+                const positionSize =
+                  riskPerUnit > 0 && riskDollars > 0
+                    ? Math.max(1, Math.floor(riskDollars / riskPerUnit))
+                    : undefined;
                 sessionStorage.setItem(
                   "pendingTradePrefill",
                   JSON.stringify({
@@ -510,6 +573,8 @@ function ChartAnalyzer() {
                     target: analysis.setupIdea?.target ?? "",
                     direction,
                     instrument: analysis.instrument ?? undefined,
+                    positionSize,
+                    riskDollars: riskDollars > 0 ? riskDollars : undefined,
                   }),
                 );
                 void navigate({ to: "/trade-log" });
@@ -743,6 +808,8 @@ function AnalysisView({
   saving,
   onBuildOptionsTrade,
   onBuildPlay,
+  analyzedAt,
+  onReanalyze,
 }: {
   a: Analysis;
   balance?: number;
@@ -756,6 +823,8 @@ function AnalysisView({
   saving?: boolean;
   onBuildOptionsTrade?: () => void;
   onBuildPlay?: () => void;
+  analyzedAt?: number | null;
+  onReanalyze?: () => void;
 }) {
   const _balance = balance ?? 0;
   const _riskPct = riskPct ?? 0;
@@ -791,6 +860,13 @@ function AnalysisView({
 
   return (
     <div className="space-y-5">
+      {/* Confidence + timestamp header */}
+      <AnalysisHeader
+        quality={quality}
+        analyzedAt={analyzedAt ?? null}
+        onReanalyze={onReanalyze}
+      />
+
       {missingFields.length > 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-500">
           <div className="font-data uppercase tracking-wider text-[10px] mb-1">
@@ -838,6 +914,16 @@ function AnalysisView({
             <span className="ml-1.5 text-[10px] font-data uppercase tracking-wider text-muted-foreground">
               Quality {quality}/5
             </span>
+            <ExplainTip
+              label={`Setup Quality ${quality}/5`}
+              text={
+                quality >= 4
+                  ? `Strong setup — ${quality} out of 5 conditions met. The AI sees high-quality alignment.`
+                  : quality === 3
+                    ? `Moderate setup — ${quality} out of 5 conditions met. Some confluence but not ideal.`
+                    : `Weak setup — only ${quality || 0} out of 5 conditions met. Consider skipping.`
+              }
+            />
           </div>
           <TrendBadge trend={a.trend} />
           {a.instrument && (
@@ -1037,7 +1123,7 @@ function AnalysisView({
           onClick={onUseLevels}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-trade-green px-4 py-3 text-sm font-bold font-data uppercase tracking-wider text-background hover:bg-trade-green/90 transition-colors"
         >
-          Use These Levels
+          Trade This Setup
           <ArrowRight className="h-4 w-4" />
         </button>
         <button
@@ -1079,6 +1165,114 @@ function QualityStars({ q }: { q: number | null | undefined }) {
         />
       ))}
     </div>
+  );
+}
+
+function AnalysisHeader({
+  quality,
+  analyzedAt,
+  onReanalyze,
+}: {
+  quality: number;
+  analyzedAt: number | null;
+  onReanalyze?: () => void;
+}) {
+  const tier =
+    quality >= 4
+      ? {
+          label: "HIGH CONFIDENCE",
+          cls: "border-trade-green/40 bg-trade-green/10 text-trade-green",
+        }
+      : quality === 3
+        ? {
+            label: "MODERATE",
+            cls: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+          }
+        : {
+            label: "LOW CONFIDENCE — consider skipping",
+            cls: "border-trade-red/40 bg-trade-red/10 text-trade-red",
+          };
+
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (!analyzedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [analyzedAt]);
+
+  const ageMin = analyzedAt ? Math.floor((now - analyzedAt) / 60_000) : 0;
+  const stale = ageMin >= 15;
+  const timeStr = analyzedAt
+    ? new Date(analyzedAt).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  return (
+    <div className="space-y-2">
+      <div
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-data font-bold uppercase tracking-[2px] ${tier.cls}`}
+      >
+        <Sparkles className="h-3 w-3" />
+        {tier.label}
+      </div>
+      {timeStr && (
+        <div
+          className={`flex flex-wrap items-center gap-2 text-[11px] font-data ${
+            stale ? "text-amber-500" : "text-muted-foreground"
+          }`}
+        >
+          <Clock className="h-3 w-3" />
+          <span>
+            Analysis generated at {timeStr}
+            {stale
+              ? " — re-analyze if more than 15 minutes have passed"
+              : ageMin > 0
+                ? ` · ${ageMin}m ago`
+                : ""}
+          </span>
+          {stale && onReanalyze && (
+            <button
+              type="button"
+              onClick={onReanalyze}
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-500 hover:bg-amber-500/20"
+            >
+              <Sparkles className="h-3 w-3" />
+              Re-analyze
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExplainTip({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`What does "${label}" mean?`}
+        aria-expanded={open}
+        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute left-1/2 top-full z-20 mt-1 w-56 -translate-x-1/2 rounded-md border border-border bg-popover p-2 text-[11px] leading-snug text-popover-foreground shadow-lg"
+        >
+          <span className="block font-data uppercase tracking-wider text-[9px] text-muted-foreground mb-0.5">
+            What this means
+          </span>
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
 
