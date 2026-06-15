@@ -133,7 +133,7 @@ export const analyzeChart = createServerFn({ method: "POST" })
                 { role: "user", content: userContent },
               ],
             }),
-            timeoutMs: 15_000,
+            timeoutMs: 20_000,
             label: "Chart analysis",
           }),
         {
@@ -150,6 +150,10 @@ export const analyzeChart = createServerFn({ method: "POST" })
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
+        console.log(
+          `[chartAnalysis ${new Date().toISOString()}] FAIL status=${res.status}`,
+          txt.slice(0, 500),
+        );
         if (res.status === 429)
           return { ok: false as const, error: "AI is rate-limited. Try again in a moment." };
         if (res.status === 402)
@@ -164,6 +168,9 @@ export const analyzeChart = createServerFn({ method: "POST" })
       const tokensUsed = json.usage?.total_tokens ?? null;
       const durationMs = Date.now() - aiStart;
       const raw = json.choices?.[0]?.message?.content?.trim() ?? "";
+      console.log(
+        `[chartAnalysis ${new Date().toISOString()}] OK tokens=${tokensUsed} duration=${durationMs}ms rawLen=${raw.length}`,
+      );
       const cleaned = raw
         .replace(/^```(?:json)?/i, "")
         .replace(/```$/i, "")
@@ -172,10 +179,12 @@ export const analyzeChart = createServerFn({ method: "POST" })
       try {
         parsed = JSON.parse(cleaned);
       } catch {
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
+        // Extract first { to last } as a fallback.
+        const first = cleaned.indexOf("{");
+        const last = cleaned.lastIndexOf("}");
+        if (first !== -1 && last > first) {
           try {
-            parsed = JSON.parse(match[0]);
+            parsed = JSON.parse(cleaned.slice(first, last + 1));
           } catch {
             parsed = null;
           }
@@ -183,9 +192,13 @@ export const analyzeChart = createServerFn({ method: "POST" })
       }
 
       if (!parsed || typeof parsed !== "object") {
+        console.log(
+          `[chartAnalysis ${new Date().toISOString()}] PARSE_FAIL raw="${raw.slice(0, 300)}"`,
+        );
         return {
           ok: false as const,
-          error: "Analysis unavailable — try a clearer screenshot.",
+          error:
+            "Analysis returned an unexpected format. Please try uploading a clearer chart screenshot.",
           tokensUsed,
           durationMs,
         };
@@ -193,11 +206,19 @@ export const analyzeChart = createServerFn({ method: "POST" })
       return { ok: true as const, analysis: parsed, raw: cleaned, tokensUsed, durationMs };
     } catch (err) {
       if (err instanceof TimeoutError) {
+        console.log(
+          `[chartAnalysis ${new Date().toISOString()}] TIMEOUT after 20s`,
+        );
         return {
           ok: false as const,
-          error: "Analysis took too long (>15s). Check your connection and try again.",
+          error:
+            "Analysis is taking too long. The chart may be too complex — try a simpler view.",
         };
       }
+      console.log(
+        `[chartAnalysis ${new Date().toISOString()}] ERROR`,
+        err instanceof Error ? err.message : err,
+      );
       return {
         ok: false as const,
         error: `Analysis error: ${err instanceof Error ? err.message : "unknown"}`,
