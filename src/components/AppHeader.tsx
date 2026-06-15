@@ -9,7 +9,9 @@ export interface AppHeaderProps {
 }
 
 export function AppHeader({ balance }: AppHeaderProps) {
-  const animated = useCountUp(balance, 280);
+  // 600ms balance count-up — long enough to feel rewarding,
+  // short enough not to delay reading the value.
+  const animated = useCountUp(balance, 600);
   const formattedBalance = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
