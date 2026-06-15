@@ -556,7 +556,7 @@ function TradeLogScreen() {
             onRestore={(t) => setTrades((prev) => [t, ...prev])}
           />
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2 stagger-trades">
             {filteredSorted.map((t) => (
               <TradeCard
                 key={t.id}
