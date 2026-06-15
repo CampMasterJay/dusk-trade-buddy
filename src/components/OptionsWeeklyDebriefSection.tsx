@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
-import { Layers, Loader2 } from "lucide-react";
+import { Layers } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { StatsTileSkeleton } from "@/components/ui/SkeletonVariants";
+import { ErrorCard } from "@/components/ui/ErrorCard";
 
 type Row = {
   net_pnl: number | null;
@@ -29,38 +31,36 @@ export function OptionsWeeklyDebriefSection({
   weekEnd: string;
 }) {
   const { user } = useAuth();
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    setLoading(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
-      .from("options_trades")
-      .select("net_pnl, entry_theta, leg1_contracts, is_debit, strategy_type, status")
-      .eq("user_id", user.id)
-      .gte("trade_date", weekStart)
-      .lte("trade_date", weekEnd)
-      .eq("status", "Closed")
-      .is("deleted_at", null)
-      .then(({ data }: { data: Row[] | null }) => {
-        if (!cancelled) {
-          setRows(data ?? []);
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, weekStart, weekEnd]);
+  const { data: rows, loading, error, refresh } = useAsyncData<Row[]>(
+    async () => {
+      if (!user?.id) return [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: e } = await (supabase as any)
+        .from("options_trades")
+        .select("net_pnl, entry_theta, leg1_contracts, is_debit, strategy_type, status")
+        .eq("user_id", user.id)
+        .gte("trade_date", weekStart)
+        .lte("trade_date", weekEnd)
+        .eq("status", "Closed")
+        .is("deleted_at", null);
+      if (e) throw e;
+      return (data ?? []) as Row[];
+    },
+    [user?.id, weekStart, weekEnd],
+    { enabled: !!user?.id },
+  );
 
   if (loading) {
+    return <StatsTileSkeleton tiles={4} label />;
+  }
+
+  if (error) {
     return (
-      <section className="rounded-xl border border-border bg-card p-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading options summary…
-      </section>
+      <ErrorCard
+        title="Couldn't load options summary"
+        message={error.message}
+        onRetry={refresh}
+      />
     );
   }
 

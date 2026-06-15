@@ -50,6 +50,13 @@ function isOffline(): boolean {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
+/** Notify all data hooks/lists that trade-derived state may have changed. */
+function broadcastRefresh(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("edgetrader:refresh"));
+  }
+}
+
 // Materialize queued (offline) trades into Trade rows for display.
 // Marked with a `pending` flag via the id prefix ("pending-...").
 function queuedToTrades(userId: string, queue: Awaited<ReturnType<typeof getQueuedTrades>>): Trade[] {
@@ -200,6 +207,7 @@ export async function createTrade(
 ): Promise<ServiceResult<Trade>> {
   if (isDemoMode()) {
     const row = demoCreateTrade(trade as unknown as Record<string, unknown>) as unknown as Trade;
+    broadcastRefresh();
     return { data: row, error: null };
   }
   // Offline path — queue the trade and return a synthetic row so the UI
@@ -207,6 +215,7 @@ export async function createTrade(
   if (isOffline() && trade.user_id) {
     const entry = await queueTrade(trade.user_id, trade);
     const [pending] = queuedToTrades(trade.user_id, [entry]);
+    broadcastRefresh();
     return { data: pending, error: null };
   }
   try {
@@ -218,12 +227,14 @@ export async function createTrade(
 
     if (error) throw error;
     await markSynced();
+    broadcastRefresh();
     return { data, error: null };
   } catch (err) {
     // Network failure mid-request — fall back to queue.
     if (trade.user_id) {
       const entry = await queueTrade(trade.user_id, trade);
       const [pending] = queuedToTrades(trade.user_id, [entry]);
+      broadcastRefresh();
       return { data: pending, error: null };
     }
     return { data: null, error: toError(err) };
@@ -247,6 +258,7 @@ export async function updateTrade(
       .single();
 
     if (error) throw error;
+    broadcastRefresh();
     return { data, error: null };
   } catch (err) {
     return { data: null, error: toError(err) };
@@ -269,6 +281,7 @@ export async function deleteTrade(
       .single();
 
     if (error) throw error;
+    broadcastRefresh();
     return { data, error: null };
   } catch (err) {
     return { data: null, error: toError(err) };

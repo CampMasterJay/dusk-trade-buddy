@@ -1,31 +1,40 @@
 ## Goal
+Standardize loading, error, and optimistic-update behavior across every Supabase-backed surface in the app.
 
-Remove the standalone "Mode" toggle (Futures / Options / Both) inside the Chart Analyzer. Each global trading mode gets its own dedicated analyzer experience, driven automatically by the app-wide `useTradingMode()` (the logo toggle in `AppHeader`).
+## Scope (audited surfaces)
+Components/hooks that fetch from Supabase directly today:
+- Hooks: `useUserSettings`, `useSetupStatuses`, `useTodayVix`, plus equivalents in `useOptionsCalculator` consumers
+- Components: `OptionsRollingPerformance`, `OptionsSummaryCard`, `OptionsWeeklyDebriefSection`, `OptionsDashboardSection`, `OptionsTradesList`, `OptionsTradeStats`, `OptionsBehaviorAnalytics`, `OptionsRiskDashboard`, `OptionsPnLAttribution`, `OpenOptionsManager`, `CreditSpreadManager`, `DailyThetaCard`, `IvrHistoryChart`, `IvrPerformanceTracker`, `EarningsCalendarManager`, `EarningsPlayStats`, `PriceAlertsPanel`, `WatchlistManager`, `ScalingTierCard`, `ChallengeHistorySection`, `AchievementsSection`, `BehaviorAnalytics`, `StreakBehavior`, `PerformanceTrends`, `RollingPerformance`, `SetupPerformanceBreakdown`, `JournalTab`, `TradeStats`, `DrawdownTracker`, `ConsistencyStreak`, `TradeOfTheWeek`, `BenchmarksPanel`, `HighImpactAlertCard`, `ExitAnalytics`, `StopAnalytics`, `SparklineCard`, `ZeroDteModule`
+- Trade logging: `NewTradeSheet`, `OptionsTradeSheet`, `QuickLogPhotoUpload`, `OptionsQuickLogFab`
+- Routes that fetch in loaders/effects: `index.tsx`, `trade-log.tsx`, `trading-history.tsx`, `weekly-debrief.tsx`, `weekly-report.tsx`, `calendar.tsx`, `game-plan.tsx`, `setup-library.tsx`, `setup-advisor.tsx`, `playbook.tsx`, `prop-firms*`, `options-risk.tsx`, `scaling-plan.tsx`, `news*`, `settings.tsx`
 
-## Behavior
+## Approach
 
-- In **Futures mode**: analyzer runs as a futures-only analyzer. No options strategy block, no options recommendation, header reads "Futures Chart Analyzer".
-- In **Options mode**: analyzer runs as an options-only analyzer. The AI is asked for `optionsRecommendation` (primary/alternative strategy, DTE, delta, IV note, earnings warning), header reads "Options Chart Analyzer", and the strategy card is always visible.
-- Switching modes (via the existing logo toggle) re-themes the analyzer; there is no per-screen mode picker anymore.
-- Scan Mode (bulk scan) follows the same active trading mode.
-- Build Play and "Use These Levels" continue to branch on mode as they already do.
+### 1. Shared primitives
+- Reuse existing `SkeletonCard` and `Skeleton` for shimmer; add a small set of layout-matched skeletons:
+  - `StatsTileSkeleton` (4-tile grid like `OptionsWeeklyDebriefSection`)
+  - `ListRowSkeleton` (trades/setups list rows)
+  - `ChartSkeleton` (chart cards)
+  - `SummarySkeleton` (Greeks/portfolio cards)
+- Reuse existing `ErrorCard` for retry UI everywhere.
 
-## Changes
+### 2. Standard async hook
+Introduce `useAsyncData<T>(fetcher, deps)` that returns `{ data, loading, error, refresh }`. Sets `loading=true` BEFORE fetch and `false` in `finally`. Components render: `loading → Skeleton`, `error → ErrorCard onRetry={refresh}`, `data → content`.
 
-1. **`src/routes/chart-analyzer.tsx`**
-   - Delete the `ChartAnalyzerModeToggle` component and its render site (around line 345).
-   - Call `useTradingMode()` in `ChartAnalyzer`; derive `marketType = mode === "options" ? "options" : "standard"`.
-   - Pass `marketType` into the `analyze({ data: { frames, marketType } })` call so the server function returns the mode-specific shape.
-   - Update the page title/subtitle to reflect the active mode ("Futures Chart Analyzer" / "Options Chart Analyzer").
+### 3. Per-component refactor
+For each component in scope:
+- Replace ad-hoc `useState/useEffect/then/catch/finally` with `useAsyncData` (or keep local state but enforce the loading-before/after invariant and add `error`)
+- Render flow: skeleton → error → empty → content (never render content while `loading || !data`)
+- Use a layout-matched skeleton variant
 
-2. **`src/components/ScanMode.tsx`**
-   - Use `useTradingMode()` and forward `marketType` to its `analyze({ data })` call so bulk scans also match the active mode.
+### 4. Optimistic trade logging
+- `tradeService.createTrade` / options equivalent: emit an optimistic event and update local caches before the network call resolves; rollback on error with a toast.
+- In `NewTradeSheet`, `OptionsTradeSheet`, `QuickLogPhotoUpload`: close the sheet immediately on submit, show optimistic row in lists, dispatch existing `edgetrader:refresh` so `useUserSettings` recalculates. On error, revert and surface `ErrorCard`/toast.
+- Add an in-memory `optimisticTradesStore` keyed by a temp UUID; trades lists merge optimistic + server rows, replacing on confirmation.
 
-3. **`src/lib/localPrefs.ts`**
-   - Remove the now-unused `chartAnalyzerMode` field (and its default). No other code reads it after step 1.
+### 5. Verification
+- Build passes.
+- Spot-check: throttle network in preview, confirm skeletons appear, error UI shows on forced failure, optimistic row appears instantly on trade save.
 
-## Out of scope
-
-- No changes to `analyzeChart` server function — it already accepts `marketType`.
-- No DB / schema changes.
-- No changes to playbook seeding, Build Play modal, or history detail beyond what already keys off `optionsRecommendation` presence.
+## Caveats / size
+This touches 40+ files. I'll execute in waves (primitives → hooks → top-traffic components → remaining → trade logging optimistic path) and report progress. If you'd rather I scope to a subset first (e.g. dashboard + trade logging only), say which.

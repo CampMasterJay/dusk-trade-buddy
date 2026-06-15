@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Activity } from "lucide-react";
 import type { Trade } from "@/lib/tradeService";
 import { rollingStats } from "@/lib/rollingStats";
 import { useAuth } from "@/components/AuthProvider";
 import { fetchOptionsRolling, type OptionsRollingStats } from "@/lib/optionsRolling";
 import { cn } from "@/lib/utils";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { StatsTileSkeleton } from "@/components/ui/SkeletonVariants";
+import { ErrorCard } from "@/components/ui/ErrorCard";
 
 /**
  * Side-by-side rolling win-rate for Futures vs Options.
@@ -12,20 +15,24 @@ import { cn } from "@/lib/utils";
  */
 export function OptionsRollingPerformance({ trades }: { trades: Trade[] }) {
   const { user } = useAuth();
-  const [opt, setOpt] = useState<OptionsRollingStats | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-    fetchOptionsRolling(user.id, 20)
-      .then((s) => !cancelled && setOpt(s))
-      .catch(() => !cancelled && setOpt(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+  const { data: opt, loading, error, refresh } = useAsyncData<OptionsRollingStats>(
+    () => fetchOptionsRolling(user!.id, 20),
+    [user?.id],
+    { enabled: !!user?.id },
+  );
 
   const futures = useMemo(() => rollingStats(trades, 20), [trades]);
+
+  if (loading) return <StatsTileSkeleton tiles={2} label />;
+  if (error) {
+    return (
+      <ErrorCard
+        title="Couldn't load rolling stats"
+        message={error.message}
+        onRetry={refresh}
+      />
+    );
+  }
 
   return (
     <section className="rounded-xl border border-border bg-card p-3">
