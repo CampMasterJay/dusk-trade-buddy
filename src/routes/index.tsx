@@ -43,6 +43,7 @@ import {
 } from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useCountUp } from "@/hooks/useCountUp";
 import { useTodayVix } from "@/hooks/useTodayVix";
 import { useTradingMode, getActiveBalance } from "@/lib/tradingMode";
 import { adjustRiskPct } from "@/lib/vixRisk";
